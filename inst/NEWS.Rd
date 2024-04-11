@@ -8,6 +8,13 @@
   }
 }
 
+\section{Version 1.16.5}{
+  \itemize{
+    \item fixed detailed plot when name of a taxon is substring of another
+    \item show supertaxon names when rotate the profile plot
+  }
+}
+
 \section{Version 1.16.3}{
   \itemize{
     \item fixed clustering method not applied

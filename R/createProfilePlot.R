@@ -607,8 +607,8 @@ addRankDivisionPlot <- function(
             }
         )
         # add vertical line to divide taxon groups
-        y_max_taxa <- length(unique(as.character(plotDf$geneID)))
-        y_max_gene <- length(unique(as.character(plotDf$supertaxonID)))
+        # add vertical line to divide taxon groups
+        max_taxa <- length(unique(as.character(plotDf$geneID)))
         for(i in groupedList) {
             min <- min(i$index)
             max <- max(i$index)
@@ -620,19 +620,19 @@ addRankDivisionPlot <- function(
                         geom = "text", angle = groupLabelAngle, hjust = 0,
                         size = groupLabelSize, 
                         x = min,
-                        y = y_max_taxa + 0.5,
+                        y = max_taxa + 0.5,
                         label = unique(as.character(i$name))
                     )
                 
             } else {
                 profilePlot <- profilePlot +
-                    geom_vline(yintercept = min - 0.5, colour = "dodgerblue4") +
-                    geom_vline(yintercept = max + 0.5, colour = "dodgerblue4") +
+                    geom_hline(yintercept = min - 0.5, colour = "dodgerblue4") +
+                    geom_hline(yintercept = max + 0.5, colour = "dodgerblue4") +
                     annotate(
-                        geom = "text", angle = groupLabelAngle, hjust = 0,
+                        geom = "text", angle = groupLabelAngle - 90, hjust = 0,
                         size = groupLabelSize, 
-                        x = min,
-                        y = y_max_gene + 0.5,
+                        y = min,
+                        x = max_taxa + 1,
                         label = unique(as.character(i$name))
                     )
             }
@@ -640,13 +640,13 @@ addRankDivisionPlot <- function(
         if (xAxis == "taxa") {
             return(
                 profilePlot + coord_cartesian(
-                    clip = 'off', ylim = c(1, y_max_taxa + groupLabelDist)
+                    clip = 'off', ylim = c(1, max_taxa + groupLabelDist)
                 )
             )
         } else 
             return(
                 profilePlot + coord_cartesian(
-                    clip = 'off', ylim = c(1, y_max_gene + groupLabelDist)
+                    clip = 'off', xlim = c(1, max_taxa + groupLabelDist)
                 )
             )
     }

@@ -2837,7 +2837,7 @@ shinyServer(function(input, output, session) {
             selTaxon <- gsub("\\[","\\\\[",selTaxon)
             selTaxon <- gsub("\\]","\\\\]",selTaxon)
             plotTaxon <- unique(
-                fullDf$supertaxon[grep(paste0(selTaxon,"$"), fullDf$supertaxon)]
+                fullDf$supertaxon[grep(paste0("_",selTaxon,"$"), fullDf$supertaxon)]
             )
             plotGeneID <- info[[1]]
             selDf <- fullDf[fullDf$geneID == plotGeneID
