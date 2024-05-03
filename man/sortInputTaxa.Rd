@@ -42,5 +42,5 @@ sortInputTaxa(taxonIDs, "species", "Homo sapiens", NULL, NULL)
 \code{\link{createLongMatrix}}
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

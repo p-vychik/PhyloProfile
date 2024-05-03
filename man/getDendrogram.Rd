@@ -31,5 +31,5 @@ getDendrogram(dd)
 \code{\link{clusterDataDend}}
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

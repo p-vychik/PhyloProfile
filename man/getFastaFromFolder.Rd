@@ -40,5 +40,5 @@ getFastaFromFolder(seqIDs, path, dirFormat, fileExt, idFormat)
 \code{\link{mainLongRaw}}
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

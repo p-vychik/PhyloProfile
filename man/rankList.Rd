@@ -4,6 +4,9 @@
 \name{rankList}
 \alias{rankList}
 \title{NCBI rank list for experimental data sets}
+\format{
+Dataframe
+}
 \usage{
 data(rankList)
 }

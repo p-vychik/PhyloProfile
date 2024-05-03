@@ -21,10 +21,10 @@ between 2 proteins* (e.g. seed protein vs ortholog) (optional).}
 
 \item{titleArchiSize}{title size (in px). Default = 12.}
 
-\item{showFeature}{choose to show all, common or unique features. 
+\item{showFeature}{choose to show all, common or unique features.
 Default = "all"}
 
-\item{seqIdFormat}{sequence ID format (either bionf or unknown). 
+\item{seqIdFormat}{sequence ID format (either bionf or unknown).
 Default = "unknown"}
 
 \item{currentNCBIinfo}{dataframe of the pre-processed NCBI taxonomy
@@ -57,5 +57,5 @@ grid::grid.draw(plot)
 \code{\link{parseDomainInput}}, \code{\link{getQualColForVector}}
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

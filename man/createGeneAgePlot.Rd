@@ -30,5 +30,5 @@ createGeneAgePlot(geneAgePlotDf)
 \code{\link{estimateGeneAge}} and \code{\link{geneAgePlotDf}}
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

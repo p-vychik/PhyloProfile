@@ -30,7 +30,7 @@ getTaxonomyRanks <- function(){
 #' @param taxDB Path to the taxonomy DB files
 #' @return List of taxon IDs, their full names, taxonomy ranks and parent IDs
 #' obtained from "PhyloProfile/data/taxonNamesReduced.txt"
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
 #' getNameList()
 
@@ -68,7 +68,7 @@ getNameList <- function(taxDB = NULL) {
 #' @param taxonIDs list of input taxon IDs (e.g. ncbi1234). Default = NULL
 #' @return Data frame contains the (subset of) taxonomy matrix for list of
 #' input taxa.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
 #' # get full pre-installed taxonomy matrix
 #' getTaxonomyMatrix()
@@ -107,7 +107,7 @@ getTaxonomyMatrix <- function(
 #' Get ID list of input taxa from the main input
 #' @param rawProfile A dataframe of input phylogenetic profile in long format
 #' @return List of all input taxon IDs (e.g. ncbi1234). Default = NULL.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @export
 #' @seealso \code{\link{createLongMatrix}}, \code{\link{mainLongRaw}}
 #' @examples
@@ -130,7 +130,7 @@ getInputTaxaID <- function(rawProfile = NULL){
 #' @param taxDB Path to the taxonomy DB files
 #' @return Data frame contains a list of full names, taxonomy ranks and parent
 #' IDs for the input taxa.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @export
 #' @seealso \code{\link{getInputTaxaID}} for getting input taxon IDs,
 #' \code{\link{getNameList}} for getting the full taxon name list
@@ -172,7 +172,7 @@ getInputTaxaName <- function(rankName, taxonIDs = NULL, taxDB = NULL){
 #' @export
 #' @return A data frame contains ncbi IDs and names of taxa from the input taxon
 #' list that belong to the selected supertaxon.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
 #' inputTaxonIDs <- c("10116", "122586", "123851", "13616", "188937", "189518",
 #' "208964", "224129", "224324", "237631", "243230")
@@ -248,7 +248,7 @@ getSelectedTaxonNames <- function(
 #' reference taxon. This matrix is sorted either based on the NCBI taxonomy
 #' info, or based on an user-defined taxonomy tree (if provided).
 #' @importFrom ape read.tree
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @export
 #' @seealso \code{\link{getNameList}}, \code{\link{getTaxonomyMatrix}},
 #' \code{\link{createUnrootedTree}}, \code{\link{sortTaxaFromTree}},
@@ -292,11 +292,11 @@ sortInputTaxa <- function(
                     "PhyloProfile/data/preCalcTree.nw", sep = "/"
                 )
             } else preCalcTreeFile <- paste(taxDB, "preCalcTree.nw", sep = "/")
-            
+
             if (file.exists(preCalcTreeFile)) {
                 preTree <- ape::read.tree(preCalcTreeFile)
             } else preTree <- createUnrootedTree(Dt)
-            
+
             if (!(repTaxon$abbrName %in% preTree$tip.label))
                 message(c(repTaxon$abbrName, " not found in ", preCalcTreeFile))
             taxaTree <- ape::root(
@@ -356,7 +356,7 @@ sortInputTaxa <- function(
 #' @param taxaCount number of species occur in each supertaxon (e.g. phylum
 #' or kingdom)
 #' @return A data frame with % of present species in each supertaxon
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{profileWithTaxonomy}} for a demo input data
 #' @examples
 #' # NOTE: for internal testing only - not recommended for outside using
@@ -433,7 +433,7 @@ calcPresSpec <- function(profileWithTax, taxaCount){
 #' This full processed profile that is required for several profiling analyses
 #' e.g. estimation of gene age (?estimateGeneAge) or identification of core gene
 #' (?getCoreGene).
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @export
 #' @seealso \code{\link{createLongMatrix}}, \code{\link{sortInputTaxa}},
 #' \code{\link{calcPresSpec}}, \code{\link{mainLongRaw}}
@@ -516,7 +516,7 @@ parseInfoProfile <- function(
 #' (super)taxa, (super)taxon IDs, number of co-orthologs in each (super)taxon,
 #' values for two additional variables var1, var2, % of species present in each
 #' supertaxon, and the categories of seed genes (or ortholog groups).
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @export
 #' @seealso \code{\link{parseInfoProfile}} and \code{\link{reduceProfile}}
 #' for generating input dataframe, \code{\link{fullProcessedProfile}} for a
@@ -690,7 +690,7 @@ filterProfileData <- function(
 #' @return A reduced dataframe contains only profile data for the selected
 #' supertaxon rank. This dataframe contains only supertaxa and their value
 #' (mVar1 & mVar2) for each gene.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @export
 #' @seealso \code{\link{parseInfoProfile}} for creating a full processed
 #' profile dataframe, \code{\link{filterProfileData}} for filter processed
@@ -707,7 +707,7 @@ reduceProfile <- function(filteredProfile) {
     if (length(unique(levels(as.factor(filteredProfile$numberSpec)))) == 1) {
         if (unique(levels(as.factor(filteredProfile$numberSpec))) == 1) {
             superDfExt <- filteredProfile[, c(
-                "geneID", "supertaxon", "supertaxonID", "orthoID", "category", 
+                "geneID", "supertaxon", "supertaxonID", "orthoID", "category",
                 "presSpec", "paralog", "mVar1", "mVar2"
             )]
             superDfExt$presentTaxa <- 1
@@ -795,7 +795,7 @@ reduceProfile <- function(filteredProfile) {
 #' number of co-orthologs in each (super)taxon, values for two additional
 #' variables var1, var2, % of species present in each supertaxon, and the
 #' categories of seed genes (or ortholog groups).
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @export
 #' @seealso \code{\link{createLongMatrix}}, \code{\link{getInputTaxaID}},
 #' \code{\link{getInputTaxaName}}, \code{\link{sortInputTaxa}},

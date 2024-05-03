@@ -21,7 +21,7 @@
 #' considered. Default = 1.
 #' @param taxDB Path to the taxonomy DB files
 #' @return A list of identified core genes.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{parseInfoProfile}} for creating a full processed
 #' profile dataframe
 #' @examples

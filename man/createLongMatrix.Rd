@@ -29,5 +29,5 @@ createLongMatrix(inputFile)
 \code{\link{wideToLong}}
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

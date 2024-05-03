@@ -3,28 +3,31 @@
 \docType{data}
 \name{profileWithTaxonomy}
 \alias{profileWithTaxonomy}
-\title{An example of a raw long input file together with the taxonomy info.}
+\title{An example of a raw long input file together with the taxonomy info}
+\format{
+Dataframe
+}
 \usage{
 data(profileWithTaxonomy)
 }
 \value{
 A data frame with 20 rows and 12 variables:
 \itemize{
-    \item{geneID}{ Seed or ortholog group ID, e.g. "OG_1017"}
-    \item{ncbiID}{ Taxon ID, e.g. "ncbi176299"}
-    \item{orthoID}{ Ortholog ID, e.g. "A.fabrum@176299@1582"}
-    \item{var1}{ First additional variable}
-    \item{var2}{ Second additional variable}
-    \item{paralog}{ Number of co-orthologs in the current taxon}
-    \item{abbrName}{ e.g. "ncbi176299"}
-    \item{taxonID}{ Taxon ID, e.g. "176299"}
-    \item{fullName}{ Full taxon name, e.g. "Agrobacterium fabrum str. C58"}
-    \item{supertaxonID}{ Supertaxon ID (only different than ncbiID in case
-    working with higher taxonomy rank than input's)}
-    \item{supertaxon}{ Name of the corresponding supertaxon}
-    \item{rank}{ Rank of the supertaxon}
+    \item geneID Seed or ortholog group ID, e.g. "OG_1017"
+    \item ncbiID Taxon ID, e.g. "ncbi176299"
+    \item orthoID Ortholog ID, e.g. "A.fabrum@176299@1582"
+    \item var1 First additional variable
+    \item var2 Second additional variable
+    \item paralog Number of co-orthologs in the current taxon
+    \item abbrName e.g. "ncbi176299"
+    \item taxonID Taxon ID, e.g. "176299"
+    \item fullName Full taxon name, e.g. "Agrobacterium fabrum str. C58"
+    \item supertaxonID Supertaxon ID (only different than ncbiID in case
+    working with higher taxonomy rank than input's)
+    \item supertaxon Name of the corresponding supertaxon
+    \item rank Rank of the supertaxon
 }
 }
 \description{
-An example of a raw long input file together with the taxonomy info.
+An example of a raw long input file together with the taxonomy info
 }

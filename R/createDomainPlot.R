@@ -15,9 +15,9 @@
 #' between 2 proteins* (e.g. seed protein vs ortholog) (optional).
 #' @param labelArchiSize lable size (in px). Default = 12.
 #' @param titleArchiSize title size (in px). Default = 12.
-#' @param showFeature choose to show all, common or unique features. 
+#' @param showFeature choose to show all, common or unique features.
 #' Default = "all"
-#' @param seqIdFormat sequence ID format (either bionf or unknown). 
+#' @param seqIdFormat sequence ID format (either bionf or unknown).
 #' Default = "unknown"
 #' @param currentNCBIinfo dataframe of the pre-processed NCBI taxonomy
 #' data. Default = NULL (will be automatically retrieved from PhyloProfile app)
@@ -25,7 +25,7 @@
 #' @import ggplot2
 #' @return A domain plot as arrangeGrob object. Use grid::grid.draw(plot) to
 #' render.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{singleDomainPlotting}}, \code{\link{sortDomains}},
 #' \code{\link{parseDomainInput}}, \code{\link{getQualColForVector}}
 #' @examples
@@ -62,7 +62,7 @@ createArchiPlot <- function(
         # filter common features
         if (!(showFeature == "all")) {
             allFeats <- c(
-                levels(as.factor(orthoDf$feature)), 
+                levels(as.factor(orthoDf$feature)),
                 levels(as.factor(seedDf$feature))
             )
             countFeats <- as.data.frame(table(allFeats))
@@ -99,14 +99,14 @@ createArchiPlot <- function(
         # simplify seq IDs if they are in bionf format
         if (seqIdFormat == "bionf") {
             seedTmp <- strsplit(as.character(seed),':', fixed = TRUE)[[1]]
-            seedSpec <- 
+            seedSpec <-
                 strsplit(as.character(seedTmp[2]),'@', fixed = TRUE)[[1]][2]
             seed <- paste0(
                 id2name(seedSpec, currentNCBIinfo)[,2], " - ", seedTmp[3]
             )
             if (ortho != seed) {
                 orthoTmp <- strsplit(as.character(ortho),':', fixed = TRUE)[[1]]
-                orthoSpec <- 
+                orthoSpec <-
                     strsplit(as.character(orthoTmp[2]),'@',fixed = TRUE)[[1]][2]
                 ortho <- paste0(
                     id2name(orthoSpec, currentNCBIinfo)[,2], " - ", orthoTmp[3]
@@ -141,7 +141,7 @@ createArchiPlot <- function(
 #' @param maxEnd the highest stop position of all domains
 #' @param colorScheme color scheme for all domain types
 #' @return Domain plot of a single protein as a ggplot object.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{getQualColForVector}},
 #' \code{\link{parseDomainInput}}
 #' @import ggplot2
@@ -248,7 +248,7 @@ singleDomainPlotting <- function(
 #' @param labelSize lable size. Default = 12.
 #' @param titleSize title size. Default = 12.
 #' @return Domain plot of a pair proteins as a arrangeGrob object.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
 #' \dontrun{
 #' seed <- "101621at6656"
@@ -308,7 +308,7 @@ pairDomainPlotting <- function(
 #' @param seedDf data of seed protein
 #' @param orthoDf data of ortholog protein
 #' @return Dataframe contains sorted domain list.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
 #' \dontrun{
 #' # get domain data
@@ -354,14 +354,42 @@ sortDomains <- function(seedDf, orthoDf){
     return(orderedOrthoDf)
 }
 
+#' Sort one domain dataframe based on list of ordered feature types
+#' @description Sort domain dataframe of one protein based on a given list of
+#' ordered feature types
+#' @param domainDf domain dataframe
+#' @param featureTypeOrder vector of ordered feature types
+#' @return Dataframe contains sorted domain list.
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom dplyr left_join
+#' @examples
+#' \dontrun{
+#' NEED TO ADD AN EXAMPLE HERE
+#' }
+
+sortDomainsByList <- function(domainDf = NULL, featureTypeOrder = NULL) {
+    if (is.null(domainDf) | is.null(featureTypeOrder))
+        stop("Domain data or feature type order is NULL!")
+    featureTypeOrder <- rev(featureTypeOrder[
+        featureTypeOrder %in% levels(as.factor(domainDf$feature_type))
+    ])
+    orderedDomainDf <- dplyr::left_join(
+        data.frame(feature_type = featureTypeOrder),
+        domainDf, by = "feature_type"
+    )
+    orderedDomainDf$feature <- factor(
+        orderedDomainDf$feature, levels = unique(orderedDomainDf$feature)
+    )
+    return(orderedDomainDf)
+}
 
 #' Modify feature names
-#' @description Simplify feature names (e.g. TM for transmembrane domain, 
+#' @description Simplify feature names (e.g. TM for transmembrane domain,
 #' LCR for low complexity regions, remove tool names from domain name) and add
 #' weight to feature names (if available)
 #' @param domainDf domain data as a dataframe object
 #' @return Dataframe contains simlified domain names in yLabel column
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
 #' \dontrun{
 #' domainFile <- system.file(
@@ -380,4 +408,211 @@ modifyFeatureName <- function(domainDf = NULL) {
     domainDf$yLabel[domainDf$yLabel == "low complexity regions"] <- "LCR"
     domainDf$yLabel[domainDf$yLabel == "low_complexity_regions"] <- "LCR"
     return(domainDf)
+}
+
+
+#' Join multiple plots and merge legends
+#' @description See: https://github.com/tidyverse/ggplot2/wiki
+#' /Share-a-legend-between-two-ggplot2-graphs
+#' @param ... List of plots, seperated by comma
+#' @param ncol number of columns for final plot
+#' @param nrow number of row for final plot
+#' @param position position of legend (bottom or right)
+
+gridArrangeSharedLegend <- function (
+        ..., ncol = length(list(...)), nrow = 1, position = c("bottom", "right")
+) {
+    plots <- list(...)
+    position <- match.arg(position)
+    g <- ggplotGrob(plots[[1]] + theme(legend.position = position))$grobs
+    legend <- g[[which(sapply(g, function(x) x$name) == "guide-box")]]
+    lheight <- sum(legend$height)
+    lwidth <- sum(legend$width)
+    gl <- lapply(plots, function(x) x + theme(legend.position = "none"))
+    gl <- c(gl, ncol = ncol, nrow = nrow)
+
+    combined <- switch(
+        position,
+        "bottom" = gridExtra::arrangeGrob(
+            do.call(arrangeGrob, gl),
+            legend,
+            ncol = 1,
+            heights = grid::unit.c(unit(1, "npc") - lheight, lheight)
+        ),
+        "right" = gridExtra::arrangeGrob(
+            do.call(arrangeGrob, gl),
+            legend,
+            ncol = 2,
+            widths = grid::unit.c(unit(1, "npc") - lwidth, lwidth)
+        )
+    )
+
+    return(combined)
+}
+
+#' Identify feature type(s) containing overlapped domains/features
+#' @param domainDf input domain dataframe
+#' @return List of feature types that have overlapped domains
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom dplyr group_by add_count
+#' @examples
+#' \dontrun{
+#' NEED TO ADD AN EXAMPLE HERE
+#' }
+
+checkOverlapDomains <- function(domainDf) {
+    if (is.null(domainDf)) stop("Domain data cannot be NULL!")
+    feature_type <- NULL
+    df <- domainDf[, c("feature", "feature_type", "start", "end")]
+    df <- data.frame(df %>% dplyr::group_by(feature_type) %>% dplyr::add_count(feature_type))
+    df$tmp <- paste(df$feature_type, df$end, sep = "_")
+    overlappedType <- lapply(
+        df$tmp[df$n > 1],
+        function (x) {
+            ed <- df$end[df$tmp == x][1]
+            st <- df$start[df$tmp == x][1]
+            type <- df$feature_type[df$tmp == x][1]
+
+            subDf <- df[
+                !(df$tmp == x) & df$feature_type == type & df$start < ed & df$end > st,
+            ]
+            if (nrow(subDf) > 0) {
+                if(!(subDf$feature[1] == df$feature[df$tmp == x]))
+                    return(subDf$feature_type)
+            }
+        }
+    )
+    return(unique(unlist(overlappedType)))
+}
+
+#' Modify domain dataframe to resolve overlapped domains/features
+#' @param domainDf input domain dataframe
+#' @return Domain dataframe with modified feature names that join multiple
+#' domains of the same type that are not overlapped
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @examples
+#' \dontrun{
+#' NEED TO ADD AN EXAMPLE HERE
+#' }
+
+resolveOverlapFeatures <- function(domainDf) {
+    if (is.null(domainDf)) stop("Domain data cannot be NULL!")
+    overlappedType <- checkOverlapDomains(domainDf)
+    domainDf$featureOri <- domainDf$feature
+    domainDf$featureOri <- as.character(domainDf$featureOri)
+    if (length(overlappedType) > 0) {
+        domainDf$feature <- ifelse(
+            !(domainDf$feature_type %in% overlappedType),
+            domainDf$feature_type,
+            domainDf$feature
+        )
+    } else {
+        domainDf$feature <- domainDf$feature_type
+    }
+    return(domainDf)
+}
+
+
+#' Add colors for each feature/domain
+#' @description Add colors to features/domains of 2 domain dataframes. Users can
+#' choose to color only the shared features, unique features, all features
+#' (default) or based on feature types. Default color pallete is "Paired", but
+#' it can be changed.
+#' @param seedDf Domain dataframe of seed protein (protein 1)
+#' @param orthoDf Domain dataframe of orthologs protein (protein 2)
+#' @param colorType Choose to color "all", "shared", "unique" features or color
+#' by "Feature type". Default: "all"
+#' @param colorPallete Choose between "Paired", "Set1", "Set2", "Set3",
+#' "Accent", "Dark2" for the color pallete
+#' @param ignoreInstanceNo Ignore number of feature instances while identifying
+#' shared or unique features. Default: FALSE
+#' @return 2 dataframes (seedDf and orthoDf) with an additional column for the
+#' assigned colors to each feature instance
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom utils head
+#' @examples
+#' \dontrun{
+#' NEED TO ADD AN EXAMPLE HERE
+#' }
+
+addFeatureColors <- function(
+        seedDf = NULL, orthoDf = NULL, colorType = "all",
+        colorPallete = "Paired", ignoreInstanceNo = FALSE
+) {
+    if (is.null(seedDf) | is.null(orthoDf)) stop("Domain Df cannot be null!")
+
+    feature <- NULL
+    featureSeedCount <- seedDf %>% dplyr::count(feature)
+    featureOrthoCount <- orthoDf %>% dplyr::count(feature)
+    featureCount <- merge(featureSeedCount, featureOrthoCount, by = "feature", all = TRUE)
+    featureCount$type <- "unique"
+    featureCount$type[featureCount$n.x == featureCount$n.y] <- "shared"
+    if (ignoreInstanceNo == TRUE)
+        featureCount$type[!is.na(featureCount$n.x) & !is.na(featureCount$n.y)] <- "shared"
+
+    featureCount$feature <- as.character(featureCount$feature)
+    sharedFeatures <- unique(featureCount$feature[featureCount$type == "shared"])
+    uniqueFeatures <- unique(featureCount$feature[featureCount$type == "unique"])
+    allFeatures <- c(sharedFeatures, uniqueFeatures)
+
+    if (colorType == "Unique" & length(uniqueFeatures) == 0)
+        colorType = "All"
+    if (colorType == "Shared" & length(sharedFeatures) == 0)
+        colorType = "All"
+
+    if (colorType == "Unique") {
+        sharedFeaturesColors <- rep("#C9C9C9", length(sharedFeatures))
+        uniqueFeaturesColors <- getQualColForVector(uniqueFeatures)
+        if (checkColorPallete(uniqueFeatures, colorPallete) == TRUE) {
+            uniqueFeaturesColors <-
+                suppressWarnings(head(
+                    RColorBrewer::brewer.pal(length(uniqueFeatures), colorPallete),
+                    length(uniqueFeatures)
+                ))
+        }
+        allColors <- c(sharedFeaturesColors, uniqueFeaturesColors)
+        colorScheme <- data.frame(color = allColors, feature = allFeatures)
+    } else if (colorType == "Shared") {
+        sharedFeaturesColors <- getQualColForVector(sharedFeatures)
+        uniqueFeaturesColors <- rep("#C9C9C9", length(uniqueFeatures))
+        if (checkColorPallete(sharedFeatures, colorPallete) == TRUE) {
+            sharedFeaturesColors <-
+                suppressWarnings(head(
+                    RColorBrewer::brewer.pal(length(sharedFeatures), colorPallete),
+                    length(sharedFeatures)
+                ))
+        }
+        allColors <- c(sharedFeaturesColors, uniqueFeaturesColors)
+        colorScheme <- data.frame(color = allColors, feature = allFeatures)
+    } else if (colorType == "All") {
+        allColors <- getQualColForVector(allFeatures)
+        if (checkColorPallete(allFeatures, colorPallete) == TRUE) {
+            allColors <-
+                suppressWarnings(head(
+                    RColorBrewer::brewer.pal(length(allFeatures), colorPallete),
+                    length(allFeatures)
+                ))
+        }
+        colorScheme <- data.frame(color = allColors, feature = allFeatures)
+    } else {
+        tmpDf <- data.frame(str_split_fixed(allFeatures, "_", 2))
+        tmpDf$name <- paste(tmpDf$X1, tmpDf$X2, sep = "_")
+        tmpDf$name[tmpDf$X2 == ""] <- tmpDf$X1[tmpDf$X2 == ""]
+        tmpDf$X2[tmpDf$X2 == ""] <- tmpDf$X1[tmpDf$X2 == ""]
+        typeColorDf <- data.frame(
+            colors = head(
+                suppressWarnings(RColorBrewer::brewer.pal(nlevels(as.factor(tmpDf$X1)), colorPallete)),
+                nlevels(as.factor(tmpDf$X1))
+            ),
+            X1 = levels(as.factor(tmpDf$X1))
+        )
+        tmpDf <- merge(tmpDf, typeColorDf, all.x = TRUE)
+        colorScheme <- data.frame(color = tmpDf$colors, feature = tmpDf$name)
+    }
+
+    # add color to seedDf and orthoDf
+    seedDf <- merge(seedDf, colorScheme, by = "feature", all.x = TRUE)
+    orthoDf <- merge(orthoDf, colorScheme, by = "feature", all.x = TRUE)
+
+    return(list(seedDf, orthoDf))
 }

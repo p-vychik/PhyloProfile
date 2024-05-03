@@ -8,7 +8,7 @@
 #' with PhyloProfile, 1 = missing parenthesis; 2 = missing comma;
 #' 3 = tree has singleton; or a list of taxa that do not exist in the input
 #' phylogenetic profile.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{getInputTaxaID}} for getting input taxon IDs,
 #' \code{\link{ppTree}} for an example of input tree
 #' @examples
@@ -54,7 +54,7 @@ checkNewick <- function(tree, inputTaxonID = NULL){
 #' @param df data frame contains taxonomy matrix used for generating tree
 #' @importFrom ape as.phylo
 #' @return A unrooted taxonomy tree as an object of class "phylo".
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{taxa2dist}} for distance matrix generation from a
 #' taxonomy matrix, \code{\link{getTaxonomyMatrix}} for getting taxonomy
 #' matrix, \code{\link{ppTaxonomyMatrix}} for a demo taxonomy matrix data
@@ -81,7 +81,7 @@ createUnrootedTree <- function(df){
 #' @export
 #' @param tree an "phylo" object for a rooted taxonomy tree
 #' @return A list of sorted taxa obtained the input taxonomy tree.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{ppTaxonomyMatrix}} for a demo taxonomy matrix data
 #' @examples
 #' data("ppTaxonomyMatrix", package = "PhyloProfile")

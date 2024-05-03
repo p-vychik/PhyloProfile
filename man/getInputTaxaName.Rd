@@ -30,5 +30,5 @@ getInputTaxaName("species", taxonIDs)
 \code{\link{getNameList}} for getting the full taxon name list
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

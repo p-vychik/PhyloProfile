@@ -29,5 +29,5 @@ checkNewick(ppTree, c("ncbi3702", "ncbi3711", "ncbi7029"))
 \code{\link{ppTree}} for an example of input tree
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

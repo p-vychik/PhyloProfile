@@ -25,5 +25,5 @@ print("Uncomment the following line to run the function")
 # getDataForOneOma("HUMAN29397", "OG")
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

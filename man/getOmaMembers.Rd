@@ -25,5 +25,5 @@ print("Uncomment the following line to run the function")
 # getOmaMembers("HUMAN29397", "OG")
 }
 \author{
-Carla Mölbert {carla.moelbert@gmx.de}
+Carla Mölbert carla.moelbert@gmx.de
 }

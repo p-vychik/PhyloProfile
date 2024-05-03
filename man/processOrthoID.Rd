@@ -12,7 +12,7 @@ processOrthoID(dataHeat = NULL)
 }
 \value{
 the same dataframe as input, but the ortholog IDs are changed into
-<taxID:orthoID>. New column {orthoFreq} specifies if the ortholog IDs are
+<taxID:orthoID>. New column "orthoFreq" specifies if the ortholog IDs are
 single or duplicated
 }
 \description{
@@ -26,5 +26,5 @@ processOrthoID(finalProcessedProfile)
 }
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

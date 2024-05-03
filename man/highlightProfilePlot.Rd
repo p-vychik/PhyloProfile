@@ -4,8 +4,8 @@
 \alias{highlightProfilePlot}
 \title{Highlight gene and/or taxon of interest on the phylogenetic profile plot}
 \usage{
-highlightProfilePlot(profilePlot = NULL, plotDf = NULL, 
-    taxonHighlight = "none", workingRank = "none", geneHighlight = NULL, 
+highlightProfilePlot(profilePlot = NULL, plotDf = NULL,
+    taxonHighlight = "none", workingRank = "none", geneHighlight = NULL,
     taxDB = NULL, xAxis = "taxa")
 }
 \arguments{
@@ -61,7 +61,7 @@ taxonHighlight <- "none"
 workingRank <- "class"
 geneHighlight <- "100265at6656"
 highlightProfilePlot(
-    profilePlot, plotDf, taxonHighlight, workingRank, geneHighlight, 
+    profilePlot, plotDf, taxonHighlight, workingRank, geneHighlight,
     NULL, plotParameter$xAxis
 )
 }
@@ -70,5 +70,5 @@ highlightProfilePlot(
 \code{\link{heatmapPlotting}}
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

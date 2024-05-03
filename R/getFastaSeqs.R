@@ -4,7 +4,7 @@
 #' all fasta sequences from the input file.
 #' @param file raw phylogenetic profile input file in multi-fasta format.
 #' @return A dataframe with one column contains sequences in fasta format.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
 #' file <- system.file(
 #'     "extdata", "test.main.fasta",
@@ -14,7 +14,7 @@
 
 getFastaFromFasInput <- function(seqIDs = NULL, file = NULL) {
     if (is.null(seqIDs)) stop("No sequence ID given!")
-    if (is.null(seqIDs) | is.null(file)) 
+    if (is.null(seqIDs) | is.null(file))
         stop("Sequence ID and input fasta file cannot be NULL!")
     faFile <- Biostrings::readAAStringSet(file)
 
@@ -37,7 +37,7 @@ getFastaFromFasInput <- function(seqIDs = NULL, file = NULL) {
 #' all fasta sequences from the concatenated input fasta file.
 #' @param concatFasta input concatenated fasta file.
 #' @return A dataframe with one column contains sequences in fasta format.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
 #' concatFasta <- system.file(
 #'     "extdata", "fastaFiles/concatenatedFile.fa",
@@ -93,7 +93,7 @@ getFastaFromFile <- function(seqIDs = NULL, concatFasta = NULL) {
 #' @param idFormat fasta header format (1 for ">speciesID:seqID", 2 for
 #' ">speciesID@seqID", 3 for ">speciesID|seqID" or 4 for "seqID")
 #' @return A dataframe with one column contains sequences in fasta format.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{mainLongRaw}}
 #' @examples
 #' seqIDs <- "RAT@10116@1|D3ZUE4"
@@ -151,7 +151,7 @@ getFastaFromFolder <- function(
             } else faFile <- Biostrings::readAAStringSet(file)
         }
         # now get selected sequences
-        if (length(unique(pmatch(seqIDs, names(faFile)))) == 1 
+        if (length(unique(pmatch(seqIDs, names(faFile)))) == 1
             & is.na(unique(pmatch(seqIDs, names(faFile)))[1])) {
             return(data.frame(
                 fasta = paste0("Please check FASTA header format!"),

@@ -10,7 +10,7 @@
 #' (optional) and the status to determine if that feature is important for
 #' comparison the architecture between 2 proteins* (e.g. seed protein vs
 #' ortholog) (optional).
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{getDomainFolder}}
 #' @examples
 #' seed <- "101621at6656"
@@ -89,7 +89,7 @@ parseDomainInput <- function(seed = NULL, inputFile = NULL, type = "file") {
 #' @param seed seed protein ID
 #' @param domainPath path to domain folder
 #' @return Domain file and its complete directory path for the selected protein.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
 #' \dontrun{
 #' domainPath <- paste0(

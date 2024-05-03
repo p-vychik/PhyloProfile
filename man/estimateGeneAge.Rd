@@ -61,5 +61,5 @@ profile dataframe; \code{\link{getNameList}} and
 \code{\link{fullProcessedProfile}} for a demo input dataframe
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

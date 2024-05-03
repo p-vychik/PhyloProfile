@@ -30,5 +30,5 @@ calcPresSpec(profileWithTaxonomy, taxaCount)
 \code{\link{profileWithTaxonomy}} for a demo input data
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

@@ -4,7 +4,7 @@
 \alias{addRankDivisionPlot}
 \title{Add taxonomy rank division lines to the heatmap plot}
 \usage{
-addRankDivisionPlot(profilePlot = NULL, plotDf = NULL, 
+addRankDivisionPlot(profilePlot = NULL, plotDf = NULL,
     taxDB = NULL, workingRank = NULL, superRank = NULL, xAxis = "taxa",
     groupLabelSize = 14, groupLabelDist = 2, groupLabelAngle = 90)
 }
@@ -72,5 +72,5 @@ addRankDivisionPlot(
 \code{\link{getTaxonomyMatrix}}
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

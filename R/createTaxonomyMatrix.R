@@ -1,7 +1,7 @@
 #' Get all NCBI taxonomy rank names
 #' @export
 #' @return A list of all available NCBI taxonomy rank names.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
 #' mainTaxonomyRank()
 
@@ -29,7 +29,7 @@ mainTaxonomyRank <- function() {
 #' @return A dataframe contains NCBI taxon IDs, taxon names, taxon ranks and the
 #' next higher taxon IDs (parent's IDs) of all taxa in the NCBI taxonomy
 #' database.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @export
 #' @examples
 #' ?processNcbiTaxonomy
@@ -103,7 +103,7 @@ processNcbiTaxonomy <- function() {
 #' data (/PhyloProfile/data/preProcessedTaxonomy.txt)
 #' @return A list of NCBI taxonomy info for input taxa, including the taxonomy
 #' IDs, full scientific names, taxonomy ranks and the parent IDs.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @export
 #' @examples
 #' inputTaxa <- c("272557", "176299")
@@ -161,7 +161,7 @@ getTaxonomyInfo <- function(inputTaxa = NULL, currentNCBIinfo = NULL) {
 #' "id#rank"). The reducedInfoList is a subset of preProcessedTaxonomy.txt file,
 #' containing the NCBI IDs, taxon fullnames, their current rank and their
 #' direct parent ID.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @export
 #' @examples
 #' inputTaxa <- c("272557", "176299")
@@ -232,7 +232,7 @@ getIDsRank <- function(inputTaxa = NULL, currentNCBIinfo = NULL){
 #' (see rankListFile in example)
 #' @return A dataframe containing a list of all possible ranks and their indexed
 #' values.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
 #' \dontrun{
 #' rankListFile <- system.file(
@@ -372,7 +372,7 @@ rankIndexing <- function (rankListFile = NULL) {
 #' taxonomy ranks from the id and rank list file. This dataframe can be used for
 #' creating a well resolved taxonomy tree (see ?createUnrootedTree) and sorting
 #' taxa based on a selected reference taxon (see ?sortInputTaxa).
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{rankIndexing}}, \code{\link{createUnrootedTree}},
 #' \code{\link{sortInputTaxa}}
 #' @examples
@@ -473,7 +473,7 @@ taxonomyTableCreator <- function(idListFile = NULL, rankListFile = NULL) {
 #' data (/PhyloProfile/data/preProcessedTaxonomy.txt)
 #' @return A list of dataframs containing taxonomy hierarchy and its URL to
 #' NCBI database for input taxon IDs
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
 #' inputTaxa <- c("272557", "176299")
 #' ncbiFilein <- system.file(
@@ -514,7 +514,7 @@ getTaxHierarchy <- function(inputTaxa = NULL, currentNCBIinfo = NULL){
 #' @param currentNCBIinfo table/dataframe of the pre-processed NCBI taxonomy
 #' data (/PhyloProfile/data/preProcessedTaxonomy.txt)
 #' @return A dataframe contains input taxon Ids and their full names.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
 #' ncbiFilein <- system.file(
 #'     "extdata", "data/preProcessedTaxonomy.txt",
@@ -547,7 +547,7 @@ id2name <- function(idList = NULL, currentNCBIinfo = NULL) {
             currentNCBIinfo$ncbiID %in% idList, c("ncbiID","fullName")
         ]
         nameList <- merge(nameList, nameListTmp, by = "ncbiID", all.x = TRUE)
-        nameList$fullName.y[is.na(nameList$fullName.y)] <- 
+        nameList$fullName.y[is.na(nameList$fullName.y)] <-
             nameList$fullName.x[is.na(nameList$fullName.y)]
         nameList <- nameList[, c("ncbiID","fullName.y")]
         colnames(nameList) <- c("ncbiID", "fullName")

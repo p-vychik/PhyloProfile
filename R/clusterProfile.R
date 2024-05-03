@@ -52,7 +52,7 @@ getDataClustering <- function(
         subDataHeat <- subDataHeat[, c("geneID", "supertaxon", "orthoID")]
         if (idFormat == "bionf") {
             subDataHeat <- within(
-                subDataHeat, 
+                subDataHeat,
                 orthoMod <- data.frame(
                     do.call(
                         'rbind', strsplit(as.character(orthoID),'|',fixed=TRUE)
@@ -164,7 +164,7 @@ getDistanceMatrix <- function(profiles = NULL, method = "mutualInformation") {
 #' or "centroid" for UPGMC). Default = "complete".
 #' @return An object class hclust generated based on input distance matrix and
 #' a selected clustering method.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{getDataClustering}},
 #' \code{\link{getDistanceMatrix}}, \code{\link{hclust}}
 #' @examples
@@ -188,7 +188,7 @@ clusterDataDend <- function(distanceMatrix = NULL, clusterMethod = "complete") {
 #' @export
 #' @param dd dendrogram object (see ?clusterDataDend)
 #' @return A dendrogram plot for the genes in the input phylogenetic profiles.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{clusterDataDend}}
 #' @examples
 #' data("finalProcessedProfile", package="PhyloProfile")

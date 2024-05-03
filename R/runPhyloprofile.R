@@ -34,7 +34,7 @@ runPhyloProfile <- function(configFile = NULL, host = NULL, port = NULL){
 
     .GlobalEnv$configFile <- configFile
     on.exit(rm(configFile, envir=.GlobalEnv))
-    
+
     i_host <- i_port <- NULL
     i_launchBrowser <- TRUE
     if (!is.null(configFile) && file.exists(configFile)) {
@@ -45,7 +45,7 @@ runPhyloProfile <- function(configFile = NULL, host = NULL, port = NULL){
     }
     if (!is.null(host)) i_host <- host
     if (!is.null(port)) i_port <- port
-    
+
     if (!is.logical(i_launchBrowser)) i_launchBrowser <- TRUE
     if (!is.null(i_host) && !is.null(i_port)) {
         shiny::runApp(

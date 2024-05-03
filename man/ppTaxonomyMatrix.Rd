@@ -3,20 +3,23 @@
 \docType{data}
 \name{ppTaxonomyMatrix}
 \alias{ppTaxonomyMatrix}
-\title{An example of a taxonomy matrix.}
+\title{An example of a taxonomy matrix}
+\format{
+Dataframe
+}
 \usage{
 data(ppTaxonomyMatrix)
 }
 \value{
 A data frame with 10 rows and 162 variables:
 \itemize{
-    \item{abbrName}{ e.g. "ncbi10090"}
-    \item{ncbiID}{ e.g. "10090"}
-    \item{fullName}{ e.g. "Mus musculus"}
-    \item{strain}{ e.g. "10090"}
+    \item abbrName  e.g. "ncbi10090"
+    \item ncbiID e.g. "10090"
+    \item fullName e.g. "Mus musculus"
+    \item strain e.g. "10090"
     ...
 }
 }
 \description{
-An example of a taxonomy matrix.
+An example of a taxonomy matrix
 }

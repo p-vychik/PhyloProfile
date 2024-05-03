@@ -29,5 +29,5 @@ currentNCBIinfo <- as.data.frame(data.table::fread(ncbiFilein))
 PhyloProfile:::getTaxHierarchy(inputTaxa, currentNCBIinfo)
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

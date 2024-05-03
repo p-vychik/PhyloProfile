@@ -30,5 +30,5 @@ taxonIDs <- c("ncbi9606", "ncbi10116")
 getTaxonomyMatrix(NULL, TRUE, taxonIDs)
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

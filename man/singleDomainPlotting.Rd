@@ -75,5 +75,5 @@ PhyloProfile:::singleDomainPlotting(
 \code{\link{parseDomainInput}}
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

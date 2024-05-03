@@ -4,7 +4,7 @@
 \alias{createPercentageDistributionData}
 \title{Create data for percentage present taxa distribution}
 \usage{
-createPercentageDistributionData(inputData = NULL, rankName = NULL, 
+createPercentageDistributionData(inputData = NULL, rankName = NULL,
     taxDB = NULL)
 }
 \arguments{
@@ -32,5 +32,5 @@ createPercentageDistributionData(mainLongRaw, "class")
 \code{\link{mainLongRaw}}
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

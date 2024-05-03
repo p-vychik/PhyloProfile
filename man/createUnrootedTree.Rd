@@ -25,5 +25,5 @@ taxonomy matrix, \code{\link{getTaxonomyMatrix}} for getting taxonomy
 matrix, \code{\link{ppTaxonomyMatrix}} for a demo taxonomy matrix data
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

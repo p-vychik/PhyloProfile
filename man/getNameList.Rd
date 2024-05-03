@@ -21,5 +21,5 @@ Get all NCBI taxon names from
 getNameList()
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

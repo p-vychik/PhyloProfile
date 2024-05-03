@@ -3,16 +3,19 @@
 \docType{data}
 \name{ppTree}
 \alias{ppTree}
-\title{An example of a taxonomy tree in newick format.}
+\title{An example of a taxonomy tree in newick format}
+\format{
+Dataframe
+}
 \usage{
 data(ppTree)
 }
 \value{
 A data frame with only one entry
-\describe{
-    \item{V1}{ tree in newick format}
+\itemize{
+    \item V1 tree in newick format
 }
 }
 \description{
-An example of a taxonomy tree in newick format.
+An example of a taxonomy tree in newick format
 }

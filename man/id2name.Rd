@@ -28,5 +28,5 @@ idList <- c("9606", "5207", "40674", "4751")
 id2name(idList, currentNCBIinfo)
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

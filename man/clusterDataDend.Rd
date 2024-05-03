@@ -36,5 +36,5 @@ clusterDataDend(distanceMatrix, clusterMethod)
 \code{\link{getDistanceMatrix}}, \code{\link{hclust}}
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

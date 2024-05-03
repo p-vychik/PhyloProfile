@@ -23,7 +23,7 @@ axis and legend - default = 9 for each; (16) legend position "top", "bottom",
 co-ortholog dots from -1 to 3 - default = 0; (18) angle of x-axis from 0 to
 90 - default = 60; (19) show/hide separate line for reference taxon 1/0 -
 default = 0; (20) enable/disable coloring gene categories TRUE/FALSE -
-default = FALSE; (21) enable/disable coloring duplicated ortholog IDs 
+default = FALSE; (21) enable/disable coloring duplicated ortholog IDs
 TRUE/FALSE - default=FALSE). NOTE: Leave blank or NULL to use default values.}
 }
 \value{
@@ -66,5 +66,5 @@ heatmapPlotting(plotDf, plotParameter)
 \code{\link{dataMainPlot}}, \code{\link{dataCustomizedPlot}}
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

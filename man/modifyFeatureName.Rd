@@ -13,7 +13,7 @@ modifyFeatureName(domainDf = NULL)
 Dataframe contains simlified domain names in yLabel column
 }
 \description{
-Simplify feature names (e.g. TM for transmembrane domain, 
+Simplify feature names (e.g. TM for transmembrane domain,
 LCR for low complexity regions, remove tool names from domain name) and add
 weight to feature names (if available)
 }
@@ -29,5 +29,5 @@ PhyloProfile:::modifyFeatureName(domainDf)
 }
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

@@ -44,5 +44,5 @@ plotParameters <- list(
 generateSinglePlot(plotDf, plotParameters, colnames(plotDf)[1])
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

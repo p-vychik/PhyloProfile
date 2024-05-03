@@ -16,5 +16,5 @@ Get all NCBI taxonomy rank names
 mainTaxonomyRank()
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

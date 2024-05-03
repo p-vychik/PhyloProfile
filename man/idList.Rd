@@ -4,6 +4,9 @@
 \name{idList}
 \alias{idList}
 \title{NCBI ID list for experimental data sets}
+\format{
+Dataframe
+}
 \usage{
 data(idList)
 }

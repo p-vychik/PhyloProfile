@@ -36,5 +36,5 @@ taxonomyTableCreator(idListFile, rankListFile)
 \code{\link{sortInputTaxa}}
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

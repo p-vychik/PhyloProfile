@@ -22,5 +22,5 @@ print("Uncomment the following line to run the function")
 # getOmaDomainFromURL("https://omabrowser.org/api/protein/7916808/domains/")
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

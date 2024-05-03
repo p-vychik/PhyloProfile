@@ -20,5 +20,5 @@ print("Uncomment the following line to run the function")
 # checkOmaID("HUMAN29398")
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

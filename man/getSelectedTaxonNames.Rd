@@ -42,5 +42,5 @@ higherName <- "Chordata"
 getSelectedTaxonNames(inputTaxonIDs, rank, higherRank, NULL, higherName,NULL)
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

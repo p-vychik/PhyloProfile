@@ -8,7 +8,7 @@
 #' @export
 #' @param filein input file
 #' @return The format of the input file format, or type of error
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{checkOmaID}}
 #' @examples
 #' filein <- system.file(
@@ -71,7 +71,7 @@ checkInputValidity <- function(filein) {
 #' @return A data frame of input data in long-format containing seed gene IDs (
 #' or orthologous group IDs), their orthologous proteins together with the
 #' corresponding taxonomy IDs and values of (up to) two additional variables.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @importFrom xml2 read_xml
 #' @importFrom xml2 xml_find_all
 #' @importFrom xml2 xml_attr
@@ -89,7 +89,7 @@ xmlParser <- function(inputFile = NULL){
     species <- xml_find_all(data, ".//species")
     geneSpec <- xml_find_all(species, ".//gene")
     refGeneID <- xml_attr(geneSpec, "id")
-    if (length(geneSpec) == 0) 
+    if (length(geneSpec) == 0)
         stop("Unsupported XML format! Please check the file header!")
     if (grepl("protId", geneSpec[1])) {
         orthoID <- as.data.frame(unlist(strsplit(
@@ -153,7 +153,7 @@ xmlParser <- function(inputFile = NULL){
 #' @return A data frame of input data in long-format containing seed gene IDs (
 #' or orthologous group IDs), their orthologous proteins together with the
 #' corresponding taxonomy IDs and values of (up to) two additional variables.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @importFrom Biostrings readAAStringSet
 #' @examples
 #' inputFile <- system.file(
@@ -193,7 +193,7 @@ fastaParser <- function(inputFile = NULL){
 #' @return A data frame of input data in long-format containing seed gene IDs (
 #' or orthologous group IDs), their orthologous proteins together with the
 #' corresponding taxonomy IDs and values of (up to) two additional variables.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
 #' inputFile <- system.file(
 #'     "extdata", "test.main.wide", package = "PhyloProfile", mustWork = TRUE
@@ -236,7 +236,7 @@ wideToLong <- function(inputFile = NULL){
 #' @return A data frame of input data in long-format containing seed gene IDs (
 #' or orthologous group IDs), their orthologous proteins together with the
 #' corresponding taxonomy IDs and values of (up to) two additional variables.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{xmlParser}}, \code{\link{fastaParser}},
 #' \code{\link{wideToLong}}
 #' @examples

@@ -1,5 +1,5 @@
 #' Create data for percentage present taxa distribution
-#' @usage createPercentageDistributionData(inputData = NULL, rankName = NULL, 
+#' @usage createPercentageDistributionData(inputData = NULL, rankName = NULL,
 #'     taxDB = NULL)
 #' @param inputData dataframe contains raw input data in long format
 #' (see ?mainLongRaw)
@@ -9,7 +9,7 @@
 #' species in the selected supertaxa, containing the seed protein IDs,
 #' percentage of their orthologs in each supertaxon and the corresponding
 #' supertaxon names.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @export
 #' @seealso \code{\link{mainLongRaw}}
 #' @examples
@@ -60,7 +60,7 @@ createPercentageDistributionData <- function(
 #' @return A dataframe for analysing the distribution of the additional
 #' variable(s) containing the protein (ortholog) IDs and the values of their
 #' variables (var1 and var2).
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @export
 #' @seealso \code{\link{mainLongRaw}}
 #' @examples
@@ -110,7 +110,7 @@ createVariableDistributionData <- function(
 #' @return A dataframe for analysing the distribution of the additional
 #' variable(s) for a subset of genes and/or taxa containing the protein
 #' (ortholog) IDs and the values of their variables (var1 and var2).
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @export
 #' @seealso \code{\link{parseInfoProfile}},
 #' \code{\link{createVariableDistributionData}},
@@ -192,7 +192,7 @@ createVariableDistributionDataSubset <- function(
 #' @param textSize text size of the distribution plot (in px). Default = 12.
 #' @return A distribution plot for the selected variable as a ggplot object
 #' @import ggplot2
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @export
 #' @seealso \code{\link{mainLongRaw}},
 #' \code{\link{createVariableDistributionData}},

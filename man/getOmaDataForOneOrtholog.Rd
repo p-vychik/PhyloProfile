@@ -21,5 +21,5 @@ print("Uncomment the following line to run the function")
 # getOmaDataForOneOrtholog("HUMAN29397")
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

@@ -107,5 +107,5 @@ demo full processed profile dataframe, \code{\link{fromInputToProfile}} for
 generating fully processed data from raw input.
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

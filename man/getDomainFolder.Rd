@@ -26,5 +26,5 @@ getDomainFolder("OG_1009", domainPath)
 }
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

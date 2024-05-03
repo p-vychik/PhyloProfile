@@ -3,9 +3,9 @@
 #' @param dataHeat a data frame contains processed profiles (see
 #' ?fullProcessedProfile, ?filterProfileData)
 #' @return the same dataframe as input, but the ortholog IDs are changed into
-#' <taxID:orthoID>. New column {orthoFreq} specifies if the ortholog IDs are
+#' <taxID:orthoID>. New column "orthoFreq" specifies if the ortholog IDs are
 #' single or duplicated
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @export
 #' @examples
 #' ?processOrthoID
@@ -27,7 +27,7 @@ processOrthoID <- function(dataHeat = NULL) {
     # parse orthoID
     if (idFormat == "bionf") {
         dataHeat <- within(
-            dataHeat, 
+            dataHeat,
             orthoMod <- data.frame(
                 do.call('rbind', strsplit(as.character(orthoID),'|',fixed=TRUE))
             )
@@ -47,8 +47,8 @@ processOrthoID <- function(dataHeat = NULL) {
     dataHeat <- merge(dataHeat, countOrthoDf, by = "orthoIDNew", all.x = TRUE)
     dataHeat$orthoFreq[dataHeat$orthoFreq > 1] <- "Multiple"
     dataHeat$orthoFreq[dataHeat$orthoFreq == 1] <- "Single"
-    
-    # assign "Multiple" for pair seed - supertaxon if 
+
+    # assign "Multiple" for pair seed - supertaxon if
     # any of their co-orthologs are multiple
     dt <- data.table(dataHeat[, c("geneID", "supertaxonID", "orthoFreq")])
     dt <- dt[!duplicated(dt),]
@@ -78,7 +78,7 @@ processOrthoID <- function(dataHeat = NULL) {
 #' paralogNew), number of species in each supertaxon (numberSpec) and the % of
 #' species that have orthologs in each supertaxon (presSpec).
 #' @import data.table
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{filterProfileData}}
 #' @examples
 #' data("finalProcessedProfile", package="PhyloProfile")
@@ -141,7 +141,7 @@ dataMainPlot <- function(dataHeat = NULL){
 #' @param selectedTaxa selected subset of taxa. Default = "all".
 #' @param selectedSeq selected subset of genes. Default = "all".
 #' @return A dataframe contains data for plotting the customized profile.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{filterProfileData}}
 #' @examples
 #' data("finalProcessedProfile", package="PhyloProfile")
@@ -219,11 +219,11 @@ dataCustomizedPlot <- function(
 #' co-ortholog dots from -1 to 3 - default = 0; (18) angle of x-axis from 0 to
 #' 90 - default = 60; (19) show/hide separate line for reference taxon 1/0 -
 #' default = 0; (20) enable/disable coloring gene categories TRUE/FALSE -
-#' default = FALSE; (21) enable/disable coloring duplicated ortholog IDs 
+#' default = FALSE; (21) enable/disable coloring duplicated ortholog IDs
 #' TRUE/FALSE - default=FALSE). NOTE: Leave blank or NULL to use default values.
 #' @return A profile heatmap plot as a ggplot object.
 #' @import ggplot2
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{dataMainPlot}}, \code{\link{dataCustomizedPlot}}
 #' @examples
 #' data("finalProcessedProfile", package="PhyloProfile")
@@ -269,8 +269,8 @@ heatmapPlotting <- function(data = NULL, parm = NULL){
             "colorByGroup" = FALSE,"catColors" = NULL,"colorByOrthoID" = FALSE)
     geneID <- supertaxon <- category <-var1<-var2 <- presSpec <- paralog <- NULL
     orthoFreq <- xmin <- xmax <- ymin <- ymax <- NULL
-    
-    ### create heatmap plot 
+
+    ### create heatmap plot
     # create geom_tile & scale_fill_gradient for var2 OR gene category
     if (parm$xAxis == "genes") p <- ggplot(data,aes(x = geneID, y = supertaxon))
     else p <- ggplot(data, aes(y = geneID, x = supertaxon))
@@ -286,8 +286,8 @@ heatmapPlotting <- function(data = NULL, parm = NULL){
                 na.value = "gray95", limits = c(0, 1)) +
                 geom_tile(aes(fill = var2))
     }
-    
-    # create geom_point for found ortho; coloring by var1 or 
+
+    # create geom_point for found ortho; coloring by var1 or
     # orthoIDs (only when working on lowest taxonomy rank)
     # and inparalogs (co-orthologs)
     if (length(unique(stats::na.omit(data$presSpec))) < 2) {
@@ -345,7 +345,7 @@ heatmapPlotting <- function(data = NULL, parm = NULL){
             (floor(min(presentVl) * 10) / 10 * 5) * (1 + parm$dotZoom),
             (floor(max(presentVl) * 10) / 10 * 5) * (1 + parm$dotZoom)))
     }
-    
+
     # create legend
     if (parm$colorByGroup == FALSE) {
         if (parm$colorByOrthoID == FALSE) {
@@ -359,7 +359,7 @@ heatmapPlotting <- function(data = NULL, parm = NULL){
         p <- p + guides(fill = guide_legend("Category"),
                         color = guide_colourbar(title = parm$var1ID))
     }
-    
+
     # guideline for separating ref species
     if (parm$guideline == 1) {
         if (parm$xAxis == "genes") {
@@ -371,7 +371,7 @@ heatmapPlotting <- function(data = NULL, parm = NULL){
                 geom_vline(xintercept = 0.5, colour = "dodgerblue4") +
                 geom_vline(xintercept = 1.5, colour = "dodgerblue4")
     }
-    
+
     # text size, legend position
     p <- p + theme_minimal(base_size = 9)
     vjustValue <- 1
@@ -392,8 +392,8 @@ heatmapPlotting <- function(data = NULL, parm = NULL){
 
 #' Highlight gene and/or taxon of interest on the phylogenetic profile plot
 #' @export
-#' @usage highlightProfilePlot(profilePlot = NULL, plotDf = NULL, 
-#'     taxonHighlight = "none", workingRank = "none", geneHighlight = NULL, 
+#' @usage highlightProfilePlot(profilePlot = NULL, plotDf = NULL,
+#'     taxonHighlight = "none", workingRank = "none", geneHighlight = NULL,
 #'     taxDB = NULL, xAxis = "taxa")
 #' @param profilePlot initial (highlighted) profile plot
 #' @param plotDf dataframe for plotting the heatmap phylogentic profile
@@ -404,7 +404,7 @@ heatmapPlotting <- function(data = NULL, parm = NULL){
 #' @param xAxis type of x-axis (either "genes" or "taxa")
 #' @return A profile heatmap plot with highlighted gene and/or taxon of interest
 #' as ggplot object.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{dataMainPlot}}, \code{\link{dataCustomizedPlot}},
 #' \code{\link{heatmapPlotting}}
 #' @examples
@@ -438,7 +438,7 @@ heatmapPlotting <- function(data = NULL, parm = NULL){
 #' workingRank <- "class"
 #' geneHighlight <- "100265at6656"
 #' highlightProfilePlot(
-#'     profilePlot, plotDf, taxonHighlight, workingRank, geneHighlight, 
+#'     profilePlot, plotDf, taxonHighlight, workingRank, geneHighlight,
 #'     NULL, plotParameter$xAxis
 #' )
 
@@ -500,7 +500,7 @@ highlightProfilePlot <- function(
 
 #' Add taxonomy rank division lines to the heatmap plot
 #' @export
-#' @usage addRankDivisionPlot(profilePlot = NULL, plotDf = NULL, 
+#' @usage addRankDivisionPlot(profilePlot = NULL, plotDf = NULL,
 #'     taxDB = NULL, workingRank = NULL, superRank = NULL, xAxis = "taxa",
 #'     groupLabelSize = 14, groupLabelDist = 2, groupLabelAngle = 90)
 #' @param profilePlot initial (highlighted) profile plot
@@ -514,7 +514,7 @@ highlightProfilePlot <- function(
 #' @param groupLabelAngle angle of rank labels
 #' @return A profile heatmap plot with highlighted gene and/or taxon of interest
 #' as ggplot object.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{heatmapPlotting}}, \code{\link{highlightProfilePlot}},
 #' \code{\link{getTaxonomyMatrix}}
 #' @examples
@@ -557,7 +557,7 @@ addRankDivisionPlot <- function(
 ) {
     if (is.null(plotDf)) stop("Input data cannot be NULL!")
     if (is.null(profilePlot)) stop("Profile plot cannot be NULL!")
-    
+
     if (is.null(workingRank) || is.null(superRank)) {
         # guideline for separating ref species
         if (xAxis == "genes") {
@@ -587,7 +587,7 @@ addRankDivisionPlot <- function(
         # remove IDs that do not have real NCBI superRank
         nameList <- getNameList(taxDB)
         subNameList <- nameList[
-            nameList$ncbiID %in% subTaxMatrix[[superRank]], 
+            nameList$ncbiID %in% subTaxMatrix[[superRank]],
             c("ncbiID", "rank", "fullName")
         ]
         colnames(subNameList) <- c(superRank, "rank", "name")
@@ -600,9 +600,9 @@ addRankDivisionPlot <- function(
             function(x) {
                 tmp <- subTaxMatrix[subTaxMatrix[[superRank]] == x,]
                 tmp$index <- which(
-                    levels(as.factor(plotDf$supertaxonID)) 
+                    levels(as.factor(plotDf$supertaxonID))
                     %in% tmp[[workingRank]]
-                ) 
+                )
                 return(tmp)
             }
         )
@@ -618,19 +618,19 @@ addRankDivisionPlot <- function(
                     geom_vline(xintercept = max + 0.5, colour = "dodgerblue4") +
                     annotate(
                         geom = "text", angle = groupLabelAngle, hjust = 0,
-                        size = groupLabelSize, 
+                        size = groupLabelSize,
                         x = min,
                         y = max_taxa + 0.5,
                         label = unique(as.character(i$name))
                     )
-                
+
             } else {
                 profilePlot <- profilePlot +
                     geom_hline(yintercept = min - 0.5, colour = "dodgerblue4") +
                     geom_hline(yintercept = max + 0.5, colour = "dodgerblue4") +
                     annotate(
                         geom = "text", angle = groupLabelAngle - 90, hjust = 0,
-                        size = groupLabelSize, 
+                        size = groupLabelSize,
                         y = min,
                         x = max_taxa + 1,
                         label = unique(as.character(i$name))
@@ -643,7 +643,7 @@ addRankDivisionPlot <- function(
                     clip = 'off', ylim = c(1, max_taxa + groupLabelDist)
                 )
             )
-        } else 
+        } else
             return(
                 profilePlot + coord_cartesian(
                     clip = 'off', xlim = c(1, max_taxa + groupLabelDist)

@@ -63,7 +63,7 @@ qualitativeColours <- function(n, light = FALSE) {
 #' color)
 #' @param x input list
 #' @export
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{qualitativeColours}}
 #' @examples
 #' items <- c("a", "b", "c")
@@ -83,4 +83,26 @@ getQualColForVector <- function(x = NULL) {
         countTypes <- countTypes + 1
     }
     return(unlist(colorsTypes))
+}
+
+
+#' Check if a color pallete has enough colors for a list of items
+#' @export
+#' @param items vector contains list of items
+#' @param pallete name of color palette
+#' @return TRUE if color pallete has enough colors, otherwise FALSE
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @examples
+#' myItems <- rep("a",3)
+#' checkColorPallete(myItems, "Set1")
+
+checkColorPallete <- function(items, pallete = "Paired") {
+    if (is.null(items)) stop("No item given!")
+    colorDf <- data.frame(RColorBrewer::brewer.pal.info)
+    if (!(pallete %in% row.names(colorDf))) 
+        stop("Given color pallete not found")
+    colorDf$name <- row.names(colorDf)
+    if (length(items) < colorDf$maxcolors[colorDf$name == pallete])
+        return(TRUE)
+    return(FALSE)
 }

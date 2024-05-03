@@ -3,28 +3,31 @@
 \docType{data}
 \name{finalProcessedProfile}
 \alias{finalProcessedProfile}
-\title{An example of a final processed & filtered phylogenetic profile.}
+\title{An example of a final processed & filtered phylogenetic profile}
+\format{
+Dataframe
+}
 \usage{
 data(finalProcessedProfile)
 }
 \value{
 A data frame with 88 rows and 11 variables:
 \itemize{
-    \item{geneID}{ Seed or ortholog group ID, e.g. "100136at6656"}
-    \item{supertaxon}{ Supertaxon name together with its ordered index, e.g.
-    "1001_Mammalia"}
-    \item{supertaxonID}{ Supertaxon ID (only different than ncbiID in case
-    working with higher taxonomy rank than input's). e.g. "40674"}
-    \item{var1}{ First additional variable}
-    \item{presSpec}{ The percentage of species presenting in each supertaxon}
-    \item{category}{ "cat"}
-    \item{orthoID}{ Ortholog ID, e.g. "100136at6656|RAT@10116@1|G3V7R8|1"}
-    \item{var2}{ Second additional variable}
-    \item{paralog}{ Number of co-orthologs in the current taxon}
-    \item{presentTaxa}{ Number of taxa that have ortho in each supertaxon}
-    \item{totalTaxa}{ Total number of taxa in each supertaxon}
+    \item geneID Seed or ortholog group ID, e.g. "100136at6656"
+    \item supertaxon Supertaxon name together with its ordered index, e.g.
+    "1001_Mammalia"
+    \item supertaxonID Supertaxon ID (only different than ncbiID in case
+    working with higher taxonomy rank than input's). e.g. "40674"
+    \item var1 First additional variable
+    \item presSpec The percentage of species presenting in each supertaxon
+    \item category "cat"
+    \item orthoID Ortholog ID, e.g. "100136at6656|RAT@10116@1|G3V7R8|1"
+    \item var2 Second additional variable
+    \item paralog Number of co-orthologs in the current taxon
+    \item presentTaxa Number of taxa that have ortho in each supertaxon
+    \item totalTaxa Total number of taxa in each supertaxon
 }
 }
 \description{
-An example of a final processed & filtered phylogenetic profile.
+An example of a final processed & filtered phylogenetic profile
 }

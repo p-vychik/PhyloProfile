@@ -282,7 +282,7 @@ dataVarDistTaxGroup <- function(
 #' @param variable name of variable that need to be plotted (one of the column
 #' names of input dataframe plotDf).
 #' @return A violin plot as a ggplot object.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @import ggplot2
 #' @examples
 #' data("mainLongRaw", package="PhyloProfile")
@@ -442,7 +442,7 @@ gridArrangeSharedLegend <- function(
 #' mean/median point; names of in-group and out-group; and plot title.
 #' NOTE: Leave blank or NULL to use default values.
 #' @return Distribution plots as a grob (gtable) object. Use grid.draw to plot.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{dataVarDistTaxGroup}}
 #' @examples
 #' data("mainLongRaw", package="PhyloProfile")
@@ -602,7 +602,7 @@ dataFeatureTaxGroup <- function(
 #' in-group and out-group; flip the plot coordinate ("Yes" or "No").
 #' NOTE: Leave blank or NULL to use default values.
 #' @return Distribution plots as a ggplot2 object.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{dataFeatureTaxGroup}}
 #' @examples
 #' data("mainLongRaw", package="PhyloProfile")

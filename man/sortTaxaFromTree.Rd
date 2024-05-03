@@ -27,5 +27,5 @@ sortTaxaFromTree(rootedTree)
 \code{\link{ppTaxonomyMatrix}} for a demo taxonomy matrix data
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

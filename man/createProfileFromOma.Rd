@@ -26,5 +26,5 @@ print("Uncomment the following lines to run the function")
 \code{\link{getDataForOneOma}}
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

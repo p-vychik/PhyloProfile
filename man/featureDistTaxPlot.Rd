@@ -48,5 +48,5 @@ featureDistTaxPlot(plotDf, plotParameters)
 \code{\link{dataFeatureTaxGroup}}
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

@@ -4,6 +4,9 @@
 \name{taxonomyMatrix}
 \alias{taxonomyMatrix}
 \title{Taxonomy matrix for experimental data sets}
+\format{
+Dataframe
+}
 \usage{
 data(taxonomyMatrix)
 }

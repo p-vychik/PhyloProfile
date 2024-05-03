@@ -4,16 +4,19 @@
 \name{taxonNamesReduced}
 \alias{taxonNamesReduced}
 \title{NCBI Taxonomy reduced data set}
+\format{
+Dataframe
+}
 \usage{
 data(taxonNamesReduced)
 }
 \value{
 A data frame with 4 columns:
 \itemize{
-    \item{ncbiID}{ e.g. "10090"}
-    \item{fullName}{ e.g. "Mus musculus"}
-    \item{rank}{ e.g. "species"}
-    \item{parentID}{ e.g. "862507"}
+    \item ncbiID e.g. "10090"
+    \item fullName e.g. "Mus musculus"
+    \item rank e.g. "species"
+    \item parentID e.g. "862507"
 }
 }
 \description{

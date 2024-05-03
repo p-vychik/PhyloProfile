@@ -30,5 +30,5 @@ profile and \code{\link{filteredProfile}} for a demo filtered
 profile dataframe
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

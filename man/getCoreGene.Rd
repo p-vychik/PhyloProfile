@@ -69,5 +69,5 @@ getCoreGene(
 profile dataframe
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }

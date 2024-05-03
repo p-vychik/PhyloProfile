@@ -14,7 +14,7 @@
 #' supertaxon. Default: c(0, 1)
 #' @param taxDB Path to the taxonomy DB files
 #' @return A dataframe contains estimated gene ages for the seed proteins.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{parseInfoProfile}} for creating a full processed
 #' profile dataframe; \code{\link{getNameList}} and
 #' \code{\link{getTaxonomyMatrix}} for getting taxonomy info,
@@ -255,7 +255,7 @@ estimateGeneAge <- function(
 #' @return A dataframe for plotting gene age plot containing the absolute number
 #' and percentage of genes for each calculated evolutionary ages and the
 #' corresponding position for writting those number on the plot.
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @export
 #' @seealso \code{\link{estimateGeneAge}}
 #' @examples
@@ -293,7 +293,7 @@ geneAgePlotDf <- function(geneAgeDf){
 #' ?geneAgePlotDf)
 #' @param textFactor increase factor of text size
 #' @return A gene age distribution plot as a ggplot2 object
-#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @import ggplot2
 #' @import RColorBrewer
 #' @export

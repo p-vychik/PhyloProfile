@@ -53,5 +53,5 @@ createVarDistPlot(
 \code{\link{createPercentageDistributionData}}
 }
 \author{
-Vinh Tran {tran@bio.uni-frankfurt.de}
+Vinh Tran tran@bio.uni-frankfurt.de
 }
