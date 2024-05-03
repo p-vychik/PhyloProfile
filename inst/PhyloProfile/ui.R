@@ -1452,22 +1452,6 @@ shinyUI(
             "Domain architecture",
             "doDomainPlot",
             size = "large",
-            fluidRow(
-                column(
-                    2, createPlotSize("archiHeight", "Plot height(px)", 400)
-                ),
-                column(
-                    2, createPlotSize("archiWidth", "Plot width(px)", 800)
-                ),
-                column(
-                    2,
-                    createTextSize("titleArchiSize", "Title size(px)", 14, 150)
-                ),
-                column(
-                    2,
-                    createTextSize("labelArchiSize","X-axis size(px)",12,150)
-                )
-            ),
             createArchitecturePlotUI("archiPlot")
         ),
         bsModal(
@@ -1475,22 +1459,6 @@ shinyUI(
             "Domain architecture",
             "doDomainPlotMain",
             size = "large",
-            fluidRow(
-                column(
-                    2, createPlotSize("archiHeightM", "Plot height(px)", 400)
-                ),
-                column(
-                    2, createPlotSize("archiWidthM", "Plot width(px)", 800)
-                ),
-                column(
-                    2,
-                    createTextSize("titleArchiSizeM", "Title size(px)", 14, 150)
-                ),
-                column(
-                    2,
-                    createTextSize("labelArchiSizeM","X-axis size(px)",12,150)
-                )
-            ),
             createArchitecturePlotUI("archiPlotMain")
         ),
 

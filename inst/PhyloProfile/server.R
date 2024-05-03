@@ -3178,10 +3178,6 @@ shinyServer(function(input, output, session) {
             createArchitecturePlot, "archiPlot",
             pointInfo = getDomainFile,
             domainInfo = getDomainInformation,
-            labelArchiSize = reactive(input$labelArchiSize),
-            titleArchiSize = reactive(input$titleArchiSize),
-            archiHeight = reactive(input$archiHeight),
-            archiWidth = reactive(input$archiWidth),
             seqIdFormat = reactive(input$seqIdFormat),
             currentNCBIinfo = reactive(currentNCBIinfo)
         )
@@ -3191,10 +3187,6 @@ shinyServer(function(input, output, session) {
             createArchitecturePlot, "archiPlotMain",
             pointInfo = getDomainFile,
             domainInfo = getDomainInformation,
-            labelArchiSize = reactive(input$labelArchiSizeM),
-            titleArchiSize = reactive(input$titleArchiSizeM),
-            archiHeight = reactive(input$archiHeightM),
-            archiWidth = reactive(input$archiWidthM),
             seqIdFormat = reactive(input$seqIdFormat),
             currentNCBIinfo = reactive(currentNCBIinfo)
         )

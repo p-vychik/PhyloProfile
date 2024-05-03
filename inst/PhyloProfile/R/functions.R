@@ -183,14 +183,14 @@ updateSliderCutoff <- function(session, id, title, newVar, varID){
                       step = 0.025)
 }
 
-createPlotSize <- function(id, title, value) {
+createPlotSize <- function(id, title, value, width = 100) {
     numericInput(id,
                  title,
                  min = 100,
                  max = 3200,
                  step = 50,
                  value = value,
-                 width = 100)
+                 width = width)
 }
 
 createTextSize <- function(id, title, value, width) {
