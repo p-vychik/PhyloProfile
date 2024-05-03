@@ -252,19 +252,141 @@ createArchitecturePlot <- function(
     # titleArchiSize, archiHeight, archiWidth, 
     seqIdFormat, currentNCBIinfo
 ){
+    # update excludeNames if no feature type on the y-axis =====================
+    observe({
+        req(input$showName)
+        if (!("axis" %in% input$showName) & !("legend" %in% input$showName)) {
+            updateSelectInput(
+                session, "excludeNames",
+                "Exclude feature names of",
+                choices = c(
+                    "flps","seg","coils","signalp","tmhmm",
+                    "smart","pfam"
+                )
+            )
+        } else if ("axis" %in% input$showName | "legend" %in% input$showName) {
+            updateSelectInput(
+                session, "excludeNames",
+                "Exclude feature names of",
+                choices = c(
+                    "flps","seg","coils","signalp","tmhmm",
+                    "smart","pfam"
+                ),
+                selected = c("tmhmm","signalp","flps","seg","coils")
+            )
+        }
+    })
+    
+    # * render e-value / bitscore filter =======================================
+    output$filterEvalue.ui <- renderUI({
+        req(domainInfo())
+        df <- domainInfo()
+        maxEvalue = 1
+        if ("evalue" %in% colnames(df))
+            maxEvalue <- format(max(df$evalue[!is.na(df$evalue)]), scientific = TRUE, digits = 2)
+        if ("E-value" %in% input$showScore) {
+            numericInput(
+                "minEvalue", "Filter E-value:",
+                min = 0,
+                max = maxEvalue,
+                value = format(0.00001, scientific = TRUE, digits = 2)
+            )
+        }
+    })
+    
+    output$filterBitscore.ui <- renderUI({
+        req(domainInfo())
+        df <- domainInfo()
+        if ("Bit-score" %in% input$showScore) {
+            numericInput(
+                "minBitscore", "Filter Bit-score:",
+                min = min(df$bitscore[!is.na(df$bitscore)]),
+                max = 9999,
+                value = min(df$bitscore[!is.na(df$bitscore)])
+            )
+        }
+    })
+    
     # * filter domain features -------------------------------------------------
     filterDomainDf <- reactive({
-        df <- domainInfo()
-        if (is.null(nrow(df))) stop("Domain info is NULL!")
-        # filter domain df by feature type
-        if (!("feature_type" %in% colnames(df))) {
-            df[c("feature_type","feature_id")] <- 
-                stringr::str_split_fixed(df$feature, '_', 2)
-            df$feature_id[df$feature_type == "smart"] <-
-                paste0(df$feature_id[df$feature_type == "smart"], "_smart")
-        }
+        outDf <- domainInfo()
+        if (is.null(nrow(outDf))) stop("Domain info is NULL!")
+        
+        # # filter domain df by feature type
+        # if (!("feature_type" %in% colnames(df))) {
+        #     df[c("feature_type","feature_id")] <- 
+        #         stringr::str_split_fixed(df$feature, '_', 2)
+        #     df$feature_id[df$feature_type == "smart"] <-
+        #         paste0(df$feature_id[df$feature_type == "smart"], "_smart")
+        # }
         # df <- df[!(df$feature_type %in% input$excludeFeature),]
-        return(df)
+        # return(outDf)
+        
+        # filter domain df by features
+        if (nrow(outDf) == 0) stop("Domain info is NULL!")
+        
+        outDf[c("feature_type","feature_id")] <- stringr::str_split_fixed(outDf$feature, '_', 2)
+        outDf <- outDf[!(outDf$feature_type %in% input$feature),]
+        # filter filters without e-value and/or bitscore
+        if ("evalue" %in% colnames(outDf)) {
+            if ("noEvalue" %in% input$feature)
+                outDf <- outDf[!is.na(outDf$evalue),]
+            if ("noBitscore" %in% input$feature)
+                outDf <- outDf[!is.na(outDf$bitscore),]
+        }
+        # modify feature IDs
+        outDf$feature_id_mod <- outDf$feature_id
+        outDf$feature_id_mod <- gsub("SINGLE", "LCR", outDf$feature_id_mod)
+        outDf$feature_id_mod[outDf$feature_type == "coils"] <- "Coils"
+        outDf$feature_id_mod[outDf$feature_type == "seg"] <- "LCR"
+        outDf$feature_id_mod[outDf$feature_type == "tmhmm"] <- "TM"
+        # exclude features IDs
+        if (!is.null(input$excludeNames)) {
+            outDf$feature_id_mod[outDf$feature_type %in% input$excludeNames] <- NA
+        }
+        
+        # enable/disable option for showing evalue/bitscore
+        if ("evalue" %in% colnames(outDf)) {
+            shinyjs::enable("showScore")
+        } else {
+            shinyjs::disable("showScore")
+        }
+        
+        # Filter data by e-value, bit-score and feature path
+        if ("evalue" %in% colnames(outDf)) {
+            # filter by e-value and/or bit-score
+            if ("E-value" %in% input$showScore) {
+                # req(input$minEvalue)
+                minEvalue <- format(input$minEvalue, scientific = FALSE)
+                naOutDf <- outDf[is.na(outDf$evalue),]
+                outDf <- outDf[!is.na(outDf$evalue) & outDf$evalue <= input$minEvalue,]
+                outDf <- rbind(outDf,naOutDf)
+            }   
+            if ("Bit-score" %in% input$showScore) {
+                # req(input$minBitscore)
+                naOutDf <- outDf[is.na(outDf$bitscore),]
+                outDf <- outDf[!is.na(outDf$bitscore) & outDf$bitscore >= input$minBitscore,]
+                outDf <- rbind(outDf,naOutDf)
+            }
+            # get only best instances
+            if ("evalue" %in% input$showInstance) {
+                naOutDf <- outDf[is.na(outDf$evalue),]
+                outDf <- outDf %>% group_by(feature, orthoID) %>% filter(evalue == min(evalue))
+                outDf <- rbind(outDf,naOutDf)
+            }
+            if ("bitscore" %in% input$showInstance) {
+                naOutDf <- outDf[is.na(outDf$bitscore),]
+                outDf <- outDf %>% group_by(feature, orthoID) %>% filter(bitscore == max(bitscore))
+                outDf <- rbind(outDf,naOutDf)
+            }
+            if ("path" %in% input$showInstance) {
+                outDf <- outDf %>% group_by(feature) %>% filter(path == "Y")
+            }
+            # Format e-values
+            outDf$evalue[!is.na(outDf$evalue)] <- 
+                format(outDf$evalue[!is.na(outDf$evalue)], scientific = TRUE, digits = 2)
+        }
+        return(outDf[!is.na(outDf$seedID),])
     })
     
     getSeqIdFormat <- reactive({
