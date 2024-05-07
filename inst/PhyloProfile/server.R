@@ -6,7 +6,8 @@ library(PhyloProfile)
 #' set size limit for input (9999mb)
 options(
     scipen = 999,
-    shiny.maxRequestSize = 9999 * 1024 ^ 2 # size limit for input 9999mb
+    shiny.maxRequestSize = 9999 * 1024 ^ 2, # size limit for input 9999mb
+    htmlwidgets.TOJSON_ARGS = list(na = 'string')
 )
 
 #' MAIN SERVER =================================================================
@@ -3178,7 +3179,6 @@ shinyServer(function(input, output, session) {
             createArchitecturePlot, "archiPlot",
             pointInfo = getDomainFile,
             domainInfo = getDomainInformation,
-            seqIdFormat = reactive(input$seqIdFormat),
             currentNCBIinfo = reactive(currentNCBIinfo)
         )
     })
@@ -3187,7 +3187,6 @@ shinyServer(function(input, output, session) {
             createArchitecturePlot, "archiPlotMain",
             pointInfo = getDomainFile,
             domainInfo = getDomainInformation,
-            seqIdFormat = reactive(input$seqIdFormat),
             currentNCBIinfo = reactive(currentNCBIinfo)
         )
     })

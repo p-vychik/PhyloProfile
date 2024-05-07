@@ -7,7 +7,6 @@
 #' @param titleArchiSize title size (from input$titleArchiSize)
 #' @param archiHeight plot height (from input$archiHeight)
 #' @param archiWidth plot width (from input$archiWidth)
-#' @param seqIdFormat sequence ID format (either bionf or unknown)
 #' @param currentNCBIinfo dataframe of the pre-processed NCBI taxonomy data
 #' @author Vinh Tran {tran@bio.uni-frankfurt.de}
 
@@ -247,10 +246,7 @@ createArchitecturePlotUI <- function(id) {
 }
 
 createArchitecturePlot <- function(
-    input, output, session, pointInfo, domainInfo, 
-    # labelArchiSize, 
-    # titleArchiSize, archiHeight, archiWidth, 
-    seqIdFormat, currentNCBIinfo
+    input, output, session, pointInfo, domainInfo, currentNCBIinfo
 ){
     # update excludeNames if no feature type on the y-axis =====================
     observe({
@@ -286,7 +282,7 @@ createArchitecturePlot <- function(
             maxEvalue <- format(max(df$evalue[!is.na(df$evalue)]), scientific = TRUE, digits = 2)
         if ("E-value" %in% input$showScore) {
             numericInput(
-                "minEvalue", "Filter E-value:",
+                session$ns("minEvalue"), "Filter E-value:",
                 min = 0,
                 max = maxEvalue,
                 value = format(0.00001, scientific = TRUE, digits = 2)
@@ -299,7 +295,7 @@ createArchitecturePlot <- function(
         df <- domainInfo()
         if ("Bit-score" %in% input$showScore) {
             numericInput(
-                "minBitscore", "Filter Bit-score:",
+                session$ns("minBitscore"), "Filter Bit-score:",
                 min = min(df$bitscore[!is.na(df$bitscore)]),
                 max = 9999,
                 value = min(df$bitscore[!is.na(df$bitscore)])
@@ -312,21 +308,21 @@ createArchitecturePlot <- function(
         outDf <- domainInfo()
         if (is.null(nrow(outDf))) stop("Domain info is NULL!")
         
-        # # filter domain df by feature type
-        # if (!("feature_type" %in% colnames(df))) {
-        #     df[c("feature_type","feature_id")] <- 
-        #         stringr::str_split_fixed(df$feature, '_', 2)
-        #     df$feature_id[df$feature_type == "smart"] <-
-        #         paste0(df$feature_id[df$feature_type == "smart"], "_smart")
-        # }
-        # df <- df[!(df$feature_type %in% input$excludeFeature),]
-        # return(outDf)
+        # get subset domainDf containing only domains for seed and ortholog
+        group <- as.character(pointInfo()[1])
+        ortho <- as.character(pointInfo()[2])
+        # get sub dataframe based on selected groupID and orthoID
+        group <- gsub("\\|", ":", group)
+        ortho <- gsub("\\|", ":", ortho)
+        grepID <- paste(group, "#", ortho, sep = "")
+        outDf <- outDf[outDf$seedID == grepID, ]
         
         # filter domain df by features
         if (nrow(outDf) == 0) stop("Domain info is NULL!")
         
         outDf[c("feature_type","feature_id")] <- stringr::str_split_fixed(outDf$feature, '_', 2)
         outDf <- outDf[!(outDf$feature_type %in% input$feature),]
+        
         # filter filters without e-value and/or bitscore
         if ("evalue" %in% colnames(outDf)) {
             if ("noEvalue" %in% input$feature)
@@ -334,6 +330,7 @@ createArchitecturePlot <- function(
             if ("noBitscore" %in% input$feature)
                 outDf <- outDf[!is.na(outDf$bitscore),]
         }
+        
         # modify feature IDs
         outDf$feature_id_mod <- outDf$feature_id
         outDf$feature_id_mod <- gsub("SINGLE", "LCR", outDf$feature_id_mod)
@@ -356,14 +353,12 @@ createArchitecturePlot <- function(
         if ("evalue" %in% colnames(outDf)) {
             # filter by e-value and/or bit-score
             if ("E-value" %in% input$showScore) {
-                # req(input$minEvalue)
                 minEvalue <- format(input$minEvalue, scientific = FALSE)
                 naOutDf <- outDf[is.na(outDf$evalue),]
-                outDf <- outDf[!is.na(outDf$evalue) & outDf$evalue <= input$minEvalue,]
+                outDf <- outDf[!is.na(outDf$evalue) & outDf$evalue <= minEvalue,]
                 outDf <- rbind(outDf,naOutDf)
             }   
             if ("Bit-score" %in% input$showScore) {
-                # req(input$minBitscore)
                 naOutDf <- outDf[is.na(outDf$bitscore),]
                 outDf <- outDf[!is.na(outDf$bitscore) & outDf$bitscore >= input$minBitscore,]
                 outDf <- rbind(outDf,naOutDf)
@@ -371,16 +366,16 @@ createArchitecturePlot <- function(
             # get only best instances
             if ("evalue" %in% input$showInstance) {
                 naOutDf <- outDf[is.na(outDf$evalue),]
-                outDf <- outDf %>% group_by(feature, orthoID) %>% filter(evalue == min(evalue))
+                outDf <- outDf %>% dplyr::group_by(feature, orthoID) %>% dplyr::filter(evalue == min(evalue))
                 outDf <- rbind(outDf,naOutDf)
             }
             if ("bitscore" %in% input$showInstance) {
                 naOutDf <- outDf[is.na(outDf$bitscore),]
-                outDf <- outDf %>% group_by(feature, orthoID) %>% filter(bitscore == max(bitscore))
+                outDf <- outDf %>% dplyr::group_by(feature, orthoID) %>% dplyr::filter(bitscore == max(bitscore))
                 outDf <- rbind(outDf,naOutDf)
             }
             if ("path" %in% input$showInstance) {
-                outDf <- outDf %>% group_by(feature) %>% filter(path == "Y")
+                outDf <- outDf %>% dplyr::group_by(feature) %>% dplyr::filter(path == "Y")
             }
             # Format e-values
             outDf$evalue[!is.na(outDf$evalue)] <- 
@@ -389,21 +384,19 @@ createArchitecturePlot <- function(
         return(outDf[!is.na(outDf$seedID),])
     })
     
-    getSeqIdFormat <- reactive({
-        if (seqIdFormat() == 1) return("bionf")
-        return("unknown")
-    })
-    
     # * render plot ------------------------------------------------------------
     output$archiPlot <- renderPlot({
         if (is.null(nrow(filterDomainDf()))) stop("Domain info is NULL!")
         # remove user specified features (from input$featureList)
         df <- filterDomainDf()
         df <- df[!(df$feature_id %in% input$featureList),]
-        # generate plot
         g <- createArchiPlot(
-            pointInfo(), df, input$labelArchiSize, input$titleArchiSize,
-            "all", getSeqIdFormat(), currentNCBIinfo()
+            pointInfo(), df, 
+            input$labelArchiSize, input$titleArchiSize, input$showScore, 
+            input$showName, input$firstDist, input$nameType, 
+            input$nameSize, input$nameColor, input$labelPos, input$colorType,
+            input$ignoreInstanceNo, currentNCBIinfo(), input$featureTypeSort,
+            input$featureTypeOrder, input$colorPallete, input$resolveOverlap
         )
         if (any(g == "No domain info available!")) {
             msgPlot()
@@ -443,10 +436,13 @@ createArchitecturePlot <- function(
             # remove user specified features (from input$featureList)
             df <- filterDomainDf()
             df <- df[!(df$feature_id %in% input$featureList),]
-            # generate plot
             g <- createArchiPlot(
-                pointInfo(), filterDomainDf(), input$labelArchiSize, input$titleArchiSize,
-                input$showFeature, getSeqIdFormat(), currentNCBIinfo()
+                pointInfo(), df, 
+                input$labelArchiSize, input$titleArchiSize, input$showScore, 
+                input$showName, input$firstDist, input$nameType, 
+                input$nameSize, input$nameColor, input$labelPos, input$colorType,
+                input$ignoreInstanceNo, currentNCBIinfo(), input$featureTypeSort,
+                input$featureTypeOrder, input$colorPallete, input$resolveOverlap
             )
             grid.draw(g)
             # save plot to file
@@ -478,9 +474,22 @@ createArchitecturePlot <- function(
     
     output$linkTable <- renderTable({
         if (is.null(nrow(filterDomainDf()))) return("No domain info available!")
-        features <- getDomainLink(pointInfo(), filterDomainDf(), getSeqIdFormat())
-        features
+        # features <- getDomainLink(pointInfo(), filterDomainDf(), getSeqIdFormat())
+        # features
+        features <- getDomainLink(pointInfo(), filterDomainDf())
+        # if(!(is.null(input$seed2))) {
+        #     seed2 <- input$seed2
+        #     if(input$seed2 == "none") seed2 <- input$seed1
+        #     features2 <- getDomainLink(c(seed2, seq2), filterDomainDf())
+        #     features <- rbind(features, features2)
+        # }
+        features <- features[!duplicated(features),]
     }, sanitize.text.function = function(x) x)
+    
+    output$domainTable <- DT::renderDataTable({
+        req(filterDomainDf())
+        createDomainInfoTable(filterDomainDf())
+    }, rownames= FALSE)
 }
 
 #' plot error message
@@ -572,21 +581,17 @@ getDomainInfo <- function(info, domainDf, type) {
 #' get pfam and smart domain links
 #' @return dataframe with domain IDs and their database links
 #' @author Vinh Tran {tran@bio.uni-frankfurt.de}
-getDomainLink <- function(info, domainDf, seqIdFormat) {
+getDomainLink <- function(info, domainDf) {
     featurePfam <- getDomainInfo(info, domainDf, "pfam")
     pfamDf <- createLinkTable(featurePfam, "pfam")
+    if (nrow(pfamDf) > 0) pfamDf$db <- "PFAM"
     featureSmart <- getDomainInfo(info, domainDf, "smart")
     smartDf <- createLinkTable(featureSmart, "smart")
-    
+    if (length(smartDf) > 0) smartDf$db <- "SMART"
     featDf <- rbind(pfamDf, smartDf)
-    featDf <- subset(featDf, select=c(orthoID,feature_id,link,evalue,bitscore))
-    featDf <-featDf[order(featDf$orthoID),]
-    if (seqIdFormat == "bionf") {
-        featDf[c("groupID", "spec", "geneID", "misc")] <- 
-            stringr::str_split_fixed(featDf$orthoID, ":", 4)
-        featDf <- subset(featDf,select=c(geneID,feature_id,link,evalue,bitscore))
-    }
-    colnames(featDf) <- c("Gene ID", "Domain ID", "URL", "E-value", "Bit-score")
+    if (nrow(featDf) < 1) stop("No PFAM/SMART domain found!")
+    featDf <- subset(featDf, select = c(feature_id, db, link))
+    colnames(featDf) <- c("Feature ID", "Source", "URL")
     return(featDf)
 }
 
@@ -619,5 +624,40 @@ createLinkTable <- function(featureDf, featureType) {
     }
     return(featureDf)
 }
- 
+
+#' plot error message
+#' @param domainDf dataframe contains feature information
+#' @return dataframe as subset of domainDf
+#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+
+createDomainInfoTable <- function(domainDf) {
+    if (is.null(domainDf)) stop("No information!")
+    
+    if (ncol(domainDf) <= 11) {
+        outDf <- domainDf[
+            ,c("orthoID", "length", "feature", "feature_type", "start", "end")
+        ]
+        colnames(outDf) <- c(
+            "orthoID", "Length", "Feature", "Start", "End"
+        )
+    } else if (ncol(domainDf) == 17 & "evalue" %in% colnames(domainDf)) {
+        outDf <- domainDf[
+            ,c(
+                "orthoID", "length", "feature", "start", "end", "evalue", 
+                "bitscore", "pStart", "pEnd", "pLen"
+            )
+        ]
+        colnames(outDf) <- c(
+            "orthoID", "Length", "Feature", "Start", "End", "E-value",
+            "Bit-score", "pHMM start", "pHMM end", "pHMM length"
+        )
+    } else {
+        return(paste("Wrong number of columns:", ncol(domainDf)))
+    }
+    outDf$Feature <- sub("_", " ", outDf$Feature)
+    outDf$`Gene ID` <- gsub("^.*:", "", outDf$orthoID)
+    outDf <- subset(outDf, select = -c(orthoID))
+    outDf <- outDf %>% dplyr::select(`Gene ID`, everything())
+    return(outDf)
+}
 
