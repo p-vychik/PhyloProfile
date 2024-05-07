@@ -48,7 +48,8 @@ createArchitecturePlotUI <- function(id) {
                     ),
                     multiple = TRUE
                 ),
-                bsButton(ns("featureOpt"), "Other feature options"),
+                # bsButton(ns("featureOpt"), "Other feature options"),
+                checkboxInput(ns("featureOpt"), "Other feature options", value = FALSE),
                 checkboxInput(ns("plotConfig"), "Plot configuration", value = FALSE)
             ),
             column(
@@ -72,6 +73,75 @@ createArchitecturePlotUI <- function(id) {
                         "Best E-value" = "evalue", 
                         "Best Bit-score" = "bitscore",
                         "Paths" = "path"
+                    )
+                )
+            )
+        ),
+        br(),
+        fluidRow(
+            conditionalPanel(
+                condition = {sprintf("input['%s'] == 1", ns("featureOpt"))},
+                column(
+                    3,
+                    radioButtons(
+                        ns("nameType"),"Type of feature names", inline = TRUE,
+                        choices = c("Labels","Texts"), selected = "Labels"
+                    )
+                    
+                ),
+                column(
+                    4,
+                    conditionalPanel(
+                        condition = {sprintf("input['%s'] == 'Labels'", ns("nameType"))},
+                        radioButtons(
+                            ns("labelPos"),"Label position", inline = TRUE,
+                            choices = c("Above","Inside","Below"), selected = "Above"
+                        )
+                    ),
+                    conditionalPanel(
+                        condition = {sprintf("input['%s'] == 'Texts'", ns("nameType"))},
+                        colourpicker::colourInput(
+                            ns("nameColor"),
+                            "Feature name color",
+                            value = "#000000"
+                        )
+                    )
+                ),
+                column(
+                    5,
+                    selectInput(
+                        ns("excludeNames"),
+                        "Exclude feature names of",
+                        choices = c(
+                            "flps","seg","coils","signalp","tmhmm",
+                            "smart","pfam"
+                        ),
+                        selected = c("tmhmm","signalp","seg","flps","coils"),
+                        multiple = TRUE
+                    )
+                ),
+                column(
+                    3,
+                    radioButtons(
+                        ns("featureTypeSort"),"Sort feature types by shared features", inline = TRUE,
+                        choices = c("Yes","No"), selected = "Yes"
+                    )
+                ),
+                column(
+                    5,
+                    conditionalPanel(
+                        condition={sprintf("input['%s'] == 'No'",ns("featureTypeSort"))},
+                        selectInput(
+                            ns("featureTypeOrder"),
+                            "Feature type order",
+                            choices = c(
+                                "pfam", "smart", "tmhmm", "coils", "signalp", "seg", "flps"
+                            ),
+                            selected = c(
+                                "pfam", "smart", "tmhmm", "coils", "signalp", "seg", "flps"
+                            ),
+                            multiple = TRUE
+                        )
                     )
                 )
             )
@@ -138,62 +208,63 @@ createArchitecturePlotUI <- function(id) {
         conditionalPanel(
             condition = {sprintf("input['%s'] == 1", ns("showDomainTable"))},
             DT::dataTableOutput(ns("domainTable"))
-        ),
-        
-        bsModal(
-            ns("featureConfigBs"),
-            "Feature name configuration",
-            ns("featureOpt"),
-            size = "small",
-            br(),
-            radioButtons(
-                ns("nameType"),"Type of feature names", inline = TRUE,
-                choices = c("Labels","Texts"), selected = "Labels"
-            ),
-            conditionalPanel(
-                condition = {sprintf("input['%s'] == 'Labels'", ns("nameType"))},
-                radioButtons(
-                    ns("labelPos"),"Label position", inline = TRUE,
-                    choices = c("Above","Inside","Below"), selected = "Above"
-                )
-            ),
-            conditionalPanel(
-                condition = {sprintf("input['%s'] == 'Texts'", ns("nameType"))},
-                colourpicker::colourInput(
-                    ns("nameColor"),
-                    "Feature name color",
-                    value = "#000000"
-                )
-            ),
-            selectInput(
-                ns("excludeNames"),
-                "Exclude feature names of",
-                choices = c(
-                    "flps","seg","coils","signalp","tmhmm",
-                    "smart","pfam"
-                ),
-                selected = c("tmhmm","signalp","seg","flps","coils"),
-                multiple = TRUE
-            ),
-            radioButtons(
-                ns("featureTypeSort"),"Sort feature types by shared features", inline = TRUE,
-                choices = c("Yes","No"), selected = "Yes"
-            ),
-            conditionalPanel(
-                condition={sprintf("input['%s'] == 'No'",ns("featureTypeSort"))},
-                selectInput(
-                    ns("featureTypeOrder"),
-                    "Feature type order",
-                    choices = c(
-                        "pfam", "smart", "tmhmm", "coils", "signalp", "seg", "flps"
-                    ),
-                    selected = c(
-                        "pfam", "smart", "tmhmm", "coils", "signalp", "seg", "flps"
-                    ),
-                    multiple = TRUE
-                )
-            )
         )
+        #,
+        
+        # bsModal(
+        #     ns("featureConfigBs"),
+        #     "Feature name configuration",
+        #     ns("featureOpt"),
+        #     size = "small",
+        #     br(),
+        #     radioButtons(
+        #         ns("nameType"),"Type of feature names", inline = TRUE,
+        #         choices = c("Labels","Texts"), selected = "Labels"
+        #     ),
+        #     conditionalPanel(
+        #         condition = {sprintf("input['%s'] == 'Labels'", ns("nameType"))},
+        #         radioButtons(
+        #             ns("labelPos"),"Label position", inline = TRUE,
+        #             choices = c("Above","Inside","Below"), selected = "Above"
+        #         )
+        #     ),
+        #     conditionalPanel(
+        #         condition = {sprintf("input['%s'] == 'Texts'", ns("nameType"))},
+        #         colourpicker::colourInput(
+        #             ns("nameColor"),
+        #             "Feature name color",
+        #             value = "#000000"
+        #         )
+        #     ),
+        #     selectInput(
+        #         ns("excludeNames"),
+        #         "Exclude feature names of",
+        #         choices = c(
+        #             "flps","seg","coils","signalp","tmhmm",
+        #             "smart","pfam"
+        #         ),
+        #         selected = c("tmhmm","signalp","seg","flps","coils"),
+        #         multiple = TRUE
+        #     ),
+        #     radioButtons(
+        #         ns("featureTypeSort"),"Sort feature types by shared features", inline = TRUE,
+        #         choices = c("Yes","No"), selected = "Yes"
+        #     ),
+        #     conditionalPanel(
+        #         condition={sprintf("input['%s'] == 'No'",ns("featureTypeSort"))},
+        #         selectInput(
+        #             ns("featureTypeOrder"),
+        #             "Feature type order",
+        #             choices = c(
+        #                 "pfam", "smart", "tmhmm", "coils", "signalp", "seg", "flps"
+        #             ),
+        #             selected = c(
+        #                 "pfam", "smart", "tmhmm", "coils", "signalp", "seg", "flps"
+        #             ),
+        #             multiple = TRUE
+        #         )
+        #     )
+        # )
         
         # column(
         #     4,
