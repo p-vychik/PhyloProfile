@@ -7,8 +7,8 @@ source("R/functions.R")
 # List of dependent packages --------------------------------------------------
 packages <- c(
     "ape", "bioDist", "Biostrings", "colourpicker", "data.table", "energy",
-    "GenomeInfoDbData", "ggplot2", "GO.db", "grid", "gridExtra", "RColorBrewer",
-    "shiny", "shinyBS", "shinyFiles", "shinyjs", "OmaDB", "zoo"
+    "extrafont", "GenomeInfoDbData", "ggplot2", "GO.db", "grid", "gridExtra", 
+    "RColorBrewer", "shiny", "shinyBS", "shinyFiles", "shinyjs", "OmaDB", "zoo"
 )
 
 # Load packages

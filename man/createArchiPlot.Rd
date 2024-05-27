@@ -4,31 +4,62 @@
 \alias{createArchiPlot}
 \title{Create protein's domain architecure plot}
 \usage{
-createArchiPlot(info = NULL, domainDf = NULL, labelArchiSize = 12,
-    titleArchiSize = 12, showFeature = "all", seqIdFormat = "unknown",
-    currentNCBIinfo = NULL)
+createArchiPlot(info, domainDf, labelArchiSize, titleArchiSize,
+    showScore, showName, firstDist, nameType, nameSize, segmentSize,
+    nameColor, labelPos, colorType, ignoreInstanceNo, currentNCBIinfo,
+    featureTypeSort, featureTypeOrder, colorPallete, resolveOverlap, font)
 }
 \arguments{
-\item{info}{a list contains seed and ortholog's IDs}
+\item{info}{A list contains seed and ortholog's IDs}
 
-\item{domainDf}{dataframe contains domain info for the seed and ortholog.
+\item{domainDf}{Dataframe contains domain info for the seed and ortholog.
 This including the seed ID, orthologs IDs, sequence lengths, feature names,
 start and end positions, feature weights (optional) and the status to
 determine if that feature is important for comparison the architecture
 between 2 proteins* (e.g. seed protein vs ortholog) (optional).}
 
-\item{labelArchiSize}{lable size (in px). Default = 12.}
+\item{labelArchiSize}{Lable size (in px). Default = 12.}
 
-\item{titleArchiSize}{title size (in px). Default = 12.}
+\item{titleArchiSize}{Title size (in px). Default = 12.}
 
-\item{showFeature}{choose to show all, common or unique features.
-Default = "all"}
+\item{showScore}{Show/hide E-values and Bit-scores. Default = NULL (hide)}
 
-\item{seqIdFormat}{sequence ID format (either bionf or unknown).
-Default = "unknown"}
+\item{showName}{list of positions for domain names, choose from "plot",
+"legend" or "axis". Default: "plot"}
 
-\item{currentNCBIinfo}{dataframe of the pre-processed NCBI taxonomy
+\item{firstDist}{Distance of the first domain to plot title. Default = 0.5}
+
+\item{nameType}{Type of domain names, either "Texts" or "Labels" (default)}
+
+\item{nameSize}{Size of domain names. Default = 3}
+
+\item{segmentSize}{Height of domain segment. Default = 5}
+
+\item{nameColor}{Color of domain names (for Texts only). Default = "black"}
+
+\item{labelPos}{Position of domain names (for Labels only). Choose from}
+
+\item{colorType}{Choose to color "all", "shared", "unique" features or color
+by "Feature type". Default = "all"}
+
+\item{ignoreInstanceNo}{Ignore number of feature instances while identifying
+shared or unique features. Default = FALSE}
+
+\item{currentNCBIinfo}{Dataframe of the pre-processed NCBI taxonomy
 data. Default = NULL (will be automatically retrieved from PhyloProfile app)}
+
+\item{featureTypeSort}{Choose to arrange plot by shared features. Default =
+"Yes"}
+
+\item{featureTypeOrder}{Vector of ordered feature types}
+
+\item{colorPallete}{Choose between "Paired", "Set1", "Set2", "Set3",
+"Accent", "Dark2" for the color pallete}
+
+\item{resolveOverlap}{Choose to merge non-overlapped features of a feature
+type into one line. Default = "Yes"}
+
+\item{font}{font of text. Default = Arial"}
 }
 \value{
 A domain plot as arrangeGrob object. Use grid::grid.draw(plot) to
@@ -49,7 +80,7 @@ domainFile <- system.file(
     package = "PhyloProfile", mustWork = TRUE
 )
 domainDf <- parseDomainInput(seedID, domainFile, "file")
-plot <- createArchiPlot(info, domainDf, 9, 9, seqIdFormat = "bionf")
+plot <- createArchiPlot(info, domainDf, 9, 9)
 grid::grid.draw(plot)
 }
 \seealso{

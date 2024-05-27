@@ -11,6 +11,7 @@
 #' @author Vinh Tran {tran@bio.uni-frankfurt.de}
 
 source("R/functions.R")
+if (is.null(fonts())) extrafont::font_import()
 
 createArchitecturePlotUI <- function(id) {
     ns <- NS(id)
@@ -116,24 +117,24 @@ createArchitecturePlotUI <- function(id) {
                             "flps","seg","coils","signalp","tmhmm",
                             "smart","pfam"
                         ),
-                        selected = c("tmhmm","signalp","seg","flps","coils"),
+                        selected = c("tmhmm","signalp","seg","coils"),
                         multiple = TRUE
                     )
                 ),
                 column(
                     3,
                     radioButtons(
-                        ns("featureTypeSort"),"Sort feature types by shared features", inline = TRUE,
+                        ns("featureTypeSort"),"Sort feature classes by shared features", inline = TRUE,
                         choices = c("Yes","No"), selected = "Yes"
                     )
                 ),
                 column(
                     5,
                     conditionalPanel(
-                        condition={sprintf("input['%s'] == 'No'",ns("featureTypeSort"))},
+                        condition={sprintf("input['%s'] == 'No'", ns("featureTypeSort"))},
                         selectInput(
                             ns("featureTypeOrder"),
-                            "Feature type order",
+                            "Feature class order",
                             choices = c(
                                 "pfam", "smart", "tmhmm", "coils", "signalp", "seg", "flps"
                             ),
@@ -166,12 +167,24 @@ createArchitecturePlotUI <- function(id) {
                 ),
                 column(
                     6,
-                    createTextSize(
-                        ns("nameSize"), "Feature segment size (mm)", 5, 200
+                    column(
+                        6,
+                        createTextSize(
+                            ns("segmentSize"), "Feature segment size (mm)", 5, 200
+                        )
                     ),
-                    sliderInput(
-                        ns("firstDist"), "Distance between plot title and the 1st feature", 
-                        min = 0, max = 5, value = 0.5, step = 0.1, width = 400
+                    column(
+                        6,
+                        createTextSize(
+                            ns("nameSize"), "Feature ID size (mm)", 3, 200
+                        )
+                    ),
+                    column(
+                        12,
+                        sliderInput(
+                            ns("firstDist"), "Distance between plot title and the 1st feature", 
+                            min = 0, max = 5, value = 0.5, step = 0.1, width = 400
+                        )
                     )
                 ),
                 column(
@@ -191,6 +204,12 @@ createArchitecturePlotUI <- function(id) {
                         "Color pallete",
                         choices = c("Paired", "Set1", "Set2", "Set3", "Accent", "Dark2"),
                         selected = "Paired"
+                    ),
+                    selectInput(
+                        ns("font"),
+                        "Font",
+                        choices = fonts(),
+                        selected = "Arial"
                     )
                 )
             )
@@ -209,110 +228,6 @@ createArchitecturePlotUI <- function(id) {
             condition = {sprintf("input['%s'] == 1", ns("showDomainTable"))},
             DT::dataTableOutput(ns("domainTable"))
         )
-        #,
-        
-        # bsModal(
-        #     ns("featureConfigBs"),
-        #     "Feature name configuration",
-        #     ns("featureOpt"),
-        #     size = "small",
-        #     br(),
-        #     radioButtons(
-        #         ns("nameType"),"Type of feature names", inline = TRUE,
-        #         choices = c("Labels","Texts"), selected = "Labels"
-        #     ),
-        #     conditionalPanel(
-        #         condition = {sprintf("input['%s'] == 'Labels'", ns("nameType"))},
-        #         radioButtons(
-        #             ns("labelPos"),"Label position", inline = TRUE,
-        #             choices = c("Above","Inside","Below"), selected = "Above"
-        #         )
-        #     ),
-        #     conditionalPanel(
-        #         condition = {sprintf("input['%s'] == 'Texts'", ns("nameType"))},
-        #         colourpicker::colourInput(
-        #             ns("nameColor"),
-        #             "Feature name color",
-        #             value = "#000000"
-        #         )
-        #     ),
-        #     selectInput(
-        #         ns("excludeNames"),
-        #         "Exclude feature names of",
-        #         choices = c(
-        #             "flps","seg","coils","signalp","tmhmm",
-        #             "smart","pfam"
-        #         ),
-        #         selected = c("tmhmm","signalp","seg","flps","coils"),
-        #         multiple = TRUE
-        #     ),
-        #     radioButtons(
-        #         ns("featureTypeSort"),"Sort feature types by shared features", inline = TRUE,
-        #         choices = c("Yes","No"), selected = "Yes"
-        #     ),
-        #     conditionalPanel(
-        #         condition={sprintf("input['%s'] == 'No'",ns("featureTypeSort"))},
-        #         selectInput(
-        #             ns("featureTypeOrder"),
-        #             "Feature type order",
-        #             choices = c(
-        #                 "pfam", "smart", "tmhmm", "coils", "signalp", "seg", "flps"
-        #             ),
-        #             selected = c(
-        #                 "pfam", "smart", "tmhmm", "coils", "signalp", "seg", "flps"
-        #             ),
-        #             multiple = TRUE
-        #         )
-        #     )
-        # )
-        
-        # column(
-        #     4,
-        #     style = "padding:0px;",
-        #     selectInput(
-        #         ns("showFeature"),
-        #         "Show",
-        #         choices = c(
-        #             "All features" = "all",
-        #             "Shared features" = "common",
-        #             "Unique features" = "unique"
-        #         ),
-        #         selected = "all"
-        #     )
-        # ),
-        # column(
-        #     4,
-        #     selectizeInput(
-        #         ns("excludeFeature"),
-        #         "Exclude feature type(s)",
-        #         choices = c(
-        #             "flps","seg","coils","signalp","tmhmm","smart","pfam"
-        #         ),
-        #         multiple = TRUE, options=list(placeholder = 'None')
-        #     )
-        # ),
-        # column(4, uiOutput(ns("featureList.ui"))),
-        # column(12, uiOutput(ns("archiPlot.ui"))),
-        # downloadButton(ns("archiDownload"), "Download plot", class = "butDL"),
-        # tags$head(
-        #     tags$style(HTML(
-        #         ".butDL{background-color:#476ba3;} .butDL{color: white;}"))
-        # ),
-        # br(),
-        # br(),
-        # h4(strong("LINKS TO ONLINE DATABASE")),
-        # textOutput(ns("selectedDomain")),
-        # tableOutput(ns("domainTable")),
-        # HTML(
-        #     paste0(
-        #         "<p><em><strong>Disclaimer:</strong> ",
-        #         "External links are automatically generated and may point to ",
-        #         "a wrong target (see <a ",
-        #         "href=\"https://github.com/BIONF/PhyloProfile/wiki/FAQ",
-        #         "#wrong-info-from-public-databases\" ",
-        #         "target=\"_blank\">FAQ</a>)</em></p>"
-        #     )
-        # )
     )
 }
 
@@ -465,14 +380,14 @@ createArchitecturePlot <- function(
             pointInfo(), df, 
             input$labelArchiSize, input$titleArchiSize, input$showScore, 
             input$showName, input$firstDist, input$nameType, 
-            input$nameSize, input$nameColor, input$labelPos, input$colorType,
+            input$nameSize, input$segmentSize, input$nameColor, input$labelPos, input$colorType,
             input$ignoreInstanceNo, currentNCBIinfo(), input$featureTypeSort,
-            input$featureTypeOrder, input$colorPallete, input$resolveOverlap
+            input$featureTypeOrder, input$colorPallete, input$resolveOverlap, input$font
         )
         if (any(g == "No domain info available!")) {
             msgPlot()
         } else {
-            grid.draw(g)
+            suppressWarnings(grid.draw(g))
         }
     })
 
@@ -501,7 +416,7 @@ createArchitecturePlot <- function(
 
     output$archiDownload <- downloadHandler(
         filename = function() {
-            c("domains.pdf")
+            c("domains.svg")
         },
         content = function(file) {
             # remove user specified features (from input$featureList)
@@ -509,20 +424,25 @@ createArchitecturePlot <- function(
             df <- df[!(df$feature_id %in% input$featureList),]
             g <- createArchiPlot(
                 pointInfo(), df, 
+                # input$labelArchiSize, input$titleArchiSize, input$showScore, 
+                # input$showName, input$firstDist, input$nameType, 
+                # input$nameSize, input$nameColor, input$labelPos, input$colorType,
+                # input$ignoreInstanceNo, currentNCBIinfo(), input$featureTypeSort,
+                # input$featureTypeOrder, input$colorPallete, input$resolveOverlap,
+                # input$font
                 input$labelArchiSize, input$titleArchiSize, input$showScore, 
                 input$showName, input$firstDist, input$nameType, 
-                input$nameSize, input$nameColor, input$labelPos, input$colorType,
+                input$nameSize, input$segmentSize, input$nameColor, input$labelPos, input$colorType,
                 input$ignoreInstanceNo, currentNCBIinfo(), input$featureTypeSort,
-                input$featureTypeOrder, input$colorPallete, input$resolveOverlap
+                input$featureTypeOrder, input$colorPallete, input$resolveOverlap, input$font
             )
-            grid.draw(g)
             # save plot to file
-            ggsave(
+            suppressWarnings(ggsave(
                 file, plot = g,
                 width = input$archiWidth * 0.056458333,
                 height = input$archiHeight * 0.056458333,
-                units = "cm", dpi = 300, device = "pdf", limitsize = FALSE
-            )
+                units = "cm", dpi = 300, device = "svg", limitsize = FALSE
+            ))
         }
     )
 
@@ -704,20 +624,25 @@ createLinkTable <- function(featureDf, featureType) {
 createDomainInfoTable <- function(domainDf) {
     if (is.null(domainDf)) stop("No information!")
     
+    selectedCols <- c("orthoID", "length", "feature", "start", "end")
     if (ncol(domainDf) <= 11) {
-        outDf <- domainDf[
-            ,c("orthoID", "length", "feature", "feature_type", "start", "end")
-        ]
-        colnames(outDf) <- c(
-            "orthoID", "Length", "Feature", "Start", "End"
-        )
-    } else if (ncol(domainDf) == 17 & "evalue" %in% colnames(domainDf)) {
-        outDf <- domainDf[
-            ,c(
-                "orthoID", "length", "feature", "start", "end", "evalue", 
-                "bitscore", "pStart", "pEnd", "pLen"
+        if (!("length" %in% colnames(domainDf)))
+            selectedCols <- selectedCols[!selectedCols == "length"]
+        outDf <- subset(domainDf, select = selectedCols)
+        if ("length" %in% colnames(domainDf)) {
+            colnames(outDf) <- c(
+                "orthoID", "Length", "Feature", "Start", "End"
             )
-        ]
+        } else {
+            colnames(outDf) <- c(
+                "orthoID", "Feature", "Start", "End"
+            )
+        }
+    } else if (ncol(domainDf) == 17 & "evalue" %in% colnames(domainDf)) {
+        selectedCols <- c(
+            selectedCols, "evalue", "bitscore", "pStart", "pEnd", "pLen"
+        )
+        outDf <- subset(domainDf, select = selectedCols)
         colnames(outDf) <- c(
             "orthoID", "Length", "Feature", "Start", "End", "E-value",
             "Bit-score", "pHMM start", "pHMM end", "pHMM length"
@@ -726,7 +651,7 @@ createDomainInfoTable <- function(domainDf) {
         return(paste("Wrong number of columns:", ncol(domainDf)))
     }
     outDf$Feature <- sub("_", " ", outDf$Feature)
-    outDf$`Gene ID` <- gsub("^.*:", "", outDf$orthoID)
+    outDf$`Gene ID` <- unlist(lapply(strsplit(outDf$orthoID, split = ":"), function (x) return(x[3]))) # gsub("^.*:", "", outDf$orthoID)
     outDf <- subset(outDf, select = -c(orthoID))
     outDf <- outDf %>% dplyr::select(`Gene ID`, everything())
     return(outDf)
