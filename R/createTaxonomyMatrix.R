@@ -32,8 +32,8 @@ mainTaxonomyRank <- function() {
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @export
 #' @examples
-#' ?processNcbiTaxonomy
 #' \dontrun{
+#' ?processNcbiTaxonomy
 #' preProcessedTaxonomy <- PhyloProfile:::processNcbiTaxonomy()
 #' # save to text (tab-delimited) file
 #' write.table(
@@ -104,6 +104,7 @@ processNcbiTaxonomy <- function() {
 #' @return A list of NCBI taxonomy info for input taxa, including the taxonomy
 #' IDs, full scientific names, taxonomy ranks and the parent IDs.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom data.table fread
 #' @export
 #' @examples
 #' inputTaxa <- c("272557", "176299")
@@ -162,6 +163,7 @@ getTaxonomyInfo <- function(inputTaxa = NULL, currentNCBIinfo = NULL) {
 #' containing the NCBI IDs, taxon fullnames, their current rank and their
 #' direct parent ID.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom data.table fread rbindlist
 #' @export
 #' @examples
 #' inputTaxa <- c("272557", "176299")
@@ -209,7 +211,7 @@ getIDsRank <- function(inputTaxa = NULL, currentNCBIinfo = NULL){
                 matrix(ll, nrow = 1, byrow = TRUE), stringsAsFactors = FALSE))
         }
     )
-    inputRankDf <- do.call(plyr::rbind.fill, inputRankList)
+    inputRankDf <- data.frame(data.table::rbindlist(inputRankList, fill = TRUE))
     inputIDList <- lapply(
         seq_len(length(inputRankIDDf)),
         function (x) {
@@ -220,7 +222,7 @@ getIDsRank <- function(inputTaxa = NULL, currentNCBIinfo = NULL){
                 matrix(ll, nrow = 1, byrow = TRUE), stringsAsFactors = FALSE))
         }
     )
-    inputIDDf <- do.call(plyr::rbind.fill, inputIDList)
+    inputIDDf <- data.frame(data.table::rbindlist(inputIDList, fill = TRUE))
     newCol <- seq(ncol(inputIDDf) + 1, ncol(inputRankDf))
     inputIDDf[paste0("X", newCol)] <- NA
     reducedDf$rank[!(reducedDf$rank %in% allMainRank)] <- "norank"
@@ -234,12 +236,10 @@ getIDsRank <- function(inputTaxa = NULL, currentNCBIinfo = NULL){
 #' values.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
-#' \dontrun{
 #' rankListFile <- system.file(
 #'     "extdata", "data/rankList.txt", package = "PhyloProfile", mustWork = TRUE
 #' )
 #' PhyloProfile:::rankIndexing(rankListFile)
-#' }
 
 rankIndexing <- function (rankListFile = NULL) {
     if (is.null(rankListFile)) stop("Rank list file is NULL!")
@@ -373,6 +373,9 @@ rankIndexing <- function (rankListFile = NULL) {
 #' creating a well resolved taxonomy tree (see ?createUnrootedTree) and sorting
 #' taxa based on a selected reference taxon (see ?sortInputTaxa).
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom data.table melt transpose setDT
+#' @importFrom pbapply pblapply
+#' @importFrom zoo na.locf
 #' @seealso \code{\link{rankIndexing}}, \code{\link{createUnrootedTree}},
 #' \code{\link{sortInputTaxa}}
 #' @examples
@@ -474,6 +477,7 @@ taxonomyTableCreator <- function(idListFile = NULL, rankListFile = NULL) {
 #' @return A list of dataframs containing taxonomy hierarchy and its URL to
 #' NCBI database for input taxon IDs
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom data.table fread
 #' @examples
 #' inputTaxa <- c("272557", "176299")
 #' ncbiFilein <- system.file(
@@ -515,6 +519,7 @@ getTaxHierarchy <- function(inputTaxa = NULL, currentNCBIinfo = NULL){
 #' data (/PhyloProfile/data/preProcessedTaxonomy.txt)
 #' @return A dataframe contains input taxon Ids and their full names.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom data.table fread
 #' @examples
 #' ncbiFilein <- system.file(
 #'     "extdata", "data/preProcessedTaxonomy.txt",

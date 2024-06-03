@@ -11,6 +11,7 @@
 #' comparison the architecture between 2 proteins* (e.g. seed protein vs
 #' ortholog) (optional).
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom stringr str_split_fixed
 #' @seealso \code{\link{getDomainFolder}}
 #' @examples
 #' seed <- "101621at6656"
@@ -91,12 +92,10 @@ parseDomainInput <- function(seed = NULL, inputFile = NULL, type = "file") {
 #' @return Domain file and its complete directory path for the selected protein.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
-#' \dontrun{
 #' domainPath <- paste0(
 #'     path.package("PhyloProfile", quiet = FALSE), "/extdata/domainFiles"
 #' )
-#' getDomainFolder("OG_1009", domainPath)
-#' }
+#' PhyloProfile:::getDomainFolder("101621at6656", domainPath)
 
 getDomainFolder <- function(seed, domainPath){
     if (is.null(seed)) {

@@ -2,6 +2,13 @@
 \title{PhyloProfile news}
 \encoding{UTF-8}
 
+\section{Version 1.18.1}{
+  \itemize{
+    \item improved domain plot #110
+    \item option to change font
+  }
+}
+
 \section{Version 1.18.0}{
   \itemize{
     \item option to specify version for OrthoDB

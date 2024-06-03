@@ -20,10 +20,8 @@ Process ortholog IDs to identify duplicated IDs
 }
 \examples{
 ?processOrthoID
-\dontrun{
 data("finalProcessedProfile", package="PhyloProfile")
 processOrthoID(finalProcessedProfile)
-}
 }
 \author{
 Vinh Tran tran@bio.uni-frankfurt.de

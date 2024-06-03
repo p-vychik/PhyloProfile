@@ -18,12 +18,10 @@ values.
 Indexing all available ranks (including norank)
 }
 \examples{
-\dontrun{
 rankListFile <- system.file(
     "extdata", "data/rankList.txt", package = "PhyloProfile", mustWork = TRUE
 )
 PhyloProfile:::rankIndexing(rankListFile)
-}
 }
 \author{
 Vinh Tran tran@bio.uni-frankfurt.de

@@ -34,6 +34,7 @@ A dataframe contains estimated gene ages for the seed proteins.
 Calculate the phylogenetic gene age from the phylogenetic profiles
 }
 \examples{
+library(dplyr)
 data("fullProcessedProfile", package="PhyloProfile")
 rankName <- "class"
 refTaxon <- "Mammalia"
@@ -42,7 +43,7 @@ taxonIDs <- levels(as.factor(processedProfileData$ncbiID))
 sortedInputTaxa <- sortInputTaxa(
     taxonIDs, rankName, refTaxon, NULL, NULL
 )
-taxaCount <- plyr::count(sortedInputTaxa, "supertaxon")
+taxaCount <- sortedInputTaxa \%>\% dplyr::count(supertaxon)
 var1Cutoff <- c(0, 1)
 var2Cutoff <- c(0, 1)
 percentCutoff <- c(0, 1)

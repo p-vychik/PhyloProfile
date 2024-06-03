@@ -5,8 +5,8 @@
 \title{Create architecure plot for a pair of seed and ortholog protein}
 \usage{
 pairDomainPlotting(seed, ortho, seedDf, orthoDf, minStart, maxEnd,
-    labelSize, titleSize, showScore, showName, firstDist,  nameType,
-    nameSize, segmentSize, nameColor, labelPos, colorPallete, font)
+    labelSize, titleSize, showScore, showWeight, namePosition, firstDist,
+    nameType, nameSize, segmentSize, nameColor, labelPos, colorPallete, font)
 }
 \arguments{
 \item{seed}{Seed ID}
@@ -31,7 +31,9 @@ protein vs ortholog) (optional)}
 
 \item{showScore}{show/hide E-values and Bit-scores. Default = NULL (hide)}
 
-\item{showName}{list of positions for domain names, choose from "plot",
+\item{showWeight}{Show/hide feature weights. Default = NULL (hide)}
+
+\item{namePosition}{list of positions for domain names, choose from "plot",
 "legend" or "axis". Default: "plot"}
 
 \item{firstDist}{distance of the first domain to plot title. Default = 0.5}
@@ -58,7 +60,6 @@ Domain plot of a pair proteins as a arrangeGrob object.
 Create architecure plot for a pair of seed and ortholog protein
 }
 \examples{
-\dontrun{
 seed <- "101621at6656"
 ortho <- "101621at6656|AGRPL@224129@0|224129_0:001955|1"
 ortho <- gsub("\\\\|", ":", ortho)
@@ -68,15 +69,29 @@ domainFile <- system.file(
     package = "PhyloProfile", mustWork = TRUE
 )
 domainDf <- parseDomainInput(seed, domainFile, "file")
+domainDf$feature_id_mod <- domainDf$feature_id
 subdomainDf <- domainDf[grep(grepID, domainDf$seedID), ]
 subdomainDf$feature <- as.character(subdomainDf$feature)
 orthoDf <- subdomainDf[subdomainDf$orthoID == ortho,]
 seedDf <- subdomainDf[subdomainDf$orthoID != ortho,]
 minStart <- min(subdomainDf$start)
 maxEnd <- max(c(subdomainDf$end, subdomainDf$length))
-g <- pairDomainPlotting(seed,ortho,seedDf,orthoDf,minStart,maxEnd,9,9)
+# resolve overlapping domains
+seedDf <- PhyloProfile:::resolveOverlapFeatures(seedDf)
+orthoDf <- PhyloProfile:::resolveOverlapFeatures(orthoDf)
+# add feature colors
+featureColorDf <- PhyloProfile:::addFeatureColors(seedDf, orthoDf)
+seedDf <- featureColorDf[[1]]
+orthoDf <- featureColorDf[[2]]
+# do plot
+g <- PhyloProfile:::pairDomainPlotting(
+   seed,ortho,seedDf,orthoDf,minStart,maxEnd, font = "sans"
+)
 grid::grid.draw(g)
 }
+\seealso{
+\code{\link{singleDomainPlotting}}, \code{\link{sortDomains}},
+\code{\link{parseDomainInput}}
 }
 \author{
 Vinh Tran tran@bio.uni-frankfurt.de

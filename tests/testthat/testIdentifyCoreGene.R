@@ -1,6 +1,7 @@
 context("test identification of core genes for a selected set of taxa")
 
 test_that("test core gene estimation", {
+    library(dplyr)
     data("fullProcessedProfile", package="PhyloProfile")
     rankName <- "class"
     refTaxon <- "Mammalia"
@@ -13,7 +14,7 @@ test_that("test core gene estimation", {
     sortedInputTaxa <- sortInputTaxa(
         taxonIDs, rankName, refTaxon, NULL
     )
-    taxaCount <- plyr::count(sortedInputTaxa, "supertaxon")
+    taxaCount <- sortedInputTaxa %>% dplyr::count(supertaxon)
     coreGene <- getCoreGene(
         rankName,
         taxaCore,

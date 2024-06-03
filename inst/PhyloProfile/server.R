@@ -26,7 +26,7 @@ shinyServer(function(input, output, session) {
     # =========================== INITIAL CHECKING  ============================
     # * check for internet connection ------------------------------------------
     observe({
-        if (hasInternet() == FALSE) toggleState("demoData")
+        if (hasInternet() == FALSE) shinyjs::toggleState("demoData")
     })
 
     output$noInternetMsg <- renderUI({
@@ -45,12 +45,12 @@ shinyServer(function(input, output, session) {
             msg <- paste0(
                 "Please wait while preprocessed data are being downloaded!!!"
             )
-            createAlert(
+            shinyBS::createAlert(
                 session, "fileExistMsgUI", "fileExistMsg", title = "",
                 content = msg,
                 append = FALSE
             )
-        } else closeAlert(session, "fileExistMsg")
+        } else shinyBS::closeAlert(session, "fileExistMsg")
     })
 
     observe({
@@ -134,7 +134,7 @@ shinyServer(function(input, output, session) {
                     }
                 }
             )
-            closeAlert(session, "fileExistMsg")
+            shinyBS::closeAlert(session, "fileExistMsg")
         }
     })
 
@@ -147,7 +147,7 @@ shinyServer(function(input, output, session) {
                     ape::write.tree(preCalcTree, file = "data/preCalcTree.nw")
                 }
             )
-            closeAlert(session, "fileExistMsg")
+            shinyBS::closeAlert(session, "fileExistMsg")
         }
     })
 
@@ -289,7 +289,7 @@ shinyServer(function(input, output, session) {
                 "Apply clustering to profile plot",
                 value = TRUE
             )
-            
+
             if (i_clusterMethod) {
                 updateSelectInput(
                     session,
@@ -338,12 +338,12 @@ shinyServer(function(input, output, session) {
         <a href=\"https://github.com/BIONF/PhyloProfile/wiki/Input-Data\">
         <span style=\"color: #ff0000;\">our wiki</span></span></a>."
             )
-            createAlert(
+            shinyBS::createAlert(
                 session, "inputMsgUI", "inputMsg", title = "",
                 content = msg,
                 append = FALSE
             )
-        } else closeAlert(session, "inputMsg")
+        } else shinyBS::closeAlert(session, "inputMsg")
     })
 
     # * check the validity of input file and render inputCheck.ui --------------
@@ -353,7 +353,7 @@ shinyServer(function(input, output, session) {
         inputType <- checkInputValidity(filein$datapath)
 
         if (inputType[1] == "noGeneID") {
-            updateButton(session, "do", disabled = TRUE)
+            shinyBS::updateButton(session, "do", disabled = TRUE)
             HTML(
                 "<font color=\"red\"><em><strong>ERROR: Unsupported input
                 format.<a
@@ -362,27 +362,27 @@ shinyServer(function(input, output, session) {
                 info</a></em></strong></font>"
             )
         } else if (inputType[1] == "emptyCell") {
-            updateButton(session, "do", disabled = TRUE)
+            shinyBS::updateButton(session, "do", disabled = TRUE)
             em(strong("ERROR: Rows have unequal length",style= "color:red"))
         } else if (inputType[1] == "moreCol") {
-            updateButton(session, "do", disabled = TRUE)
+            shinyBS::updateButton(session, "do", disabled = TRUE)
             em(strong(
                 "ERROR: More columns than column names", style = "color:red"
             ))
         } else if (inputType[1] == "invalidFormat") {
-            updateButton(session, "do", disabled = TRUE)
+            shinyBS::updateButton(session, "do", disabled = TRUE)
             em(strong(
                 "ERROR: Invalid format", style = "color:red"
             ))
         } else {
             validType = c("xml", "fasta", "wide", "long", "oma")
             if (!(inputType[1] %in% validType)) {
-                updateButton(session, "do", disabled = TRUE)
+                shinyBS::updateButton(session, "do", disabled = TRUE)
                 invalidOma <- paste(inputType, collapse = "; ")
                 msg <- paste0("ERROR: Invalid IDs found! ", invalidOma)
                 em(strong(msg, style = "color:red"))
             } else {
-                updateButton(session, "do", disabled = FALSE)
+                shinyBS::updateButton(session, "do", disabled = FALSE)
                 return()
             }
         }
@@ -505,10 +505,10 @@ shinyServer(function(input, output, session) {
     # * close OMA parsing popup windows -------------------------------------
     observeEvent(input$getDataOma, {
         toggleModal(session, "getOmaDataWindows", toggle = "close")
-        updateButton(session, "getDataOma", disabled = TRUE)
-        toggleState("mainInput")
-        toggleState("fileDomainInput")
-        toggleState("fastaUpload")
+        shinyBS::updateButton(session, "getDataOma", disabled = TRUE)
+        shinyjs::toggleState("mainInput")
+        shinyjs::toggleState("fileDomainInput")
+        shinyjs::toggleState("fastaUpload")
     })
 
     # * render textinput for Variable 1 & 2 ------------------------------------
@@ -592,10 +592,10 @@ shinyServer(function(input, output, session) {
 
     # * render location of taxonomy DB -----------------------------------------
     getUserTaxDBpath <- reactive({
-        shinyDirChoose(
+        shinyFiles::shinyDirChoose(
             input, "taxDbDir", roots = homePath, session = session
         )
-        outputPath <- parseDirPath(homePath, input$taxDbDir)
+        outputPath <- shinyFiles::parseDirPath(homePath, input$taxDbDir)
         return(replaceHomeCharacter(as.character(outputPath)))
     })
 
@@ -696,7 +696,7 @@ shinyServer(function(input, output, session) {
         }
         if (!is.null(tree)) {
             checkNewick <- checkNewick(tree, inputTaxonID())
-            if (checkNewick == 0) updateButton(session, "do", disabled = FALSE)
+            if (checkNewick == 0) shinyBS::updateButton(session, "do", disabled = FALSE)
             return(checkNewick)
         } else return()
     })
@@ -705,21 +705,21 @@ shinyServer(function(input, output, session) {
         checkNewick <- checkNewickID()
         req(checkNewick)
         if (checkNewick == 1) {
-            updateButton(session, "do", disabled = TRUE)
+            shinyBS::updateButton(session, "do", disabled = TRUE)
             HTML("<p><em><span style=\"color: #ff0000;\"><strong>
             ERROR: Parenthesis(-es) missing!</strong></span></em></p>")
         } else if (checkNewick == 2) {
-            updateButton(session, "do", disabled = TRUE)
+            shinyBS::updateButton(session, "do", disabled = TRUE)
             HTML("<p><em><span style=\"color: #ff0000;\"><strong>
             ERROR: Comma(s) missing!</strong></span></em></p>")
         } else if (checkNewick == 3) {
-            updateButton(session, "do", disabled = TRUE)
+            shinyBS::updateButton(session, "do", disabled = TRUE)
             HTML("<p><em><span style=\"color: #ff0000;\"><strong>
             ERROR: Tree contains singleton!</strong></span></em></p>")
         } else if (checkNewick == 0) {
             return()
         } else {
-            updateButton(session, "do", disabled = TRUE)
+            shinyBS::updateButton(session, "do", disabled = TRUE)
             strong(
                 em(paste0(checkNewick, " not exist in main input file!")),
                 style = "color:red"
@@ -768,7 +768,7 @@ shinyServer(function(input, output, session) {
         sortedTaxonList <- sortedTaxonInputDf$V1
         if (length(sortedTaxonList) > 0) {
             if ("FALSE" %in% grepl("ncbi", sortedTaxonList)) {
-                updateButton(session, "do", disabled = TRUE)
+                shinyBS::updateButton(session, "do", disabled = TRUE)
                 msg <- paste0("<p><em><span style=\"color: #ff0000;\"><strong>
             ERROR: Invalid input!</strong></span></em></p>")
             } else {
@@ -780,8 +780,8 @@ shinyServer(function(input, output, session) {
 
     observeEvent(input$inputSortedTaxa,  ({
         if (!is.null(input$inputSortedTaxa)) {
-            toggleState("rankSelect")
-            toggleState("inSelect")
+            shinyjs::toggleState("rankSelect")
+            shinyjs::toggleState("inSelect")
         }
     }))
 
@@ -941,11 +941,11 @@ shinyServer(function(input, output, session) {
 
     # * enable "PLOT" button ---------------------------------------------------
     observeEvent(input$rankSelect,  ({
-        if (input$rankSelect == "") updateButton(session, "do", disabled = TRUE)
+        if (input$rankSelect == "") shinyBS::updateButton(session, "do", disabled = TRUE)
         else {
             unkTaxa <- unkTaxa()
             if (length(unkTaxa) == 0) {
-                updateButton(session, "do", disabled = FALSE)
+                shinyBS::updateButton(session, "do", disabled = FALSE)
             }
         }
     }))
@@ -960,20 +960,20 @@ shinyServer(function(input, output, session) {
     # * disable main input, genelist input and demo data checkbox --------------
     observe({
         if (input$do > 0) {
-            toggleState("mainInput")
-            toggleState("geneListSelected")
-            toggleState("demoData")
-            toggleState("rankSelect")
-            toggleState("taxDbLoc")
+            shinyjs::toggleState("mainInput")
+            shinyjs::toggleState("geneListSelected")
+            shinyjs::toggleState("demoData")
+            shinyjs::toggleState("rankSelect")
+            shinyjs::toggleState("taxDbLoc")
         }
     })
 
     # * enable/disable update plot button --------------------------------------
     observe({
         if (input$autoUpdate == TRUE) {
-            updateButton(session, "updateBtn", disabled = TRUE)
+            shinyBS::updateButton(session, "updateBtn", disabled = TRUE)
         } else {
-            updateButton(session, "updateBtn", disabled = FALSE)
+            shinyBS::updateButton(session, "updateBtn", disabled = FALSE)
         }
     })
 
@@ -1302,7 +1302,7 @@ shinyServer(function(input, output, session) {
 
     # * check the status of unkTaxa --------------------------------------------
     output$unkTaxaStatus <- reactive({
-        unkTaxa <- unkTaxa() 
+        unkTaxa <- unkTaxa()
         if (length(unkTaxa) > 0) {
             if ("invalid" %in% unkTaxa$Source) return("invalid")
             if ("unknown" %in% unkTaxa$Source) return("unknown")
@@ -1371,7 +1371,7 @@ shinyServer(function(input, output, session) {
             comment.char = ""
         )
         if (ncol(tmpDf) != 4) {
-            createAlert(
+            shinyBS::createAlert(
                 session, "wrongNewTaxa", "wrongNewTaxaMsg",
                 content = "Wrong format. Please check your file!",
                 append = FALSE
@@ -1379,7 +1379,7 @@ shinyServer(function(input, output, session) {
             shinyjs::disable("newDone")
             return()
         } else {
-            createAlert(
+            shinyBS::createAlert(
                 session, "wrongNewTaxa", "wrongNewTaxaMsg",
                 content = "Click Finish adding to continue!",
                 append = FALSE
@@ -1412,9 +1412,9 @@ shinyServer(function(input, output, session) {
     observeEvent(input$butParse, {
         toggleModal(session, "parseConfirm", toggle = "close")
         v1$parse <- input$butParse
-        updateButton(session, "butParse", disabled = TRUE)
-        toggleState("newTaxaAsk")
-        toggleState("mainInput")
+        shinyBS::updateButton(session, "butParse", disabled = TRUE)
+        shinyjs::toggleState("newTaxaAsk")
+        shinyjs::toggleState("mainInput")
     })
 
     # * create rankList, idList, taxonNamesReduced, taxonomyMatrix -------------
@@ -1679,7 +1679,7 @@ shinyServer(function(input, output, session) {
         filein <- input$mainInput
         if (is.null(filein) & input$demoData == "none") {
             v$doPlot <- FALSE
-            updateButton(session, "do", disabled = TRUE)
+            shinyBS::updateButton(session, "do", disabled = TRUE)
         }
     })
 
@@ -1949,7 +1949,7 @@ shinyServer(function(input, output, session) {
 
     # * count taxa for each supertaxon -----------------------------------------
     getCountTaxa <- reactive({
-        taxaCount <- plyr::count(sortedtaxaList(), "supertaxon")
+        taxaCount <- sortedtaxaList() %>% dplyr::count(supertaxon)
         return(taxaCount)
     })
 
@@ -2130,7 +2130,7 @@ shinyServer(function(input, output, session) {
         dataHeat <- dataHeat()
         if (!is.null(i_clusterMethod)) clusterMethod <- i_clusterMethod
         else clusterMethod <- input$clusterMethod
-        
+
         if (nlevels(as.factor(dataHeat$geneID)) > 1) {
             withProgress(message = 'Clustering profile data...', value = 0.5, {
                 dat <- getProfiles()
@@ -2359,7 +2359,6 @@ shinyServer(function(input, output, session) {
                 catColors <- getCatColors(i_geneCategory, type = "config")
             }
         } else colorByGroup == FALSE
-
         if (input$autoUpdate == TRUE) {
             inputPara <- list(
                 "xAxis" = input$xAxis,
@@ -2380,6 +2379,7 @@ shinyServer(function(input, output, session) {
                 "mainLegend" = input$mainLegend,
                 "dotZoom" = input$dotZoom,
                 "xAngle" = input$xAngle,
+                "font" = input$font,
                 "guideline" = 0,
                 "width" = input$width,
                 "height" = input$height,
@@ -2405,6 +2405,7 @@ shinyServer(function(input, output, session) {
                     "midColorVar2" =  input$midColorVar2,
                     "highColorVar2" = input$highColorVar2,
                     "paraColor" = input$paraColor,
+                    "font" = input$font,
                     "xSize" = input$xSize,
                     "ySize" = input$ySize,
                     "legendSize" = input$legendSize,
@@ -2693,6 +2694,7 @@ shinyServer(function(input, output, session) {
                 "mainLegend" = input$selectedLegend,
                 "dotZoom" = input$dotZoomSelect,
                 "xAngle" = input$xAngleSelect,
+                "font" = input$font,
                 "guideline" = 0,
                 "width" = input$selectedWidth,
                 "height" = input$selectedHeight,
@@ -2879,7 +2881,8 @@ shinyServer(function(input, output, session) {
         var1ID = reactive(input$var1ID),
         var2ID = reactive(input$var2ID),
         detailedText = reactive(input$detailedText),
-        detailedHeight = reactive(input$detailedHeight)
+        detailedHeight = reactive(input$detailedHeight),
+        font = reactive(input$font)
     )
 
     # * render database links --------------------------------------------------
@@ -3065,52 +3068,52 @@ shinyServer(function(input, output, session) {
             info <- c(infoTmp[[1]], as.character(infoTmp[[2]]))
         } else {
             # else, get info from detailed plot
-            updateButton(session, "doDomainPlotMain", disabled = TRUE)
+            shinyBS::updateButton(session, "doDomainPlotMain", disabled = TRUE)
             if (!is.null(pointInfoDetail())) {
                 info <- pointInfoDetail() # info = seedID, orthoID, var1
             }
         }
 
         if (is.null(info)) {
-            updateButton(session, "doDomainPlot", disabled = TRUE)
-            updateButton(session, "doDomainPlotMain", disabled = TRUE)
+            shinyBS::updateButton(session, "doDomainPlot", disabled = TRUE)
+            shinyBS::updateButton(session, "doDomainPlotMain", disabled = TRUE)
             return("noSelectHit")
         } else {
             if (
                 input$demoData == "arthropoda" | input$demoData == "ampk-tor" |
                 input$demoData == "preCalcDt"
             ) {
-                updateButton(session, "doDomainPlot", disabled = FALSE)
+                shinyBS::updateButton(session, "doDomainPlot", disabled = FALSE)
                 if (lowestRank == input$rankSelect || infoTmp[[8]][1] == 1)
-                    updateButton(session, "doDomainPlotMain", disabled = FALSE)
+                    shinyBS::updateButton(session, "doDomainPlotMain", disabled = FALSE)
                 else
-                    updateButton(session, "doDomainPlotMain", disabled = TRUE)
+                    shinyBS::updateButton(session, "doDomainPlotMain", disabled = TRUE)
             } else {
                 if (checkInputValidity(input$mainInput$datapath) == "oma") {
-                    updateButton(session, "doDomainPlot", disabled = FALSE)
+                    shinyBS::updateButton(session, "doDomainPlot", disabled = FALSE)
                     if (lowestRank == input$rankSelect || infoTmp[[8]][1] == 1)
-                        updateButton(session, "doDomainPlotMain", disabled = FALSE)
+                        shinyBS::updateButton(session, "doDomainPlotMain", disabled = FALSE)
                     else
-                        updateButton(session, "doDomainPlotMain", disabled = TRUE)
+                        shinyBS::updateButton(session, "doDomainPlotMain", disabled = TRUE)
                 } else {
                     if (input$annoLocation == "from file") {
                         inputDomain <- input$fileDomainInput
                         if (is.null(inputDomain)) {
-                            updateButton(
+                            shinyBS::updateButton(
                                 session, "doDomainPlot", disabled = TRUE
                             )
-                            updateButton(
+                            shinyBS::updateButton(
                                 session, "doDomainPlotMain", disabled = TRUE
                             )
                             return("noFileInput")
                         } else {
-                            updateButton(
+                            shinyBS::updateButton(
                                 session, "doDomainPlot", disabled = FALSE
                             )
                             if (lowestRank == input$rankSelect || infoTmp[[8]][1] == 1)
-                                updateButton(session, "doDomainPlotMain", disabled = FALSE)
+                                shinyBS::updateButton(session, "doDomainPlotMain", disabled = FALSE)
                             else
-                                updateButton(session, "doDomainPlotMain", disabled = TRUE)
+                                shinyBS::updateButton(session, "doDomainPlotMain", disabled = TRUE)
                         }
                     } else {
                         domainDf <- parseDomainInput(
@@ -3119,30 +3122,30 @@ shinyServer(function(input, output, session) {
                         if (length(domainDf) == 1) {
                             if (domainDf == "noSelectHit" |
                                 domainDf == "noFileInFolder") {
-                                updateButton(
+                                shinyBS::updateButton(
                                     session, "doDomainPlot", disabled = TRUE
                                 )
-                                updateButton(
+                                shinyBS::updateButton(
                                     session, "doDomainPlotMain", disabled = TRUE
                                 )
                                 return(domainDf)
                             } else {
-                                updateButton(
+                                shinyBS::updateButton(
                                     session, "doDomainPlot", disabled = FALSE
                                 )
                                 if (lowestRank == input$rankSelect || infoTmp[[8]][1] == 1)
-                                    updateButton(session, "doDomainPlotMain", disabled = FALSE)
+                                    shinyBS::updateButton(session, "doDomainPlotMain", disabled = FALSE)
                                 else
-                                    updateButton(session, "doDomainPlotMain", disabled = TRUE)
+                                    shinyBS::updateButton(session, "doDomainPlotMain", disabled = TRUE)
                             }
                         } else {
-                            updateButton(
+                            shinyBS::updateButton(
                                 session, "doDomainPlot", disabled = FALSE
                             )
                             if (lowestRank == input$rankSelect || infoTmp[[8]][1] == 1)
-                                updateButton(session, "doDomainPlotMain", disabled = FALSE)
+                                shinyBS::updateButton(session, "doDomainPlotMain", disabled = FALSE)
                             else
-                                updateButton(session, "doDomainPlotMain", disabled = TRUE)
+                                shinyBS::updateButton(session, "doDomainPlotMain", disabled = TRUE)
                         }
                     }
                 }
@@ -3179,7 +3182,8 @@ shinyServer(function(input, output, session) {
             createArchitecturePlot, "archiPlot",
             pointInfo = getDomainFile,
             domainInfo = getDomainInformation,
-            currentNCBIinfo = reactive(currentNCBIinfo)
+            currentNCBIinfo = reactive(currentNCBIinfo),
+            font = reactive(input$font)
         )
     })
     observeEvent(input$doDomainPlotMain, {
@@ -3187,7 +3191,8 @@ shinyServer(function(input, output, session) {
             createArchitecturePlot, "archiPlotMain",
             pointInfo = getDomainFile,
             domainInfo = getDomainInformation,
-            currentNCBIinfo = reactive(currentNCBIinfo)
+            currentNCBIinfo = reactive(currentNCBIinfo),
+            font = reactive(input$font)
         )
     })
 
@@ -3343,7 +3348,7 @@ shinyServer(function(input, output, session) {
         )
 
         if (input$tabs == "Export plot settings") {
-            createAlert(
+            shinyBS::createAlert(
                 session, "descExportSettingUI", "descExportSetting",
                 content = desc, append = FALSE
             )
@@ -3404,10 +3409,10 @@ shinyServer(function(input, output, session) {
     }
 
     getSettingPath <- reactive({
-        shinyDirChoose(
+        shinyFiles::shinyDirChoose(
             input, "settingDir", roots = homePath, session = session
         )
-        settingPath <- parseDirPath(homePath, input$settingDir)
+        settingPath <- shinyFiles::parseDirPath(homePath, input$settingDir)
         settingPathMod <- replaceHomeCharacter(as.character(settingPath))
         if (length(settingPathMod) > 0) {
             if (input$exportSetting == "list")
@@ -3464,7 +3469,7 @@ shinyServer(function(input, output, session) {
         )
 
         if (input$tabs == "Profiles clustering") {
-            createAlert(
+            shinyBS::createAlert(
                 session, "descClusteringUI", "descClustering",
                 content = desc, append = FALSE
             )
@@ -3621,7 +3626,7 @@ shinyServer(function(input, output, session) {
         )
 
         if (input$tabs == "Distribution analysis") {
-            createAlert(
+            shinyBS::createAlert(
                 session, "descDistributionUI", "descDistribution",
                 content = desc, append = FALSE
             )
@@ -3722,7 +3727,7 @@ shinyServer(function(input, output, session) {
         )
 
         if (input$tabs == "Gene age estimation") {
-            createAlert(
+            shinyBS::createAlert(
                 session, "descGeneAgeUI", "descGeneAge",
                 title = "", content = desc, append = FALSE
             )
@@ -3780,7 +3785,8 @@ shinyServer(function(input, output, session) {
         data = geneAgeDf,
         geneAgeWidth = reactive(input$geneAgeWidth),
         geneAgeHeight = reactive(input$geneAgeHeight),
-        geneAgeText = reactive(input$geneAgeText)
+        geneAgeText = reactive(input$geneAgeText),
+        font = reactive(input$font)
     )
 
     # * CORE GENES IDENTIFICATION ==============================================
@@ -3799,7 +3805,7 @@ shinyServer(function(input, output, session) {
         )
 
         if (input$tabs == "Core gene identification") {
-            createAlert(
+            shinyBS::createAlert(
                 session, "descCoreGeneUI", "descCoreGene",
                 title = "", content = desc, append = FALSE
             )
@@ -3932,7 +3938,7 @@ shinyServer(function(input, output, session) {
         )
 
         if (input$tabs == "Group comparison") {
-            createAlert(
+            shinyBS::createAlert(
                 session, "descGCUI", "descGC", title = "",
                 content = desc, append = FALSE
             )
@@ -4324,7 +4330,7 @@ shinyServer(function(input, output, session) {
         )
 
         if (input$tabs == "NCBI taxonomy data") {
-            createAlert(
+            shinyBS::createAlert(
                 session, "descNcbiTaxDbUI", "descNcbiTaxDb", title = "",
                 content = desc, append = FALSE
             )
@@ -4342,7 +4348,7 @@ shinyServer(function(input, output, session) {
                 id = "updateNCBITaxStatus", html = m$message, add = TRUE
             )
         })
-        updateButton(session, "doUpdateNcbi", disabled = TRUE)
+        shinyBS::updateButton(session, "doUpdateNcbi", disabled = TRUE)
     })
 
     # ** do reset taxonomy data ------------------------------------------------
@@ -4363,7 +4369,7 @@ shinyServer(function(input, output, session) {
                 id = "resetTaxonomyDataStatus", html = m$message, add = TRUE
             )
         })
-        updateButton(session, "doResetTax", disabled = TRUE)
+        shinyBS::updateButton(session, "doResetTax", disabled = TRUE)
     })
 
     # ** do export taxonomy data -----------------------------------------------
@@ -4372,10 +4378,10 @@ shinyServer(function(input, output, session) {
     })
 
     getTaxPathOut <- reactive({
-        shinyDirChoose(
+        shinyFiles::shinyDirChoose(
             input, "taxDirOut", roots = homePath, session = session
         )
-        taxPathOut <- parseDirPath(homePath, input$taxDirOut)
+        taxPathOut <- shinyFiles::parseDirPath(homePath, input$taxDirOut)
         return(replaceHomeCharacter(as.character(taxPathOut)))
     })
 
@@ -4397,7 +4403,7 @@ shinyServer(function(input, output, session) {
                 id = "exportTaxonomyDataStatus", html = m$message, add = TRUE
             )
         })
-        updateButton(session, "doExportTax", disabled = TRUE)
+        shinyBS::updateButton(session, "doExportTax", disabled = TRUE)
     })
 
     # ** do import taxonomy data -----------------------------------------------
@@ -4411,10 +4417,10 @@ shinyServer(function(input, output, session) {
     })
 
     getInTaxPath <- reactive({
-        shinyDirChoose(
+        shinyFiles::shinyDirChoose(
             input, "taxDir", roots = homePath, session = session
         )
-        taxPath <- parseDirPath(homePath, input$taxDir)
+        taxPath <- shinyFiles::parseDirPath(homePath, input$taxDir)
         return(replaceHomeCharacter(as.character(taxPath)))
     })
 
@@ -4437,6 +4443,6 @@ shinyServer(function(input, output, session) {
                 id = "importTaxonomyDataStatus", html = m$message, add = TRUE
             )
         })
-        updateButton(session, "doImportTax", disabled = TRUE)
+        shinyBS::updateButton(session, "doImportTax", disabled = TRUE)
     })
 })

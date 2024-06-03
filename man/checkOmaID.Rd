@@ -16,7 +16,7 @@ List of invalid IDs (not readable for OMA)
 Check if input IDs are valid OMA IDs for OMA Browser
 }
 \examples{
-print("Uncomment the following line to run the function")
+### Uncomment the following line to run the function
 # checkOmaID("HUMAN29398")
 }
 \author{

@@ -41,6 +41,7 @@ that criteria must be fullfilled for a certain percentage of selected taxa
 or all of them (determined via coreCoverage).
 }
 \examples{
+library(dplyr)
 data("fullProcessedProfile", package="PhyloProfile")
 rankName <- "class"
 refTaxon <- "Mammalia"
@@ -50,7 +51,7 @@ taxonIDs <- levels(as.factor(fullProcessedProfile$ncbiID))
 sortedInputTaxa <- sortInputTaxa(
     taxonIDs, rankName, refTaxon, NULL, NULL
 )
-taxaCount <- plyr::count(sortedInputTaxa, "supertaxon")
+taxaCount <- sortedInputTaxa \%>\% dplyr::count(supertaxon)
 var1Cutoff <- c(0.75, 1.0)
 var2Cutoff <- c(0.75, 1.0)
 percentCutoff <- c(0.0, 1.0)

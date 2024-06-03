@@ -5,8 +5,8 @@
 \title{Create architecure plot for a single protein}
 \usage{
 singleDomainPlotting(df, geneID, sep, labelSize, titleSize, minStart,
-    maxEnd, colorPallete, showScore, showName, firstDist, nameType,
-    nameSize, segmentSize, nameColor, labelPos, font)
+    maxEnd, colorPallete, showScore, showWeight, namePosition, firstDist,
+    nameType, nameSize, segmentSize, nameColor, labelPos, font)
 }
 \arguments{
 \item{df}{Domain dataframe for ploting containing the seed ID, ortholog ID,
@@ -31,7 +31,9 @@ protein vs ortholog) (optional)}
 
 \item{showScore}{Show/hide E-values and Bit-scores. Default = NULL (hide)}
 
-\item{showName}{List of positions for domain names, choose from "plot",
+\item{showWeight}{Show/hide feature weights. Default = NULL (hide)}
+
+\item{namePosition}{List of positions for domain names, choose from "plot",
 "legend" or "axis". Default: "plot"}
 
 \item{firstDist}{Distance of the first domain to plot title. Default = 0.5}
@@ -56,43 +58,36 @@ Domain plot of a single protein as a ggplot object.
 Create architecure plot for a single protein
 }
 \examples{
-\dontrun{
-# get domain data
+seed <- "101621at6656"
+ortho <- "101621at6656|AGRPL@224129@0|224129_0:001955|1"
+ortho <- gsub("\\\\|", ":", ortho)
+grepID <- paste(seed, "#", ortho, sep = "")
 domainFile <- system.file(
     "extdata", "domainFiles/101621at6656.domains",
     package = "PhyloProfile", mustWork = TRUE
 )
-seedID <- "101621at6656"
-domainDf <- parseDomainInput(seedID, domainFile, "file")
-df <- domainDf[
-    domainDf$orthoID == "101621at6656:AGRPL@224129@0:224129_0:001955:1",]
-# create color scheme for all domain types
-allFeatures <- levels(as.factor(df$feature))
-allColors <- getQualColForVector(allFeatures)
-colorScheme <- structure(
-    allColors,
-    .Names = allFeatures
+domainDf <- parseDomainInput(seed, domainFile, "file")
+domainDf$feature_id_mod <- domainDf$feature_id
+subdomainDf <- domainDf[grep(grepID, domainDf$seedID), ]
+subdomainDf$feature <- as.character(subdomainDf$feature)
+orthoDf <- subdomainDf[subdomainDf$orthoID == ortho,]
+seedDf <- subdomainDf[subdomainDf$orthoID != ortho,]
+minStart <- min(subdomainDf$start)
+maxEnd <- max(c(subdomainDf$end, subdomainDf$length))
+# resolve overlapping domains
+seedDf <- PhyloProfile:::resolveOverlapFeatures(seedDf)
+orthoDf <- PhyloProfile:::resolveOverlapFeatures(orthoDf)
+# add feature colors
+featureColorDf <- PhyloProfile:::addFeatureColors(seedDf, orthoDf)
+seedDf <- featureColorDf[[1]]
+orthoDf <- featureColorDf[[2]]
+# do plot
+g <- PhyloProfile:::singleDomainPlotting(
+   seedDf, seed, minStart = minStart, maxEnd = maxEnd, font = "sans"
 )
-# other parameters
-geneID <- "AGRPL@224129@0|224129_0:001955|1"
-sep <- "|"
-labelSize <- 9
-titleSize <- 9
-minStart <- min(df$start)
-maxEnd <- max(df$end)
-# do plotting
-PhyloProfile:::singleDomainPlotting(
-    df,
-    geneID,
-    sep,
-    labelSize, titleSize,
-    minStart, maxEnd,
-    colorScheme
-)
-}
+grid::grid.draw(g)
 }
 \seealso{
-\code{\link{getQualColForVector}},
 \code{\link{parseDomainInput}}
 }
 \author{

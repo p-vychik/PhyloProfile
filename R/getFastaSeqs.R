@@ -5,6 +5,7 @@
 #' @param file raw phylogenetic profile input file in multi-fasta format.
 #' @return A dataframe with one column contains sequences in fasta format.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom Biostrings readAAStringSet
 #' @examples
 #' file <- system.file(
 #'     "extdata", "test.main.fasta",
@@ -38,6 +39,7 @@ getFastaFromFasInput <- function(seqIDs = NULL, file = NULL) {
 #' @param concatFasta input concatenated fasta file.
 #' @return A dataframe with one column contains sequences in fasta format.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom Biostrings readAAStringSet
 #' @examples
 #' concatFasta <- system.file(
 #'     "extdata", "fastaFiles/concatenatedFile.fa",
@@ -94,6 +96,7 @@ getFastaFromFile <- function(seqIDs = NULL, concatFasta = NULL) {
 #' ">speciesID@seqID", 3 for ">speciesID|seqID" or 4 for "seqID")
 #' @return A dataframe with one column contains sequences in fasta format.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom Biostrings readAAStringSet
 #' @seealso \code{\link{mainLongRaw}}
 #' @examples
 #' seqIDs <- "RAT@10116@1|D3ZUE4"

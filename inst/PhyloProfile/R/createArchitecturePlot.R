@@ -11,7 +11,6 @@
 #' @author Vinh Tran {tran@bio.uni-frankfurt.de}
 
 source("R/functions.R")
-if (is.null(fonts())) extrafont::font_import()
 
 createArchitecturePlotUI <- function(id) {
     ns <- NS(id)
@@ -21,12 +20,12 @@ createArchitecturePlotUI <- function(id) {
                 3,
                 radioButtons(
                     ns("resolveOverlap"),
-                    "Merge non-overlapped features", 
-                    choices = c("Yes","No"), selected = "Yes", 
+                    "Merge non-overlapped features",
+                    choices = c("Yes","No"), selected = "Yes",
                     inline = TRUE
                 ),
                 checkboxGroupInput(
-                    ns("showName"),
+                    ns("namePostion"),
                     "Display feature names",
                     choices = c(
                         "On the plot" = "plot",
@@ -49,15 +48,24 @@ createArchitecturePlotUI <- function(id) {
                     ),
                     multiple = TRUE
                 ),
-                # bsButton(ns("featureOpt"), "Other feature options"),
-                checkboxInput(ns("featureOpt"), "Other feature options", value = FALSE),
-                checkboxInput(ns("plotConfig"), "Plot configuration", value = FALSE)
+                checkboxInput(
+                    ns("featureOpt"), "Other feature options", value = FALSE
+                ),
+                checkboxInput(
+                    ns("plotConfig"), "Plot configuration", value = FALSE
+                )
             ),
             column(
                 3,
+                strong("Show information"),
+                checkboxGroupInput(
+                    ns("showWeight"),
+                    "",
+                    choices = "Weight"
+                ),
                 checkboxGroupInput(
                     ns("showScore"),
-                    "Show information",
+                    "",
                     choices = c(
                         "E-value", "Bit-score"
                     )
@@ -71,7 +79,7 @@ createArchitecturePlotUI <- function(id) {
                     ns("showInstance"),
                     "Show only instances with",
                     choices = c(
-                        "Best E-value" = "evalue", 
+                        "Best E-value" = "evalue",
                         "Best Bit-score" = "bitscore",
                         "Paths" = "path"
                     )
@@ -88,19 +96,24 @@ createArchitecturePlotUI <- function(id) {
                         ns("nameType"),"Type of feature names", inline = TRUE,
                         choices = c("Labels","Texts"), selected = "Labels"
                     )
-                    
+
                 ),
                 column(
                     4,
                     conditionalPanel(
-                        condition = {sprintf("input['%s'] == 'Labels'", ns("nameType"))},
+                        condition = {
+                            sprintf("input['%s'] == 'Labels'", ns("nameType"))
+                        },
                         radioButtons(
                             ns("labelPos"),"Label position", inline = TRUE,
-                            choices = c("Above","Inside","Below"), selected = "Above"
+                            choices = c("Above","Inside","Below"),
+                            selected = "Above"
                         )
                     ),
                     conditionalPanel(
-                        condition = {sprintf("input['%s'] == 'Texts'", ns("nameType"))},
+                        condition = {
+                            sprintf("input['%s'] == 'Texts'", ns("nameType"))
+                        },
                         colourpicker::colourInput(
                             ns("nameColor"),
                             "Feature name color",
@@ -124,22 +137,28 @@ createArchitecturePlotUI <- function(id) {
                 column(
                     3,
                     radioButtons(
-                        ns("featureTypeSort"),"Sort feature classes by shared features", inline = TRUE,
-                        choices = c("Yes","No"), selected = "Yes"
+                        ns("featureClassSort"),
+                        "Sort feature classes by shared features",
+                        choices = c("Yes","No"), selected = "Yes",
+                        inline = TRUE
                     )
                 ),
                 column(
                     5,
                     conditionalPanel(
-                        condition={sprintf("input['%s'] == 'No'", ns("featureTypeSort"))},
+                        condition = {
+                            sprintf("input['%s']=='No'",ns("featureClassSort"))
+                        },
                         selectInput(
-                            ns("featureTypeOrder"),
+                            ns("featureClassOrder"),
                             "Feature class order",
                             choices = c(
-                                "pfam", "smart", "tmhmm", "coils", "signalp", "seg", "flps"
+                                "pfam", "smart", "tmhmm", "coils", "signalp",
+                                "seg", "flps"
                             ),
                             selected = c(
-                                "pfam", "smart", "tmhmm", "coils", "signalp", "seg", "flps"
+                                "pfam", "smart", "tmhmm", "coils", "signalp",
+                                "seg", "flps"
                             ),
                             multiple = TRUE
                         )
@@ -153,8 +172,8 @@ createArchitecturePlotUI <- function(id) {
                 condition = {sprintf("input['%s'] == 1", ns("plotConfig"))},
                 column(
                     3,
-                    createPlotSize(ns("archiHeight"), "Plot height(px)",400, 200),
-                    createPlotSize(ns("archiWidth"), "Plot width (px)", 800, 200)
+                    createPlotSize(ns("archiHeight"),"Plot height(px)",400,200),
+                    createPlotSize(ns("archiWidth"),"Plot width (px)", 800, 200)
                 ),
                 column(
                     3,
@@ -170,7 +189,7 @@ createArchitecturePlotUI <- function(id) {
                     column(
                         6,
                         createTextSize(
-                            ns("segmentSize"), "Feature segment size (mm)", 5, 200
+                            ns("segmentSize"),"Feature segment size (mm)",5,200
                         )
                     ),
                     column(
@@ -182,19 +201,22 @@ createArchitecturePlotUI <- function(id) {
                     column(
                         12,
                         sliderInput(
-                            ns("firstDist"), "Distance between plot title and the 1st feature", 
-                            min = 0, max = 5, value = 0.5, step = 0.1, width = 400
+                            ns("firstDist"),
+                            "Distance between plot title and the 1st feature",
+                            min = 0, max = 5, value = 0.5, step = 0.1, width=400
                         )
                     )
                 ),
                 column(
                     6,
                     radioButtons(
-                        ns("colorType"),"Color feature instances", inline = TRUE,
-                        choices = c("Shared","Unique","All","Feature type"), selected = "All"
+                        ns("colorType"),"Color feature instances", inline=TRUE,
+                        choices = c("Shared","Unique","All","Feature type"),
+                        selected = "All"
                     ),
                     checkboxInput(
-                        ns("ignoreInstanceNo"), "Ignore number of instances", value = FALSE
+                        ns("ignoreInstanceNo"), "Ignore number of instances",
+                        value = FALSE
                     ),
                 ),
                 column(
@@ -202,14 +224,10 @@ createArchitecturePlotUI <- function(id) {
                     selectInput(
                         ns("colorPallete"),
                         "Color pallete",
-                        choices = c("Paired", "Set1", "Set2", "Set3", "Accent", "Dark2"),
+                        choices = c(
+                            "Paired", "Set1", "Set2", "Set3", "Accent", "Dark2"
+                        ),
                         selected = "Paired"
-                    ),
-                    selectInput(
-                        ns("font"),
-                        "Font",
-                        choices = fonts(),
-                        selected = "Arial"
                     )
                 )
             )
@@ -232,12 +250,14 @@ createArchitecturePlotUI <- function(id) {
 }
 
 createArchitecturePlot <- function(
-    input, output, session, pointInfo, domainInfo, currentNCBIinfo
+    input, output, session, pointInfo, domainInfo, currentNCBIinfo, font="sans"
 ){
-    # update excludeNames if no feature type on the y-axis =====================
+    # * update excludeNames if no feature type on the y-axis ===================
     observe({
-        req(input$showName)
-        if (!("axis" %in% input$showName) & !("legend" %in% input$showName)) {
+        req(input$namePostion)
+        if (
+            !("axis" %in% input$namePostion) & !("legend" %in% input$namePostion)
+        ) {
             updateSelectInput(
                 session, "excludeNames",
                 "Exclude feature names of",
@@ -246,7 +266,9 @@ createArchitecturePlot <- function(
                     "smart","pfam"
                 )
             )
-        } else if ("axis" %in% input$showName | "legend" %in% input$showName) {
+        } else if (
+            "axis" %in% input$namePostion | "legend" %in% input$namePostion
+        ) {
             updateSelectInput(
                 session, "excludeNames",
                 "Exclude feature names of",
@@ -258,14 +280,16 @@ createArchitecturePlot <- function(
             )
         }
     })
-    
+
     # * render e-value / bitscore filter =======================================
     output$filterEvalue.ui <- renderUI({
         req(domainInfo())
         df <- domainInfo()
         maxEvalue = 1
         if ("evalue" %in% colnames(df))
-            maxEvalue <- format(max(df$evalue[!is.na(df$evalue)]), scientific = TRUE, digits = 2)
+            maxEvalue <- format(
+                max(df$evalue[!is.na(df$evalue)]), scientific = TRUE, digits = 2
+            )
         if ("E-value" %in% input$showScore) {
             numericInput(
                 session$ns("minEvalue"), "Filter E-value:",
@@ -275,7 +299,7 @@ createArchitecturePlot <- function(
             )
         }
     })
-    
+
     output$filterBitscore.ui <- renderUI({
         req(domainInfo())
         df <- domainInfo()
@@ -288,12 +312,13 @@ createArchitecturePlot <- function(
             )
         }
     })
-    
-    # * filter domain features -------------------------------------------------
+
+    # * filter domain features =================================================
     filterDomainDf <- reactive({
         outDf <- domainInfo()
+        if (is.null(outDf)) stop("Domain info is NULL!")
         if (is.null(nrow(outDf))) stop("Domain info is NULL!")
-        
+
         # get subset domainDf containing only domains for seed and ortholog
         group <- as.character(pointInfo()[1])
         ortho <- as.character(pointInfo()[2])
@@ -302,13 +327,14 @@ createArchitecturePlot <- function(
         ortho <- gsub("\\|", ":", ortho)
         grepID <- paste(group, "#", ortho, sep = "")
         outDf <- outDf[outDf$seedID == grepID, ]
-        
+
         # filter domain df by features
         if (nrow(outDf) == 0) stop("Domain info is NULL!")
-        
-        outDf[c("feature_type","feature_id")] <- stringr::str_split_fixed(outDf$feature, '_', 2)
+
+        outDf[c("feature_type","feature_id")] <-
+            stringr::str_split_fixed(outDf$feature, '_', 2)
         outDf <- outDf[!(outDf$feature_type %in% input$feature),]
-        
+
         # filter filters without e-value and/or bitscore
         if ("evalue" %in% colnames(outDf)) {
             if ("noEvalue" %in% input$feature)
@@ -316,7 +342,7 @@ createArchitecturePlot <- function(
             if ("noBitscore" %in% input$feature)
                 outDf <- outDf[!is.na(outDf$bitscore),]
         }
-        
+
         # modify feature IDs
         outDf$feature_id_mod <- outDf$feature_id
         outDf$feature_id_mod <- gsub("SINGLE", "LCR", outDf$feature_id_mod)
@@ -325,16 +351,23 @@ createArchitecturePlot <- function(
         outDf$feature_id_mod[outDf$feature_type == "tmhmm"] <- "TM"
         # exclude features IDs
         if (!is.null(input$excludeNames)) {
-            outDf$feature_id_mod[outDf$feature_type %in% input$excludeNames] <- NA
+            outDf$feature_id_mod[outDf$feature_type %in% input$excludeNames]<-NA
         }
-        
+
         # enable/disable option for showing evalue/bitscore
         if ("evalue" %in% colnames(outDf)) {
             shinyjs::enable("showScore")
         } else {
             shinyjs::disable("showScore")
         }
-        
+
+        # enable/disable option for showing weight
+        if ("weight" %in% colnames(outDf)) {
+            shinyjs::enable("showWeight")
+        } else {
+            shinyjs::disable("showWeight")
+        }
+
         # Filter data by e-value, bit-score and feature path
         if ("evalue" %in% colnames(outDf)) {
             # filter by e-value and/or bit-score
@@ -343,51 +376,60 @@ createArchitecturePlot <- function(
                 naOutDf <- outDf[is.na(outDf$evalue),]
                 outDf <- outDf[!is.na(outDf$evalue) & outDf$evalue <= minEvalue,]
                 outDf <- rbind(outDf,naOutDf)
-            }   
+            }
             if ("Bit-score" %in% input$showScore) {
                 naOutDf <- outDf[is.na(outDf$bitscore),]
-                outDf <- outDf[!is.na(outDf$bitscore) & outDf$bitscore >= input$minBitscore,]
+                outDf <- outDf[
+                    !is.na(outDf$bitscore) & outDf$bitscore >= input$minBitscore,
+                ]
                 outDf <- rbind(outDf,naOutDf)
             }
             # get only best instances
             if ("evalue" %in% input$showInstance) {
                 naOutDf <- outDf[is.na(outDf$evalue),]
-                outDf <- outDf %>% dplyr::group_by(feature, orthoID) %>% dplyr::filter(evalue == min(evalue))
+                outDf <- outDf %>% dplyr::group_by(feature, orthoID) %>%
+                    dplyr::filter(evalue == min(evalue))
                 outDf <- rbind(outDf,naOutDf)
             }
             if ("bitscore" %in% input$showInstance) {
                 naOutDf <- outDf[is.na(outDf$bitscore),]
-                outDf <- outDf %>% dplyr::group_by(feature, orthoID) %>% dplyr::filter(bitscore == max(bitscore))
+                outDf <- outDf %>% dplyr::group_by(feature, orthoID) %>%
+                    dplyr::filter(bitscore == max(bitscore))
                 outDf <- rbind(outDf,naOutDf)
             }
             if ("path" %in% input$showInstance) {
-                outDf <- outDf %>% dplyr::group_by(feature) %>% dplyr::filter(path == "Y")
+                outDf <- outDf %>% dplyr::group_by(feature) %>%
+                    dplyr::filter(path == "Y")
             }
             # Format e-values
-            outDf$evalue[!is.na(outDf$evalue)] <- 
-                format(outDf$evalue[!is.na(outDf$evalue)], scientific = TRUE, digits = 2)
+            outDf$evalue[!is.na(outDf$evalue)] <-
+                format(
+                    outDf$evalue[!is.na(outDf$evalue)], scientific = TRUE,
+                    digits = 2
+                )
         }
         return(outDf[!is.na(outDf$seedID),])
     })
-    
-    # * render plot ------------------------------------------------------------
+
+    # * render plot ============================================================
     output$archiPlot <- renderPlot({
         if (is.null(nrow(filterDomainDf()))) stop("Domain info is NULL!")
         # remove user specified features (from input$featureList)
         df <- filterDomainDf()
         df <- df[!(df$feature_id %in% input$featureList),]
         g <- createArchiPlot(
-            pointInfo(), df, 
-            input$labelArchiSize, input$titleArchiSize, input$showScore, 
-            input$showName, input$firstDist, input$nameType, 
-            input$nameSize, input$segmentSize, input$nameColor, input$labelPos, input$colorType,
-            input$ignoreInstanceNo, currentNCBIinfo(), input$featureTypeSort,
-            input$featureTypeOrder, input$colorPallete, input$resolveOverlap, input$font
+            pointInfo(), df,
+            input$labelArchiSize, input$titleArchiSize, input$showScore,
+            input$showWeight, input$namePostion, input$firstDist,input$nameType,
+            input$nameSize, input$segmentSize, input$nameColor, input$labelPos,
+            input$colorType, input$ignoreInstanceNo, currentNCBIinfo(),
+            input$featureClassSort, input$featureClassOrder, input$colorPallete,
+            input$resolveOverlap, font()
         )
         if (any(g == "No domain info available!")) {
             msgPlot()
         } else {
-            suppressWarnings(grid.draw(g))
+            suppressWarnings(grid::grid.draw(g))
         }
     })
 
@@ -423,18 +465,14 @@ createArchitecturePlot <- function(
             df <- filterDomainDf()
             df <- df[!(df$feature_id %in% input$featureList),]
             g <- createArchiPlot(
-                pointInfo(), df, 
-                # input$labelArchiSize, input$titleArchiSize, input$showScore, 
-                # input$showName, input$firstDist, input$nameType, 
-                # input$nameSize, input$nameColor, input$labelPos, input$colorType,
-                # input$ignoreInstanceNo, currentNCBIinfo(), input$featureTypeSort,
-                # input$featureTypeOrder, input$colorPallete, input$resolveOverlap,
-                # input$font
-                input$labelArchiSize, input$titleArchiSize, input$showScore, 
-                input$showName, input$firstDist, input$nameType, 
-                input$nameSize, input$segmentSize, input$nameColor, input$labelPos, input$colorType,
-                input$ignoreInstanceNo, currentNCBIinfo(), input$featureTypeSort,
-                input$featureTypeOrder, input$colorPallete, input$resolveOverlap, input$font
+                pointInfo(), df,
+                input$labelArchiSize, input$titleArchiSize, input$showScore,
+                input$showWeight, input$namePostion, input$firstDist,
+                input$nameType, input$nameSize, input$segmentSize,
+                input$nameColor, input$labelPos, input$colorType,
+                input$ignoreInstanceNo, currentNCBIinfo(),
+                input$featureClassSort, input$featureClassOrder,
+                input$colorPallete, input$resolveOverlap, font()
             )
             # save plot to file
             suppressWarnings(ggsave(
@@ -450,9 +488,9 @@ createArchitecturePlot <- function(
     #     if (is.null(input$archiClick$y)) return("No domain selected!")
     #     y <- input$archiClick$y
     #     # paste(y, round(y), convertY(unit(y, "npc"), "px"))
-    #     
+    #
     # })
-    
+
     output$featureList.ui <- renderUI({
         ns <- session$ns
         allFeats <- getAllFeatures(pointInfo(), filterDomainDf())
@@ -462,21 +500,13 @@ createArchitecturePlot <- function(
             options=list(placeholder = 'None')
         )
     })
-    
+
     output$linkTable <- renderTable({
         if (is.null(nrow(filterDomainDf()))) return("No domain info available!")
-        # features <- getDomainLink(pointInfo(), filterDomainDf(), getSeqIdFormat())
-        # features
         features <- getDomainLink(pointInfo(), filterDomainDf())
-        # if(!(is.null(input$seed2))) {
-        #     seed2 <- input$seed2
-        #     if(input$seed2 == "none") seed2 <- input$seed1
-        #     features2 <- getDomainLink(c(seed2, seq2), filterDomainDf())
-        #     features <- rbind(features, features2)
-        # }
         features <- features[!duplicated(features),]
     }, sanitize.text.function = function(x) x)
-    
+
     output$domainTable <- DT::renderDataTable({
         req(filterDomainDf())
         createDomainInfoTable(filterDomainDf())
@@ -529,7 +559,7 @@ getAllFeatures <- function(info, domainDf) {
         orthoDf <- subdomainDf[subdomainDf$orthoID == ortho,]
         seedDf <- subdomainDf[subdomainDf$orthoID != ortho,]
         feature <- c(
-            levels(as.factor(orthoDf$feature_id)), 
+            levels(as.factor(orthoDf$feature_id)),
             levels(as.factor(seedDf$feature_id))
         )
     }
@@ -596,11 +626,13 @@ createLinkTable <- function(featureDf, featureType) {
     if (nrow(featureDf) > 0) {
         if (featureType == "pfam") {
             featureDf$link[is.na(featureDf$acc)] <- paste0(
-                "<a href='http://pfam-legacy.xfam.org/family/", featureDf$feature_id,
+                "<a href='http://pfam-legacy.xfam.org/family/",
+                featureDf$feature_id,
                 "' target='_blank'>", "PFAM", "</a>"
             )
             featureDf$link[!(is.na(featureDf$acc))] <- paste0(
-                "<a href='https://www.ebi.ac.uk/interpro/entry/pfam/", featureDf$acc, 
+                "<a href='https://www.ebi.ac.uk/interpro/entry/pfam/",
+                featureDf$acc,
                 "' target='_blank'>", "INTERPRO", "</a>"
             )
         } else {
@@ -623,7 +655,7 @@ createLinkTable <- function(featureDf, featureType) {
 
 createDomainInfoTable <- function(domainDf) {
     if (is.null(domainDf)) stop("No information!")
-    
+
     selectedCols <- c("orthoID", "length", "feature", "start", "end")
     if (ncol(domainDf) <= 11) {
         if (!("length" %in% colnames(domainDf)))
@@ -651,9 +683,10 @@ createDomainInfoTable <- function(domainDf) {
         return(paste("Wrong number of columns:", ncol(domainDf)))
     }
     outDf$Feature <- sub("_", " ", outDf$Feature)
-    outDf$`Gene ID` <- unlist(lapply(strsplit(outDf$orthoID, split = ":"), function (x) return(x[3]))) # gsub("^.*:", "", outDf$orthoID)
+    outDf$`Gene ID` <- unlist(lapply(
+        strsplit(outDf$orthoID, split = ":"), function (x) return(x[3])
+    ))
     outDf <- subset(outDf, select = -c(orthoID))
     outDf <- outDf %>% dplyr::select(`Gene ID`, everything())
     return(outDf)
 }
-

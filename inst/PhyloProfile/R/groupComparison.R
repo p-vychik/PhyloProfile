@@ -154,8 +154,8 @@ groupComparison <- function (
             input$candidateGenes, candidateGenes(), compareType(), plotDf(),
             plotParameters()
         )
-        grid.newpage()
-        grid.draw(g)
+        grid::grid.newpage()
+        grid::grid.draw(g)
     })
 
     output$varPlots.ui <- renderUI({

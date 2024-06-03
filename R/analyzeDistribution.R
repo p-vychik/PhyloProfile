@@ -10,6 +10,7 @@
 #' percentage of their orthologs in each supertaxon and the corresponding
 #' supertaxon names.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom dplyr count
 #' @export
 #' @seealso \code{\link{mainLongRaw}}
 #' @examples
@@ -21,6 +22,7 @@ createPercentageDistributionData <- function(
 ) {
     if (is.null(inputData) | is.null(rankName))
         stop("Input data or rank name cannot be NULL!")
+    geneID <- ncbiID <- supertaxon <- NULL
     allMainRanks <- getTaxonomyRanks()
     if (!(rankName[1] %in% allMainRanks)) stop("Invalid taxonomy rank given!")
     if (ncol(inputData) < 4) {
@@ -31,7 +33,7 @@ createPercentageDistributionData <- function(
         colnames(inputData) <- c("geneID", "ncbiID", "orthoID", "var1", "var2")
     }
     # count number of inparalogs
-    paralogCount <- plyr::count(inputData, c("geneID", "ncbiID"))
+    paralogCount <- inputData %>% dplyr::count(geneID, ncbiID)
     inputData <- merge(inputData, paralogCount, by = c("geneID", "ncbiID"))
     colnames(inputData)[ncol(inputData)] <- "paralog"
     # get sorted taxonomy list
@@ -41,7 +43,7 @@ createPercentageDistributionData <- function(
     taxaTree <- NULL
     taxaList <- sortInputTaxa(inputTaxonID, rankName, refTaxon, taxaTree, taxDB)
     # calculate frequency of all supertaxa
-    taxaCount <- plyr::count(taxaList, "supertaxon")
+    taxaCount <- taxaList %>% dplyr::count(supertaxon)
     # merge inputData, inputDatavar2 and taxaList to get taxonomy info
     taxaMdData <- merge(inputData, taxaList, by = "ncbiID")
     # calculate % present species

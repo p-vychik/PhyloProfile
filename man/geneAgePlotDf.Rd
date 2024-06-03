@@ -20,7 +20,7 @@ Create data for plotting gene ages
 \examples{
 geneAgeDf <- data.frame(
 geneID = c("100136at6656", "100265at6656", "101621at6656", "103479at6656"),
-cat = c("0000001", "0000011", "0000001", "0000011"),
+cath = c("0000001", "0000011", "0000001", "0000011"),
 age = c("07_LUCA", "06_Eukaryota", "07_LUCA", "06_Eukaryota")
 )
 geneAgePlotDf(geneAgeDf)

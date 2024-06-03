@@ -21,7 +21,7 @@ Get taxonomy IDs, sequences, length and annotations for an OMA
 orthologous group (or OMA HOG).
 }
 \examples{
-print("Uncomment the following line to run the function")
+### Uncomment the following line to run the function
 # getDataForOneOma("HUMAN29397", "OG")
 }
 \author{

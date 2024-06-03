@@ -66,6 +66,7 @@ fromInputToProfile() instead!
 # NOTE: this function require some intermediate steps using the results from
 # other functions. If you would like to get a full processed data from the
 # raw input, please use the function fromInputToProfile() instead!
+library(dplyr)
 data("fullProcessedProfile", package="PhyloProfile")
 rankName <- "class"
 refTaxon <- "Mammalia"
@@ -83,7 +84,7 @@ taxonIDs <- levels(as.factor(fullProcessedProfile$ncbiID))
 sortedInputTaxa <- sortInputTaxa(
     taxonIDs, rankName, refTaxon, NULL, NULL
 )
-taxaCount <- plyr::count(sortedInputTaxa, "supertaxon")
+taxaCount <- sortedInputTaxa \%>\% dplyr::count(supertaxon)
 filterProfileData(
     fullProcessedProfile,
     taxaCount,

@@ -16,6 +16,7 @@
 #' @return A wide dataframe contains values for calculating distance matrix.
 #' @author Carla Mölbert (carla.moelbert@gmx.de), Vinh Tran
 #' (tran@bio.uni-frankfurt.de)
+#' @importFrom data.table dcast setDT
 #' @seealso \code{\link{fromInputToProfile}}
 #' @examples
 #' data("finalProcessedProfile", package="PhyloProfile")
@@ -110,6 +111,8 @@ getDataClustering <- function(
 #' @return A calculated distance matrix for input phylogenetic profiles.
 #' @importFrom bioDist mutualInfo
 #' @importFrom bioDist cor.dist
+#' @importFrom stats dist as.dist
+#' @importFrom energy dcor
 #' @author Carla Mölbert (carla.moelbert@gmx.de), Vinh Tran
 #' (tran@bio.uni-frankfurt.de)
 #' @seealso \code{\link{getDataClustering}}
@@ -136,7 +139,7 @@ getDistanceMatrix <- function(profiles = NULL, method = "mutualInformation") {
             p_i <- unlist(profiles[i,])
             for (j in seq_len(nrow(profiles))) { # columns
                 if (i == j) break
-                matrix[i, j] <- dcor(p_i, unlist(profiles[j,]))
+                matrix[i, j] <- energy::dcor(p_i, unlist(profiles[j,]))
             }
         }
         # Swich the value so that the profiles with a high correlation
@@ -165,6 +168,7 @@ getDistanceMatrix <- function(profiles = NULL, method = "mutualInformation") {
 #' @return An object class hclust generated based on input distance matrix and
 #' a selected clustering method.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom stats hclust
 #' @seealso \code{\link{getDataClustering}},
 #' \code{\link{getDistanceMatrix}}, \code{\link{hclust}}
 #' @examples
@@ -189,6 +193,7 @@ clusterDataDend <- function(distanceMatrix = NULL, clusterMethod = "complete") {
 #' @param dd dendrogram object (see ?clusterDataDend)
 #' @return A dendrogram plot for the genes in the input phylogenetic profiles.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom ape plot.phylo
 #' @seealso \code{\link{clusterDataDend}}
 #' @examples
 #' data("finalProcessedProfile", package="PhyloProfile")

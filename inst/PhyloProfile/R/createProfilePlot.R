@@ -41,7 +41,6 @@ createProfilePlot <- function(input, output, session,
     # data for heatmap ---------------------------------------------------------
     dataHeat <- reactive({
         if (is.null(data())) stop("Profile data is NULL!")
-
         if (typeProfile() == "customizedProfile") {
             if (is.null(inTaxa()) | is.null(inSeq())) return()
 
@@ -98,8 +97,9 @@ createProfilePlot <- function(input, output, session,
             )
             addRankDivisionPlot(
                 p, dataHeat(), taxDB(), rankSelect(), getSuperRank(),
-                parameters()$xAxis, parameters()$groupLabelSize,
-                parameters()$groupLabelDist, parameters()$groupLabelAngle
+                parameters()$xAxis, parameters()$font, 
+                parameters()$groupLabelSize, parameters()$groupLabelDist, 
+                parameters()$groupLabelAngle
             )
         })
     })
@@ -131,7 +131,7 @@ createProfilePlot <- function(input, output, session,
                 file,
                 plot = addRankDivisionPlot(
                     basicProfile(), dataHeat(), taxDB(), rankSelect(),
-                    getSuperRank(), parameters()$xAxis,
+                    getSuperRank(), parameters()$xAxis, parameters()$font,
                     parameters()$groupLabelSize, parameters()$groupLabelDist,
                     parameters()$groupLabelAngle
                 ),

@@ -8,10 +8,16 @@
 #' @return List of invalid IDs (not readable for OMA)
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
-#' print("Uncomment the following line to run the function")
+#' ### Uncomment the following line to run the function
 #' # checkOmaID("HUMAN29398")
 
 checkOmaID <- function(ids) {
+    if (!requireNamespace("OmaDB", quietly = TRUE)) {
+        stop(
+            "Package \"OmaDB\" must be installed to use this function.",
+            call. = FALSE
+        )
+    }
     ids <- as.character(ids)
     getOma <- OmaDB::getProtein(ids)
     return(setdiff(ids, names(getOma)))
@@ -28,10 +34,16 @@ checkOmaID <- function(ids) {
 #' @return List of OMA orthologs for an input seed protein.
 #' @author Carla Mölbert carla.moelbert@gmx.de
 #' @examples
-#' print("Uncomment the following line to run the function")
+#' ### Uncomment the following line to run the function
 #' # getOmaMembers("HUMAN29397", "OG")
 
 getOmaMembers <- function(id = NULL, orthoType = "OG") {
+    if (!requireNamespace("OmaDB", quietly = TRUE)) {
+        stop(
+            "Package \"OmaDB\" must be installed to use this function.",
+            call. = FALSE
+        )
+    }
     if (is.null(id)) stop("No OMA ID given!")
     # get the members of the Hierarchical Orthologous Group
     if (orthoType == "HOG") {
@@ -57,10 +69,16 @@ getOmaMembers <- function(id = NULL, orthoType = "OG") {
 #' @return Data frame contains feature names with their start and end positions
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
-#' print("Uncomment the following line to run the function")
+#' ### Uncomment the following line to run the function
 #' # getOmaDomainFromURL("https://omabrowser.org/api/protein/7916808/domains/")
 
 getOmaDomainFromURL <- function(domainURL = NULL) {
+    if (!requireNamespace("OmaDB", quietly = TRUE)) {
+        stop(
+            "Package \"OmaDB\" must be installed to use this function.",
+            call. = FALSE
+        )
+    }
     if (is.null(domainURL)) stop("OMA domain URL is NULL!")
     if (grepl("https://", domainURL[1])) {
         domains <- OmaDB::resolveURL(domainURL)$regions
@@ -93,10 +111,16 @@ getOmaDomainFromURL <- function(domainURL = NULL) {
 #' sequence, length and domain annotations (tab delimited) for input OMA protein
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
-#' print("Uncomment the following line to run the function")
+#' ### Uncomment the following line to run the function
 #' # getOmaDataForOneOrtholog("HUMAN29397")
 
 getOmaDataForOneOrtholog <- function(id = NULL) {
+    if (!requireNamespace("OmaDB", quietly = TRUE)) {
+        stop(
+            "Package \"OmaDB\" must be installed to use this function.",
+            call. = FALSE
+        )
+    }
     if (is.null(id)) stop("No OMA ID given!")
     # get ncbi taxonomy id
     specName <- substr(id, 1, 5)
@@ -141,10 +165,16 @@ getOmaDataForOneOrtholog <- function(id = NULL) {
 #' lengths, domain annotations (tab delimited) and the corresponding seed ID.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
-#' print("Uncomment the following line to run the function")
+#' ### Uncomment the following line to run the function
 #' # getDataForOneOma("HUMAN29397", "OG")
 
 getDataForOneOma <- function(seedID = NULL, orthoType = "OG"){
+    if (!requireNamespace("OmaDB", quietly = TRUE)) {
+        stop(
+            "Package \"OmaDB\" must be installed to use this function.",
+            call. = FALSE
+        )
+    }
     if (is.null(seedID)) stop("No OMA seed ID given!")
     # get members
     idList <- getOmaMembers(seedID, orthoType)
@@ -197,7 +227,7 @@ getDataForOneOma <- function(seedID = NULL, orthoType = "OG"){
 #' @seealso \code{\link{getDataForOneOma}}
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
-#' print("Uncomment the following lines to run the function")
+#' ### Uncomment the following lines to run the function
 #' # omaData <- getDataForOneOma("HUMAN29397", "OG")
 #' # createProfileFromOma(omaData)
 
@@ -216,8 +246,9 @@ createProfileFromOma <- function(finalOmaDf = NULL) {
 #' and end positions of those features.
 #' @seealso \code{\link{getDataForOneOma}}
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom data.table rbindlist
 #' @examples
-#' print("Uncomment the following line to run the function")
+#' ### Uncomment the following line to run the function
 #' # omaData <- getDataForOneOma("HUMAN29397", "OG")
 #' # getAllDomainsOma(omaData)
 
@@ -271,7 +302,7 @@ getAllDomainsOma <- function(finalOmaDf = NULL) {
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{getDataForOneOma}}
 #' @examples
-#' print("Uncomment the following line to run the function")
+#' ### Uncomment the following line to run the function
 #' # omaData <- getDataForOneOma("HUMAN29397", "OG")
 #' # getAllFastaOma(omaData)
 
@@ -290,7 +321,7 @@ getAllFastaOma <- function(finalOmaDf = NULL) {
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{getDataForOneOma}}
 #' @examples
-#' print("Uncomment the following line to run the function")
+#' ### Uncomment the following line to run the function
 #' # omaData <- getDataForOneOma("HUMAN29397", "OG")
 #' # getSelectedFastaOma(omaData, "HUMAN29397")
 

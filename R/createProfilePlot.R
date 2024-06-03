@@ -9,10 +9,8 @@
 #' @export
 #' @examples
 #' ?processOrthoID
-#' \dontrun{
 #' data("finalProcessedProfile", package="PhyloProfile")
 #' processOrthoID(finalProcessedProfile)
-#' }
 
 processOrthoID <- function(dataHeat = NULL) {
     if (is.null(dataHeat)) stop("Input data cannot be NULL!")
@@ -77,7 +75,7 @@ processOrthoID <- function(dataHeat = NULL) {
 #' number of original and filtered co-orthologs in each supertaxon (paralog and
 #' paralogNew), number of species in each supertaxon (numberSpec) and the % of
 #' species that have orthologs in each supertaxon (presSpec).
-#' @import data.table
+#' @importFrom stats na.omit
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{filterProfileData}}
 #' @examples
@@ -142,6 +140,7 @@ dataMainPlot <- function(dataHeat = NULL){
 #' @param selectedSeq selected subset of genes. Default = "all".
 #' @return A dataframe contains data for plotting the customized profile.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom stats na.omit
 #' @seealso \code{\link{filterProfileData}}
 #' @examples
 #' data("finalProcessedProfile", package="PhyloProfile")
@@ -502,13 +501,15 @@ highlightProfilePlot <- function(
 #' @export
 #' @usage addRankDivisionPlot(profilePlot = NULL, plotDf = NULL,
 #'     taxDB = NULL, workingRank = NULL, superRank = NULL, xAxis = "taxa",
-#'     groupLabelSize = 14, groupLabelDist = 2, groupLabelAngle = 90)
+#'     font = "Arial", groupLabelSize = 14, groupLabelDist = 2,
+#'     groupLabelAngle = 90)
 #' @param profilePlot initial (highlighted) profile plot
 #' @param plotDf dataframe for plotting the heatmap phylogentic profile
 #' @param taxDB path to taxonomy database (taxonomyMatrix.txt file required!)
 #' @param workingRank working taxonomy rank (e.g. species)
 #' @param superRank taxonomy rank for division lines (e.g. superkingdom)
 #' @param xAxis type of x-axis (either "genes" or "taxa")
+#' @param font font of text. Default = Arial"
 #' @param groupLabelSize size of rank labels
 #' @param groupLabelDist size of the plot area for rank labels
 #' @param groupLabelAngle angle of rank labels
@@ -547,17 +548,17 @@ highlightProfilePlot <- function(
 #' workingRank <- "class"
 #' superRank <- "superkingdom"
 #' addRankDivisionPlot(
-#'     profilePlot, plotDf, NULL, workingRank, superRank, "taxa"
+#'     profilePlot, plotDf, NULL, workingRank, superRank, "taxa", font = "sans"
 #' )
 
 addRankDivisionPlot <- function(
         profilePlot = NULL, plotDf = NULL, taxDB = NULL,
-        workingRank = NULL, superRank = NULL, xAxis = "taxa",
+        workingRank = NULL, superRank = NULL, xAxis = "taxa", font = "Arial",
         groupLabelSize = 14, groupLabelDist = 2, groupLabelAngle = 90
 ) {
     if (is.null(plotDf)) stop("Input data cannot be NULL!")
     if (is.null(profilePlot)) stop("Profile plot cannot be NULL!")
-
+    profilePlot <- profilePlot + theme(text = element_text(family = font))
     if (is.null(workingRank) || is.null(superRank)) {
         # guideline for separating ref species
         if (xAxis == "genes") {
@@ -606,7 +607,6 @@ addRankDivisionPlot <- function(
                 return(tmp)
             }
         )
-        # add vertical line to divide taxon groups
         # add vertical line to divide taxon groups
         max_taxa <- length(unique(as.character(plotDf$geneID)))
         for(i in groupedList) {

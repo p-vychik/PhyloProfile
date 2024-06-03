@@ -352,7 +352,8 @@ generateSinglePlot <- function(plotDf, parameters, variable) {
 #' @param position Gird position (bottom or right)
 #' @param title Title of grid
 #' @param titleSize Size of grid title
-#' @import gridExtra ggplot2
+#' @import ggplot2
+#' @importFrom gridExtra arrangeGrob
 #' @return Grid of plots with common legend
 #' @author Phil Boileau, \email{philippe.boileau@rimuhc.ca}
 #' @note adapted from https://rdrr.io/github/PhilBoileau/CLSAR/src/R/

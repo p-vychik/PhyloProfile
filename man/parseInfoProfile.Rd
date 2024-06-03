@@ -29,12 +29,13 @@ taxon. The output contains the number of paralogs, the max/min/mean/median
 of VAR1 and VAR2.
 }
 \examples{
+library(dplyr)
 data("mainLongRaw", package="PhyloProfile")
 taxonIDs <- getInputTaxaID(mainLongRaw)
 sortedInputTaxa <- sortInputTaxa(
     taxonIDs, "class", "Mammalia", NULL, NULL
 )
-taxaCount <- plyr::count(sortedInputTaxa, "supertaxon")
+taxaCount <- sortedInputTaxa \%>\% dplyr::count(supertaxon)
 coorthoCOMax <- 999
 parseInfoProfile(
     mainLongRaw, sortedInputTaxa, taxaCount, coorthoCOMax

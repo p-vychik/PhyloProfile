@@ -9,3 +9,4 @@
 ^_config\.yml$
 ^www$
 
+^LICENSE\.md$

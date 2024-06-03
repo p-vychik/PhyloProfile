@@ -32,6 +32,41 @@ joined plots with merged legend as a grid object
 \description{
 Join multiple plots and merge legends
 }
+\examples{
+seed <- "101621at6656"
+ortho <- "101621at6656|AGRPL@224129@0|224129_0:001955|1"
+ortho <- gsub("\\\\|", ":", ortho)
+grepID <- paste(seed, "#", ortho, sep = "")
+domainFile <- system.file(
+    "extdata", "domainFiles/101621at6656.domains",
+    package = "PhyloProfile", mustWork = TRUE
+)
+domainDf <- parseDomainInput(seed, domainFile, "file")
+domainDf$feature_id_mod <- domainDf$feature_id
+subdomainDf <- domainDf[grep(grepID, domainDf$seedID), ]
+subdomainDf$feature <- as.character(subdomainDf$feature)
+orthoDf <- subdomainDf[subdomainDf$orthoID == ortho,]
+seedDf <- subdomainDf[subdomainDf$orthoID != ortho,]
+minStart <- min(subdomainDf$start)
+maxEnd <- max(c(subdomainDf$end, subdomainDf$length))
+# resolve overlapping domains
+seedDf <- PhyloProfile:::resolveOverlapFeatures(seedDf)
+orthoDf <- PhyloProfile:::resolveOverlapFeatures(orthoDf)
+# add feature colors
+featureColorDf <- PhyloProfile:::addFeatureColors(seedDf, orthoDf)
+seedDf <- featureColorDf[[1]]
+orthoDf <- featureColorDf[[2]]
+# generate plots
+plotSeed <- PhyloProfile:::singleDomainPlotting(
+    seedDf, seed, minStart = minStart, maxEnd = maxEnd, font = "sans"
+)
+plotOrtho <- PhyloProfile:::singleDomainPlotting(
+    orthoDf, ortho, minStart = minStart, maxEnd = maxEnd, font = "sans"
+)
+# merge plots
+PhyloProfile:::joinPlotMergeLegends(
+    seedDf, orthoDf, plotSeed, plotOrtho, "bottom", font = "sans")
+}
 \author{
 Vinh Tran tran@bio.uni-frankfurt.de
 }

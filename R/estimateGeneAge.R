@@ -15,11 +15,14 @@
 #' @param taxDB Path to the taxonomy DB files
 #' @return A dataframe contains estimated gene ages for the seed proteins.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom data.table setDT setnames
+#' @importFrom dplyr count
 #' @seealso \code{\link{parseInfoProfile}} for creating a full processed
 #' profile dataframe; \code{\link{getNameList}} and
 #' \code{\link{getTaxonomyMatrix}} for getting taxonomy info,
 #' \code{\link{fullProcessedProfile}} for a demo input dataframe
 #' @examples
+#' library(dplyr)
 #' data("fullProcessedProfile", package="PhyloProfile")
 #' rankName <- "class"
 #' refTaxon <- "Mammalia"
@@ -28,7 +31,7 @@
 #' sortedInputTaxa <- sortInputTaxa(
 #'     taxonIDs, rankName, refTaxon, NULL, NULL
 #' )
-#' taxaCount <- plyr::count(sortedInputTaxa, "supertaxon")
+#' taxaCount <- sortedInputTaxa %>% dplyr::count(supertaxon)
 #' var1Cutoff <- c(0, 1)
 #' var2Cutoff <- c(0, 1)
 #' percentCutoff <- c(0, 1)
@@ -74,12 +77,12 @@ estimateGeneAge <- function(
     }
     catList <- lapply(
         seq(nrow(subDtTmp)), function (x) {
-            cat <- subDtTmp[x, ] %in% supFirstLine
-            cat <- paste0(cat, collapse = "")})
+            cath <- subDtTmp[x, ] %in% supFirstLine
+            cath <- paste0(cath, collapse = "")})
     catDf <- data.frame(ncbiID = as.character(subDtTmp$abbrName),
-                        cat = do.call(rbind, catList), stringsAsFactors = FALSE)
-    catDf$cat <- gsub("TRUE", "1", catDf$cat)
-    catDf$cat <- gsub("FALSE", "0", catDf$cat)
+                        cath = do.call(rbind, catList), stringsAsFactors=FALSE)
+    catDf$cath <- gsub("TRUE", "1", catDf$cath)
+    catDf$cath <- gsub("FALSE", "0", catDf$cath)
     # get main input data
     mdData <- droplevels(processedProfileData)
     # filter by var1, var2 ..
@@ -100,7 +103,7 @@ estimateGeneAge <- function(
     mdDtExt$var2[mdDtExt$var2 == "NA" | is.na(mdDtExt$var2)] <- 0
     # remove cat for "NA" orthologs and also for orthologs that dont fit cutoffs
     if (nrow(mdDtExt[mdDtExt$orthoID == "NA" | is.na(mdDtExt$orthoID), ]) > 0)
-        mdDtExt[mdDtExt$orthoID == "NA" | is.na(mdDtExt$orthoID),]$cat <- NA
+        mdDtExt[mdDtExt$orthoID == "NA" | is.na(mdDtExt$orthoID),]$cath <- NA
     mdDtExt <- mdDtExt[stats::complete.cases(mdDtExt), ]
     # filter by %specpres
     mdDtExt <- mdDtExt[
@@ -108,26 +111,26 @@ estimateGeneAge <- function(
         ]
 
     # get the furthest common taxon with selected taxon for each gene
-    geneAgeDf <- as.data.frame(tapply(mdDtExt$cat, mdDtExt$geneID, min))
+    geneAgeDf <- as.data.frame(tapply(mdDtExt$cath, mdDtExt$geneID, min))
     data.table::setDT(geneAgeDf, keep.rownames = TRUE)[]
-    data.table::setnames(geneAgeDf, seq_len(2), c("geneID", "cat"))  #col names
+    data.table::setnames(geneAgeDf, seq_len(2), c("geneID", "cath"))  #col names
     row.names(geneAgeDf) <- NULL   # remove row names
 
     ### move NA cat to working taxonomy rank
     if (rankName == "genus")
-        geneAgeDf$cat[is.na(geneAgeDf$cat)] <- "011111111"
+        geneAgeDf$cath[is.na(geneAgeDf$cath)] <- "011111111"
     else if (rankName == "family")
-        geneAgeDf$cat[is.na(geneAgeDf$cat)] <- "001111111"
+        geneAgeDf$cath[is.na(geneAgeDf$cath)] <- "001111111"
     else if (rankName == "class")
-        geneAgeDf$cat[is.na(geneAgeDf$cat)] <- "000111111"
+        geneAgeDf$cath[is.na(geneAgeDf$cath)] <- "000111111"
     else if (rankName == "phylum")
-        geneAgeDf$cat[is.na(geneAgeDf$cat)] <- "000011111"
+        geneAgeDf$cath[is.na(geneAgeDf$cath)] <- "000011111"
     else if (rankName == "kingdom")
-        geneAgeDf$cat[is.na(geneAgeDf$cat)] <- "000001111"
+        geneAgeDf$cath[is.na(geneAgeDf$cath)] <- "000001111"
     else if (rankName == "superkingdom")
-        geneAgeDf$cat[is.na(geneAgeDf$cat)] <- "000000011"
+        geneAgeDf$cath[is.na(geneAgeDf$cath)] <- "000000011"
     else
-        geneAgeDf$cat[is.na(geneAgeDf$cat)] <- "111111111"
+        geneAgeDf$cath[is.na(geneAgeDf$cath)] <- "111111111"
     ### merge ranks that are lower than ref rank to ref rank
     index <- 0
     if (rankName != "species")
@@ -135,13 +138,13 @@ estimateGeneAge <- function(
     maxCat <- paste0(
         paste(rep(0,index), collapse = ""), paste(rep(1,9-index), collapse = "")
     )
-    geneAgeDf$cat[geneAgeDf$cat > maxCat] <- maxCat
+    geneAgeDf$cath[geneAgeDf$cath > maxCat] <- maxCat
     ### convert cat into geneAge
     domainDfList <- lapply(
-        geneAgeDf[geneAgeDf$cat == "000000001",]$geneID,
+        geneAgeDf[geneAgeDf$cath == "000000001",]$geneID,
         function (x) {
             orthoList <- mdDtExt[
-                mdDtExt$geneID == x & mdDtExt$cat == "000000001",]$ncbiID
+                mdDtExt$geneID == x & mdDtExt$cath == "000000001",]$ncbiID
             orthoDomainID <- levels(as.factor(
                 subDt[subDt$abbrName %in% orthoList,]$superkingdom))
             orthoDomainName <- levels(as.factor(c(
@@ -157,10 +160,10 @@ estimateGeneAge <- function(
         }
     )
     konList <- lapply(
-        geneAgeDf[geneAgeDf$cat == "000000111",]$geneID,
+        geneAgeDf[geneAgeDf$cath == "000000111",]$geneID,
         function (x) {
             orthoList <- mdDtExt[
-                mdDtExt$geneID == x & mdDtExt$cat == "000000111",]$ncbiID
+                mdDtExt$geneID == x & mdDtExt$cath == "000000111",]$ncbiID
             orthoKonID <- levels(as.factor(
                 subDt[subDt$abbrName %in% orthoList,]$norank_33154))
             superKingdom <- taxList$ncbiID[
@@ -192,13 +195,13 @@ estimateGeneAge <- function(
         }
     )
     sarList <- lapply(
-        geneAgeDf[geneAgeDf$cat == "000001111",]$geneID,
+        geneAgeDf[geneAgeDf$cath == "000001111",]$geneID,
         function (x) {
             if (
                 taxList$fullName[taxList$ncbiID == supFirstLine$kingdom] =="Sar"
             ) {
                 orthoList <- mdDtExt[
-                    mdDtExt$geneID == x & mdDtExt$cat == "000001111",]$ncbiID
+                    mdDtExt$geneID == x & mdDtExt$cath == "000001111",]$ncbiID
                 sarTaxDt <- Dt[
                     Dt$abbrName %in% orthoList,
                     colnames(Dt)[
@@ -232,21 +235,21 @@ estimateGeneAge <- function(
     geneAgeDfPre <- do.call(rbind, c(domainDfList, konList, sarList))
     if (!(is.null(geneAgeDfPre)))
         geneAgeDf <- merge(geneAgeDf, geneAgeDfPre, by = "geneID", all.x = TRUE)
-    geneAgeDf$age[geneAgeDf$cat == "000000011"] <- paste0(
+    geneAgeDf$age[geneAgeDf$cath == "000000011"] <- paste0(
         "08_", taxList$fullName[taxList$ncbiID == supFirstLine$superkingdom])
-    geneAgeDf$age[geneAgeDf$cat == "000011111"] <- paste0(
+    geneAgeDf$age[geneAgeDf$cath == "000011111"] <- paste0(
         "04_", taxList$fullName[taxList$ncbiID == supFirstLine$phylum])
-    geneAgeDf$age[geneAgeDf$cat == "000111111"] <- paste0(
+    geneAgeDf$age[geneAgeDf$cath == "000111111"] <- paste0(
         "03_", taxList$fullName[taxList$ncbiID == supFirstLine$class])
-    geneAgeDf$age[geneAgeDf$cat == "001111111"] <- paste0(
+    geneAgeDf$age[geneAgeDf$cath == "001111111"] <- paste0(
         "02_", taxList$fullName[taxList$ncbiID == supFirstLine$family])
-    geneAgeDf$age[geneAgeDf$cat == "011111111"] <- paste0(
+    geneAgeDf$age[geneAgeDf$cath == "011111111"] <- paste0(
         "01_", taxList$fullName[taxList$ncbiID == supFirstLine$genus])
-    geneAgeDf$age[geneAgeDf$cat == "111111111"] <- paste0(
+    geneAgeDf$age[geneAgeDf$cath == "111111111"] <- paste0(
         "00_", taxList$fullName[
             taxList$fullName == refTaxon & taxList$rank == rankName])
     # return geneAge data frame
-    geneAgeDf <- geneAgeDf[, c("geneID", "cat", "age")]
+    geneAgeDf <- geneAgeDf[, c("geneID", "cath", "age")]
     return(geneAgeDf)
 }
 
@@ -256,19 +259,21 @@ estimateGeneAge <- function(
 #' and percentage of genes for each calculated evolutionary ages and the
 #' corresponding position for writting those number on the plot.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom dplyr count
 #' @export
 #' @seealso \code{\link{estimateGeneAge}}
 #' @examples
 #' geneAgeDf <- data.frame(
 #' geneID = c("100136at6656", "100265at6656", "101621at6656", "103479at6656"),
-#' cat = c("0000001", "0000011", "0000001", "0000011"),
+#' cath = c("0000001", "0000011", "0000001", "0000011"),
 #' age = c("07_LUCA", "06_Eukaryota", "07_LUCA", "06_Eukaryota")
 #' )
 #' geneAgePlotDf(geneAgeDf)
 
 geneAgePlotDf <- function(geneAgeDf){
     if (is.null(geneAgeDf)) stop("Gene age data is NULL!")
-    plotDf <- plyr::count(geneAgeDf, c("age"))
+    age <- NULL
+    plotDf <- geneAgeDf %>% dplyr::count(age)
     plotDf$level <- substring(plotDf$age, 1,2)
     levelDf <- data.frame(
         level = c("00", "01", "02", "03", "04", "05", "08", "10"),
@@ -282,8 +287,8 @@ geneAgePlotDf <- function(geneAgeDf){
     plotDf[is.na(plotDf)] <- ""
     plotDf$name <- paste0(substring(plotDf$age, 4), plotDf$rank)
     plotDf$name <- factor(plotDf$name, levels = plotDf$name)
-    plotDf$percentage <- round(plotDf$freq / sum(plotDf$freq) * 100, 1)
-    outDf <- plotDf[, c("name", "freq", "percentage")]
+    plotDf$percentage <- round(plotDf$n / sum(plotDf$n) * 100, 1)
+    outDf <- plotDf[, c("name", "n", "percentage")]
     colnames(outDf) <- c("name", "count", "percentage")
     return(outDf)
 }
@@ -292,10 +297,11 @@ geneAgePlotDf <- function(geneAgeDf){
 #' @param geneAgePlotDf data frame required for plotting gene age (see
 #' ?geneAgePlotDf)
 #' @param textFactor increase factor of text size
+#' @param font font of text. Default = Arial"
 #' @return A gene age distribution plot as a ggplot2 object
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @import ggplot2
-#' @import RColorBrewer
+#' @importFrom RColorBrewer brewer.pal
 #' @export
 #' @seealso \code{\link{estimateGeneAge}} and \code{\link{geneAgePlotDf}}
 #' @examples
@@ -304,14 +310,10 @@ geneAgePlotDf <- function(geneAgeDf){
 #'     count = c(7, 1, 30),
 #'     percentage = c(18, 3, 79)
 #' )
-#' createGeneAgePlot(geneAgePlotDf)
+#' createGeneAgePlot(geneAgePlotDf, 1, "sans")
 
-createGeneAgePlot <- function (geneAgePlotDf, textFactor = 1){
-    name <- NULL
-    count <- NULL
-    percentage <- NULL
-    x <- NULL
-    y <- NULL
+createGeneAgePlot <- function (geneAgePlotDf, textFactor = 1, font = "Arial"){
+    name <- count <- percentage <- x <- y <- NULL
     arrowDf <- data.frame(time = c(0, 0), y = c(0, nrow(geneAgePlotDf) + 1))
     n <- nlevels(as.factor(geneAgePlotDf$name))
     mycolors <- grDevices::colorRampPalette(brewer.pal(11, "Spectral"))(n)
@@ -341,7 +343,8 @@ createGeneAgePlot <- function (geneAgePlotDf, textFactor = 1){
             legend.position = "none",
             axis.title.y = element_blank(),
             axis.title.x = element_text(size = 12 * textFactor),
-            axis.text = element_text(size = 12 * textFactor)
+            axis.text = element_text(size = 12 * textFactor),
+            text = element_text(family = font)
         ) +
         scale_fill_manual(values = mycolors) +
         scale_x_discrete(limits = rev(levels(geneAgePlotDf$name))) +

@@ -21,7 +21,5 @@ list of n different colors
 Create qualitative colours
 }
 \examples{
-\dontrun{
 PhyloProfile:::qualitativeColours(5)
-}
 }

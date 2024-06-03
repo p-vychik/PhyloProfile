@@ -1,6 +1,7 @@
 context("test creating data and plots for distritbution analysis function")
 
 test_that("test distritbution analyze functions", {
+    library(dplyr)
     # raw input
     inputData <- createLongMatrix("mainWideTest.txt")
     # selected rank name
@@ -25,7 +26,7 @@ test_that("test distritbution analyze functions", {
     sortedTaxa <- sortInputTaxa(
         inputTaxonID, rankName, refTaxon, taxaTree
     )
-    taxaCount <- plyr::count(sortedTaxa, "supertaxon")
+    taxaCount <- sortedTaxa %>% dplyr::count(supertaxon)
     fullProfileData <- parseInfoProfile(
         inputData,
         sortedTaxa,

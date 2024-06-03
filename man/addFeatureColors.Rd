@@ -37,9 +37,21 @@ choose to color only the shared features, unique features, all features
 it can be changed.
 }
 \examples{
-\dontrun{
-NEED TO ADD AN EXAMPLE HERE
-}
+# get domain data
+seedID <- "101621at6656"
+domainFile <- system.file(
+    "extdata", "domainFiles/101621at6656.domains",
+    package = "PhyloProfile", mustWork = TRUE
+)
+domainDf <- parseDomainInput(seedID, domainFile, "file")
+# get seedDf and orthoDf
+subDf <- domainDf[
+    domainDf$seedID ==
+    "101621at6656#101621at6656:AGRPL@224129@0:224129_0:001955:1",]
+orthoDf <- subDf[subDf$orthoID == "101621at6656:DROME@7227@1:Q9VG04",]
+seedDf <- subDf[subDf$orthoID != "101621at6656:DROME@7227@1:Q9VG04",]
+# add colors to features
+PhyloProfile:::addFeatureColors(seedDf, orthoDf)
 }
 \author{
 Vinh Tran tran@bio.uni-frankfurt.de

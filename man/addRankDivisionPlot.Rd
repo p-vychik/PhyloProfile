@@ -6,7 +6,8 @@
 \usage{
 addRankDivisionPlot(profilePlot = NULL, plotDf = NULL,
     taxDB = NULL, workingRank = NULL, superRank = NULL, xAxis = "taxa",
-    groupLabelSize = 14, groupLabelDist = 2, groupLabelAngle = 90)
+    font = "Arial", groupLabelSize = 14, groupLabelDist = 2,
+    groupLabelAngle = 90)
 }
 \arguments{
 \item{profilePlot}{initial (highlighted) profile plot}
@@ -20,6 +21,8 @@ addRankDivisionPlot(profilePlot = NULL, plotDf = NULL,
 \item{superRank}{taxonomy rank for division lines (e.g. superkingdom)}
 
 \item{xAxis}{type of x-axis (either "genes" or "taxa")}
+
+\item{font}{font of text. Default = Arial"}
 
 \item{groupLabelSize}{size of rank labels}
 
@@ -64,7 +67,7 @@ profilePlot <- heatmapPlotting(plotDf, plotParameter)
 workingRank <- "class"
 superRank <- "superkingdom"
 addRankDivisionPlot(
-    profilePlot, plotDf, NULL, workingRank, superRank, "taxa"
+    profilePlot, plotDf, NULL, workingRank, superRank, "taxa", font = "sans"
 )
 }
 \seealso{

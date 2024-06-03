@@ -5,10 +5,9 @@
 #' @param light light colors TRUE or FALSE
 #' @return list of n different colors
 #' @source Modified based on https://gist.github.com/peterk87/6011397
+#' @importFrom RColorBrewer brewer.pal
 #' @examples
-#' \dontrun{
 #' PhyloProfile:::qualitativeColours(5)
-#' }
 
 qualitativeColours <- function(n, light = FALSE) {
     # For more than 21 colours needed
@@ -92,6 +91,7 @@ getQualColForVector <- function(x = NULL) {
 #' @param pallete name of color palette
 #' @return TRUE if color pallete has enough colors, otherwise FALSE
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom RColorBrewer brewer.pal.info
 #' @examples
 #' myItems <- rep("a",3)
 #' checkColorPallete(myItems, "Set1")
@@ -99,7 +99,7 @@ getQualColForVector <- function(x = NULL) {
 checkColorPallete <- function(items, pallete = "Paired") {
     if (is.null(items)) stop("No item given!")
     colorDf <- data.frame(RColorBrewer::brewer.pal.info)
-    if (!(pallete %in% row.names(colorDf))) 
+    if (!(pallete %in% row.names(colorDf)))
         stop("Given color pallete not found")
     colorDf$name <- row.names(colorDf)
     if (length(items) < colorDf$maxcolors[colorDf$name == pallete])

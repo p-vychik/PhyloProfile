@@ -5,9 +5,10 @@
 \title{Create protein's domain architecure plot}
 \usage{
 createArchiPlot(info, domainDf, labelArchiSize, titleArchiSize,
-    showScore, showName, firstDist, nameType, nameSize, segmentSize,
-    nameColor, labelPos, colorType, ignoreInstanceNo, currentNCBIinfo,
-    featureTypeSort, featureTypeOrder, colorPallete, resolveOverlap, font)
+    showScore, showWeight, namePosition, firstDist, nameType, nameSize,
+    segmentSize, nameColor, labelPos, colorType, ignoreInstanceNo,
+    currentNCBIinfo, featureClassSort, featureClassOrder, colorPallete,
+    resolveOverlap, font)
 }
 \arguments{
 \item{info}{A list contains seed and ortholog's IDs}
@@ -24,7 +25,9 @@ between 2 proteins* (e.g. seed protein vs ortholog) (optional).}
 
 \item{showScore}{Show/hide E-values and Bit-scores. Default = NULL (hide)}
 
-\item{showName}{list of positions for domain names, choose from "plot",
+\item{showWeight}{Show/hide feature weights. Default = NULL (hide)}
+
+\item{namePosition}{list of positions for domain names, choose from "plot",
 "legend" or "axis". Default: "plot"}
 
 \item{firstDist}{Distance of the first domain to plot title. Default = 0.5}
@@ -48,10 +51,9 @@ shared or unique features. Default = FALSE}
 \item{currentNCBIinfo}{Dataframe of the pre-processed NCBI taxonomy
 data. Default = NULL (will be automatically retrieved from PhyloProfile app)}
 
-\item{featureTypeSort}{Choose to arrange plot by shared features. Default =
-"Yes"}
+\item{featureClassSort}{Choose to sort features. Default = "Yes"}
 
-\item{featureTypeOrder}{Vector of ordered feature types}
+\item{featureClassOrder}{vector of ordered feature classes}
 
 \item{colorPallete}{Choose between "Paired", "Set1", "Set2", "Set3",
 "Accent", "Dark2" for the color pallete}
@@ -80,12 +82,17 @@ domainFile <- system.file(
     package = "PhyloProfile", mustWork = TRUE
 )
 domainDf <- parseDomainInput(seedID, domainFile, "file")
-plot <- createArchiPlot(info, domainDf, 9, 9)
+domainDf$feature_id_mod <- domainDf$feature_id
+domainDf$feature_id_mod <- gsub("SINGLE", "LCR", domainDf$feature_id_mod)
+domainDf$feature_id_mod[domainDf$feature_type == "coils"] <- "Coils"
+domainDf$feature_id_mod[domainDf$feature_type == "seg"] <- "LCR"
+domainDf$feature_id_mod[domainDf$feature_type == "tmhmm"] <- "TM"
+plot <- createArchiPlot(info, domainDf, font = "sans")
 grid::grid.draw(plot)
 }
 \seealso{
-\code{\link{singleDomainPlotting}}, \code{\link{sortDomains}},
-\code{\link{parseDomainInput}}, \code{\link{getQualColForVector}}
+\code{\link{singleDomainPlotting}},\code{\link{pairDomainPlotting}},
+\code{\link{sortDomains}}, \code{\link{parseDomainInput}}
 }
 \author{
 Vinh Tran tran@bio.uni-frankfurt.de

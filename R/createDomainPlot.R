@@ -5,9 +5,10 @@
 #' which normally is also the orthologous group ID.
 #' @export
 #' @usage createArchiPlot(info, domainDf, labelArchiSize, titleArchiSize,
-#'     showScore, showName, firstDist, nameType, nameSize, segmentSize,
-#'     nameColor, labelPos, colorType, ignoreInstanceNo, currentNCBIinfo,
-#'     featureTypeSort, featureTypeOrder, colorPallete, resolveOverlap, font)
+#'     showScore, showWeight, namePosition, firstDist, nameType, nameSize,
+#'     segmentSize, nameColor, labelPos, colorType, ignoreInstanceNo,
+#'     currentNCBIinfo, featureClassSort, featureClassOrder, colorPallete,
+#'     resolveOverlap, font)
 #' @param info A list contains seed and ortholog's IDs
 #' @param domainDf Dataframe contains domain info for the seed and ortholog.
 #' This including the seed ID, orthologs IDs, sequence lengths, feature names,
@@ -17,7 +18,8 @@
 #' @param labelArchiSize Lable size (in px). Default = 12.
 #' @param titleArchiSize Title size (in px). Default = 12.
 #' @param showScore Show/hide E-values and Bit-scores. Default = NULL (hide)
-#' @param showName list of positions for domain names, choose from "plot",
+#' @param showWeight Show/hide feature weights. Default = NULL (hide)
+#' @param namePosition list of positions for domain names, choose from "plot",
 #' "legend" or "axis". Default: "plot"
 #' @param firstDist Distance of the first domain to plot title. Default = 0.5
 #' @param nameType Type of domain names, either "Texts" or "Labels" (default)
@@ -31,9 +33,8 @@
 #' shared or unique features. Default = FALSE
 #' @param currentNCBIinfo Dataframe of the pre-processed NCBI taxonomy
 #' data. Default = NULL (will be automatically retrieved from PhyloProfile app)
-#' @param featureTypeSort Choose to arrange plot by shared features. Default =
-#' "Yes"
-#' @param featureTypeOrder Vector of ordered feature types
+#' @param featureClassSort Choose to sort features. Default = "Yes"
+#' @param featureClassOrder vector of ordered feature classes
 #' @param colorPallete Choose between "Paired", "Set1", "Set2", "Set3",
 #' "Accent", "Dark2" for the color pallete
 #' @param resolveOverlap Choose to merge non-overlapped features of a feature
@@ -42,8 +43,9 @@
 #' @return A domain plot as arrangeGrob object. Use grid::grid.draw(plot) to
 #' render.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
-#' @seealso \code{\link{singleDomainPlotting}}, \code{\link{sortDomains}},
-#' \code{\link{parseDomainInput}}, \code{\link{getQualColForVector}}
+#' @importFrom stringr str_count
+#' @seealso \code{\link{singleDomainPlotting}},\code{\link{pairDomainPlotting}},
+#' \code{\link{sortDomains}}, \code{\link{parseDomainInput}}
 #' @examples
 #' seedID <- "101621at6656"
 #' orthoID <- "101621at6656|AGRPL@224129@0|224129_0:001955|1"
@@ -53,15 +55,21 @@
 #'     package = "PhyloProfile", mustWork = TRUE
 #' )
 #' domainDf <- parseDomainInput(seedID, domainFile, "file")
-#' plot <- createArchiPlot(info, domainDf, 9, 9)
+#' domainDf$feature_id_mod <- domainDf$feature_id
+#' domainDf$feature_id_mod <- gsub("SINGLE", "LCR", domainDf$feature_id_mod)
+#' domainDf$feature_id_mod[domainDf$feature_type == "coils"] <- "Coils"
+#' domainDf$feature_id_mod[domainDf$feature_type == "seg"] <- "LCR"
+#' domainDf$feature_id_mod[domainDf$feature_type == "tmhmm"] <- "TM"
+#' plot <- createArchiPlot(info, domainDf, font = "sans")
 #' grid::grid.draw(plot)
 
 createArchiPlot <- function(
         info = NULL, domainDf = NULL, labelArchiSize = 12, titleArchiSize = 12,
-        showScore = NULL, showName = "plot", firstDist = 0.5,
-        nameType = "Labels", nameSize = 3, segmentSize = 5, nameColor = "#000000",
-        labelPos = "Above", colorType = "Unique", ignoreInstanceNo = FALSE,
-        currentNCBIinfo = NULL, featureTypeSort = "Yes", featureTypeOrder = NULL,
+        showScore = NULL, showWeight = NULL, namePosition = "plot",
+        firstDist = 0.5, nameType = "Labels", nameSize = 3, segmentSize = 5,
+        nameColor = "#000000", labelPos = "Above", colorType = "Unique",
+        ignoreInstanceNo = FALSE, currentNCBIinfo = NULL,
+        featureClassSort = "Yes", featureClassOrder = NULL,
         colorPallete = "Paired", resolveOverlap = "Yes", font = "Arial"
 ){
     if (is.null(info) | is.null(domainDf)) return(ggplot() + theme_void())
@@ -71,7 +79,6 @@ createArchiPlot <- function(
     group <- gsub("\\|", ":", group)
     ortho <- gsub("\\|", ":", ortho)
     grepID <- paste(group, "#", ortho, sep = "")
-    # subdomainDf <- domainDf[grep(grepID, domainDf$seedID), ]
     subdomainDf <- domainDf
     subdomainDf$feature <- as.character(subdomainDf$feature)
     subdomainDf <- subdomainDf[!duplicated(subdomainDf), ]
@@ -93,7 +100,10 @@ createArchiPlot <- function(
 
         # simplify seed/ortho seq IDs if they are in bionf format
         if (!is.null(currentNCBIinfo)) {
-            if (str_count(seed, ":") >= 2 & str_count(seed, "@") >= 2) {
+            if (
+                stringr::str_count(seed, ":") >= 2 & 
+                stringr::str_count(seed, "@") >= 2
+            ) {
                 seedTmp <- strsplit(as.character(seed),':', fixed = TRUE)[[1]]
                 seedSpec <-
                     strsplit(as.character(seedTmp[2]),'@', fixed = TRUE)[[1]][2]
@@ -101,18 +111,23 @@ createArchiPlot <- function(
                     id2name(seedSpec, currentNCBIinfo)[,2], " - ", seedTmp[3]
                 )
                 if (ortho != seed) {
-                    orthoTmp <- strsplit(as.character(ortho),':', fixed = TRUE)[[1]]
+                    orthoTmp <- strsplit(
+                        as.character(ortho),':', fixed = TRUE)[[1]]
                     orthoSpec <-
-                        strsplit(as.character(orthoTmp[2]),'@',fixed = TRUE)[[1]][2]
+                        strsplit(
+                            as.character(orthoTmp[2]),'@',fixed = TRUE)[[1]][2]
                     ortho <- paste0(
-                        id2name(orthoSpec, currentNCBIinfo)[,2], " - ", orthoTmp[3]
+                        id2name(orthoSpec, currentNCBIinfo)[,2],
+                        " - ", orthoTmp[3]
                     )
                 }
             }
         }
 
         # add feature colors
-        featureColorDf <- addFeatureColors(seedDf, orthoDf, colorType, colorPallete, ignoreInstanceNo)
+        featureColorDf <- addFeatureColors(
+            seedDf, orthoDf, colorType, colorPallete, ignoreInstanceNo
+        )
         seedDf <- featureColorDf[[1]]
         orthoDf <- featureColorDf[[2]]
 
@@ -128,9 +143,9 @@ createArchiPlot <- function(
         }
 
         if (nrow(orthoDf) > 0) {
-            if (all.equal(seedDf, orthoDf)[1] == TRUE) featureTypeSort <- "No"
+            if (all.equal(seedDf, orthoDf)[1] == TRUE) featureClassSort <- "No"
             # sort features
-            if (featureTypeSort == "Yes") {
+            if (featureClassSort == "Yes") {
                 # change order of one df's features based on order of other df's
                 if (length(orthoDf$feature) < length(seedDf$feature)) {
                     orderedOrthoDf <- orthoDf[order(orthoDf$feature), ]
@@ -143,298 +158,33 @@ createArchiPlot <- function(
                 }
             } else {
                 # change order based on list of feature types
-                orderedSeedDf <- sortDomainsByList(seedDf, featureTypeOrder)
-                orderedOrthoDf <- sortDomainsByList(orthoDf, featureTypeOrder)
+                orderedSeedDf <- sortDomainsByList(seedDf, featureClassOrder)
+                orderedOrthoDf <- sortDomainsByList(orthoDf, featureClassOrder)
             }
-
-            # join weight values and feature names
-            if ("weight" %in% colnames(orderedOrthoDf)) {
-                NULL
-                # orderedOrthoDf$yLabel <- paste0(
-                #     orderedOrthoDf$feature," (",round(orderedOrthoDf$weight, 2),")")
-            } else orderedOrthoDf$yLabel <- orderedOrthoDf$feature
-            if ("weight" %in% colnames(orderedSeedDf)) {
-                NULL
-                # orderedSeedDf$yLabel <- paste0(
-                #     orderedSeedDf$feature," (",round(orderedSeedDf$weight, 2),")")
-            } else orderedSeedDf$yLabel <- orderedSeedDf$feature
             # plotting
             g <- pairDomainPlotting(
                 seed, ortho, orderedSeedDf, orderedOrthoDf, minStart, maxEnd,
-                labelArchiSize, titleArchiSize, showScore, showName, firstDist,
-                nameType, nameSize, segmentSize, nameColor, labelPos, colorPallete, font)
+                labelArchiSize, titleArchiSize, showScore, showWeight,
+                namePosition, firstDist, nameType, nameSize, segmentSize,
+                nameColor, labelPos, colorPallete, font)
         } else {
-            # orderedSeedDf <- seedDf[order(seedDf$feature), ]
-            orderedSeedDf <- sortDomainsByList(seedDf, featureTypeOrder)
-            if ("weight" %in% colnames(orderedSeedDf)) {
-                NULL
-                # orderedSeedDf$yLabel <- paste0(
-                #     orderedSeedDf$feature," (",round(orderedSeedDf$weight, 2),")")
-            } else orderedSeedDf$yLabel <- orderedSeedDf$feature
+            orderedSeedDf <- sortDomainsByList(seedDf, featureClassOrder)
             # plotting
             g <- pairDomainPlotting(
                 seed, seed, orderedSeedDf, orderedSeedDf, minStart, maxEnd,
-                labelArchiSize, titleArchiSize, showScore, showName, firstDist,
-                nameType, nameSize, segmentSize, nameColor, labelPos, colorPallete, font)
+                labelArchiSize, titleArchiSize, showScore, showWeight,
+                namePosition, firstDist, nameType, nameSize, segmentSize,
+                nameColor, labelPos, colorPallete, font)
         }
         return(g)
     }
 }
 
-# createArchiPlot <- function(
-#         info = NULL, domainDf = NULL, labelArchiSize = 12, titleArchiSize = 12,
-#         showScore = NULL, domainNamePos = "plot", firstDist = 0.5,
-#         nameType = "Labels", nameSize = 5, nameColor = "#000000", labelPos = "Above",
-#         colorType = "Unique", ignoreInstanceNo = FALSE, currentNCBIinfo = NULL,
-#         featureTypeSort = "Yes", featureTypeOrder = NULL, colorPallete = "Paired",
-#         resolveOverlap = "Yes"
-# ){
-#     if (is.null(info) | is.null(domainDf)) return(ggplot() + theme_void())
-#     group <- as.character(info[1])
-#     ortho <- as.character(info[2])
-#     # get sub dataframe based on selected groupID and orthoID
-#     group <- gsub("\\|", ":", group)
-#     ortho <- gsub("\\|", ":", ortho)
-#     grepID <- paste(group, "#", ortho, sep = "")
-#     subdomainDf <- domainDf[domainDf$seedID == grepID, ]
-#     subdomainDf$feature <- as.character(subdomainDf$feature)
-#     orthoID <- NULL
-#
-#     if (nrow(subdomainDf) < 1) return(paste0("No domain info available!"))
-#     else {
-#         # get minStart and maxEnd
-#         minStart <- min(subdomainDf$start)
-#         maxEnd <- max(subdomainDf$end)
-#         if ("length" %in% colnames(subdomainDf))
-#             maxEnd <- max(c(subdomainDf$end, subdomainDf$length))
-#         # ortho & seed domains df
-#         orthoDf <- subdomainDf[subdomainDf$orthoID == ortho,]
-#         seedDf <- subdomainDf[subdomainDf$orthoID != ortho,]
-#         if (nrow(seedDf) == 0) seedDf <- orthoDf
-#         seed <- as.character(seedDf$orthoID[1])
-#         if (nrow(seedDf) == 0) return(paste0("No domain info available!"))
-#
-#         # simplify seed/ortho seq IDs if they are in bionf format
-#         if (!is.null(currentNCBIinfo)) {
-#             if (str_count(seed, ":") >= 2 & str_count(seed, "@") >= 2) {
-#                 seedTmp <- strsplit(as.character(seed),':', fixed = TRUE)[[1]]
-#                 seedSpec <-
-#                     strsplit(as.character(seedTmp[2]),'@', fixed = TRUE)[[1]][2]
-#                 seed <- paste0(
-#                     id2name(seedSpec, currentNCBIinfo)[,2], " - ", seedTmp[3]
-#                 )
-#                 if (ortho != seed) {
-#                     orthoTmp <- strsplit(as.character(ortho),':', fixed = TRUE)[[1]]
-#                     orthoSpec <-
-#                         strsplit(as.character(orthoTmp[2]),'@',fixed = TRUE)[[1]][2]
-#                     ortho <- paste0(
-#                         id2name(orthoSpec, currentNCBIinfo)[,2], " - ", orthoTmp[3]
-#                     )
-#                 }
-#             }
-#         }
-#
-#         # add feature colors
-#         featureColorDf <- addFeatureColors(seedDf, orthoDf, colorType, colorPallete, ignoreInstanceNo)
-#         seedDf <- featureColorDf[[1]]
-#         orthoDf <- featureColorDf[[2]]
-#         # resolve (non)overlapped features
-#         if (resolveOverlap == "Yes") {
-#             seedDf <- resolveOverlapFeatures(seedDf)
-#             orthoDf <- resolveOverlapFeatures(orthoDf)
-#         } else {
-#             seedDf$featureOri <- seedDf$feature
-#             seedDf$featureOri <- as.character(seedDf$featureOri)
-#             orthoDf$featureOri <- orthoDf$feature
-#             orthoDf$featureOri <- as.character(orthoDf$featureOri)
-#         }
-#
-#         if (nrow(orthoDf) > 0) {
-#             if (all.equal(seedDf, orthoDf)[1] == TRUE) featureTypeSort <- "No"
-#             # sort features
-#             if (featureTypeSort == "Yes") {
-#                 # change order of one df's features based on order of other df's
-#                 if (length(orthoDf$feature) < length(seedDf$feature)) {
-#                     orderedOrthoDf <- orthoDf[order(orthoDf$feature), ]
-#                     orderedSeedDf <- sortDomains(orderedOrthoDf, seedDf)
-#                     orderedOrthoDf <- sortDomains(orderedSeedDf, orderedOrthoDf)
-#                 } else {
-#                     orderedSeedDf <- seedDf[order(seedDf$feature), ]
-#                     orderedOrthoDf <- sortDomains(orderedSeedDf, orthoDf)
-#                     orderedSeedDf <- sortDomains(orderedOrthoDf, orderedSeedDf)
-#                 }
-#             } else {
-#                 # change order based on list of feature types
-#                 orderedSeedDf <- sortDomainsByList(seedDf, featureTypeOrder)
-#                 orderedOrthoDf <- sortDomainsByList(orthoDf, featureTypeOrder)
-#             }
-#
-#             # join weight values and feature names
-#             if ("weight" %in% colnames(orderedOrthoDf)) {
-#                 NULL
-#                 # orderedOrthoDf$yLabel <- paste0(
-#                 #     orderedOrthoDf$feature," (",round(orderedOrthoDf$weight, 2),")")
-#             } else orderedOrthoDf$yLabel <- orderedOrthoDf$feature
-#             if ("weight" %in% colnames(orderedSeedDf)) {
-#                 NULL
-#                 # orderedSeedDf$yLabel <- paste0(
-#                 #     orderedSeedDf$feature," (",round(orderedSeedDf$weight, 2),")")
-#             } else orderedSeedDf$yLabel <- orderedSeedDf$feature
-#             # plotting
-#             g <- pairDomainPlotting(
-#                 seed, ortho, orderedSeedDf, orderedOrthoDf, minStart, maxEnd,
-#                 labelArchiSize, titleArchiSize, showScore, domainNamePos, firstDist,
-#                 nameType, nameSize, nameColor, labelPos, colorPallete)
-#         } else {
-#             # orderedSeedDf <- seedDf[order(seedDf$feature), ]
-#             orderedSeedDf <- sortDomainsByList(seedDf, featureTypeOrder)
-#             if ("weight" %in% colnames(orderedSeedDf)) {
-#                 NULL
-#                 # orderedSeedDf$yLabel <- paste0(
-#                 #     orderedSeedDf$feature," (",round(orderedSeedDf$weight, 2),")")
-#             } else orderedSeedDf$yLabel <- orderedSeedDf$feature
-#             # plotting
-#             g <- pairDomainPlotting(
-#                 seed, seed, orderedSeedDf, orderedSeedDf, minStart, maxEnd,
-#                 labelArchiSize, titleArchiSize, showScore, domainNamePos, firstDist,
-#                 nameType, nameSize, nameColor, labelPos, colorPallete)
-#         }
-#         return(g)
-#     }
-# }
-
-
-#' Create protein's domain architecure plot
-#' @description Create architecture plot for both seed and orthologous protein.
-#' If domains of ortholog are missing, only architecture of seed protein will
-#' be plotted. NOTE: seed protein ID is the one being shown in the profile plot,
-#' which normally is also the orthologous group ID.
-#' @export
-#' @usage createArchiPlot2(info = NULL, domainDf = NULL, labelArchiSize = 12,
-#'     titleArchiSize = 12, showFeature = "all", seqIdFormat = "unknown",
-#'     currentNCBIinfo = NULL)
-#' @param info a list contains seed and ortholog's IDs
-#' @param domainDf dataframe contains domain info for the seed and ortholog.
-#' This including the seed ID, orthologs IDs, sequence lengths, feature names,
-#' start and end positions, feature weights (optional) and the status to
-#' determine if that feature is important for comparison the architecture
-#' between 2 proteins* (e.g. seed protein vs ortholog) (optional).
-#' @param labelArchiSize lable size (in px). Default = 12.
-#' @param titleArchiSize title size (in px). Default = 12.
-#' @param showFeature choose to show all, common or unique features.
-#' Default = "all"
-#' @param seqIdFormat sequence ID format (either bionf or unknown).
-#' Default = "unknown"
-#' @param currentNCBIinfo dataframe of the pre-processed NCBI taxonomy
-#' data. Default = NULL (will be automatically retrieved from PhyloProfile app)
-#' @importFrom gridExtra arrangeGrob
-#' @import ggplot2
-#' @return A domain plot as arrangeGrob object. Use grid::grid.draw(plot) to
-#' render.
-#' @author Vinh Tran tran@bio.uni-frankfurt.de
-#' @seealso \code{\link{singleDomainPlotting}}, \code{\link{sortDomains}},
-#' \code{\link{parseDomainInput}}, \code{\link{getQualColForVector}}
-#' @examples
-#' seedID <- "101621at6656"
-#' orthoID <- "101621at6656|AGRPL@224129@0|224129_0:001955|1"
-#' info <- c(seedID, orthoID)
-#' domainFile <- system.file(
-#'     "extdata", "domainFiles/101621at6656.domains",
-#'     package = "PhyloProfile", mustWork = TRUE
-#' )
-#' domainDf <- parseDomainInput(seedID, domainFile, "file")
-#' plot <- createArchiPlot(info, domainDf, 9, 9, seqIdFormat = "bionf")
-#' grid::grid.draw(plot)
-
-createArchiPlot2 <- function(
-    info = NULL, domainDf = NULL, labelArchiSize = 12, titleArchiSize = 12,
-    showFeature = "all", seqIdFormat = "unknown", currentNCBIinfo = NULL
-){
-    if (is.null(info) | is.null(domainDf)) return(ggplot() + theme_void())
-    group <- as.character(info[1])
-    ortho <- as.character(info[2])
-    # get sub dataframe based on selected groupID and orthoID
-    group <- gsub("\\|", ":", group)
-    ortho <- gsub("\\|", ":", ortho)
-    grepID <- paste(group, "#", ortho, sep = "")
-    subdomainDf <- domainDf[grep(grepID, domainDf$seedID), ]
-    subdomainDf$feature <- as.character(subdomainDf$feature)
-    orthoID <- NULL
-    if (nrow(subdomainDf) < 1) return(paste0("No domain info available!"))
-    else {
-        # ortho & seed domains df
-        orthoDf <- subdomainDf[subdomainDf$orthoID == ortho,]
-        seedDf <- subdomainDf[subdomainDf$orthoID != ortho,]
-        # filter common features
-        if (!(showFeature == "all")) {
-            allFeats <- c(
-                levels(as.factor(orthoDf$feature)),
-                levels(as.factor(seedDf$feature))
-            )
-            countFeats <- as.data.frame(table(allFeats))
-            commonFeats <- countFeats$allFeats[countFeats$Freq > 1]
-            if (showFeature == "common") {
-                orthoDf <- orthoDf[orthoDf$feature %in% commonFeats,]
-                seedDf <- seedDf[seedDf$feature %in% commonFeats,]
-            } else {
-                orthoDf <- orthoDf[!(orthoDf$feature %in% commonFeats),]
-                seedDf <- seedDf[!(seedDf$feature %in% commonFeats),]
-            }
-        }
-        # final check
-        if (nrow(seedDf) == 0) seedDf <- orthoDf
-        seed <- as.character(seedDf$orthoID[1])
-        if (nrow(seedDf) == 0) return(paste0("No domain info available!"))
-        if (nrow(orthoDf) == 0) {
-            ortho <- seed
-            orthoDf <- seedDf
-        }
-        # change order of one df's features based on order of other df's
-        if (length(orthoDf$feature) < length(seedDf$feature)) {
-            if (nrow(orthoDf) > 0) {
-                orderedOrthoDf <- orthoDf[order(orthoDf$feature), ]
-                orderedSeedDf <- sortDomains(orderedOrthoDf, seedDf)
-            }
-        } else {
-            orderedSeedDf <- seedDf[order(seedDf$feature), ]
-            orderedOrthoDf <- sortDomains(orderedSeedDf, orthoDf)
-        }
-        # modify feature (domain) names (used as x-axis label in domain plot)
-        orderedOrthoDf <- modifyFeatureName(orderedOrthoDf)
-        orderedSeedDf <- modifyFeatureName(orderedSeedDf)
-        # simplify seq IDs if they are in bionf format
-        if (seqIdFormat == "bionf") {
-            seedTmp <- strsplit(as.character(seed),':', fixed = TRUE)[[1]]
-            seedSpec <-
-                strsplit(as.character(seedTmp[2]),'@', fixed = TRUE)[[1]][2]
-            seed <- paste0(
-                id2name(seedSpec, currentNCBIinfo)[,2], " - ", seedTmp[3]
-            )
-            if (ortho != seed) {
-                orthoTmp <- strsplit(as.character(ortho),':', fixed = TRUE)[[1]]
-                orthoSpec <-
-                    strsplit(as.character(orthoTmp[2]),'@',fixed = TRUE)[[1]][2]
-                ortho <- paste0(
-                    id2name(orthoSpec, currentNCBIinfo)[,2], " - ", orthoTmp[3]
-                )
-            }
-        }
-        # plotting
-        minStart <- min(subdomainDf$start)
-        maxEnd <- max(subdomainDf$end)
-        if ("length" %in% colnames(subdomainDf))
-            maxEnd <- max(c(subdomainDf$end, subdomainDf$length))
-        g <- pairDomainPlotting(
-            seed, ortho, orderedSeedDf, orderedOrthoDf, minStart, maxEnd,
-            labelArchiSize, titleArchiSize)
-        return(g)
-    }
-}
 
 #' Create architecure plot for a single protein
 #' @usage singleDomainPlotting(df, geneID, sep, labelSize, titleSize, minStart,
-#'     maxEnd, colorPallete, showScore, showName, firstDist, nameType,
-#'     nameSize, segmentSize, nameColor, labelPos, font)
+#'     maxEnd, colorPallete, showScore, showWeight, namePosition, firstDist,
+#'     nameType, nameSize, segmentSize, nameColor, labelPos, font)
 #' @param df Domain dataframe for ploting containing the seed ID, ortholog ID,
 #' ortholog sequence length, feature names, start and end positions,
 #' feature weights (optional) and the status to determine if that feature is
@@ -448,7 +198,8 @@ createArchiPlot2 <- function(
 #' @param maxEnd The highest stop position of all domains
 #' @param colorPallete Color pallete. Default = Paired"
 #' @param showScore Show/hide E-values and Bit-scores. Default = NULL (hide)
-#' @param showName List of positions for domain names, choose from "plot",
+#' @param showWeight Show/hide feature weights. Default = NULL (hide)
+#' @param namePosition List of positions for domain names, choose from "plot",
 #' "legend" or "axis". Default: "plot"
 #' @param firstDist Distance of the first domain to plot title. Default = 0.5
 #' @param nameType Type of domain names, either "Texts" or "Labels" (default)
@@ -460,53 +211,49 @@ createArchiPlot2 <- function(
 #' @param font font of text. Default = Arial"
 #' @return Domain plot of a single protein as a ggplot object.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
-#' @seealso \code{\link{getQualColForVector}},
-#' \code{\link{parseDomainInput}}
+#' @importFrom RColorBrewer brewer.pal
+#' @importFrom stringr str_wrap
+#' @seealso \code{\link{parseDomainInput}}
 #' @import ggplot2
 #' @examples
-#' \dontrun{
-#' # get domain data
+#' seed <- "101621at6656"
+#' ortho <- "101621at6656|AGRPL@224129@0|224129_0:001955|1"
+#' ortho <- gsub("\\|", ":", ortho)
+#' grepID <- paste(seed, "#", ortho, sep = "")
 #' domainFile <- system.file(
 #'     "extdata", "domainFiles/101621at6656.domains",
 #'     package = "PhyloProfile", mustWork = TRUE
 #' )
-#' seedID <- "101621at6656"
-#' domainDf <- parseDomainInput(seedID, domainFile, "file")
-#' df <- domainDf[
-#'     domainDf$orthoID == "101621at6656:AGRPL@224129@0:224129_0:001955:1",]
-#' # create color scheme for all domain types
-#' allFeatures <- levels(as.factor(df$feature))
-#' allColors <- getQualColForVector(allFeatures)
-#' colorScheme <- structure(
-#'     allColors,
-#'     .Names = allFeatures
+#' domainDf <- parseDomainInput(seed, domainFile, "file")
+#' domainDf$feature_id_mod <- domainDf$feature_id
+#' subdomainDf <- domainDf[grep(grepID, domainDf$seedID), ]
+#' subdomainDf$feature <- as.character(subdomainDf$feature)
+#' orthoDf <- subdomainDf[subdomainDf$orthoID == ortho,]
+#' seedDf <- subdomainDf[subdomainDf$orthoID != ortho,]
+#' minStart <- min(subdomainDf$start)
+#' maxEnd <- max(c(subdomainDf$end, subdomainDf$length))
+#' # resolve overlapping domains
+#' seedDf <- PhyloProfile:::resolveOverlapFeatures(seedDf)
+#' orthoDf <- PhyloProfile:::resolveOverlapFeatures(orthoDf)
+#' # add feature colors
+#' featureColorDf <- PhyloProfile:::addFeatureColors(seedDf, orthoDf)
+#' seedDf <- featureColorDf[[1]]
+#' orthoDf <- featureColorDf[[2]]
+#' # do plot
+#' g <- PhyloProfile:::singleDomainPlotting(
+#'    seedDf, seed, minStart = minStart, maxEnd = maxEnd, font = "sans"
 #' )
-#' # other parameters
-#' geneID <- "AGRPL@224129@0|224129_0:001955|1"
-#' sep <- "|"
-#' labelSize <- 9
-#' titleSize <- 9
-#' minStart <- min(df$start)
-#' maxEnd <- max(df$end)
-#' # do plotting
-#' PhyloProfile:::singleDomainPlotting(
-#'     df,
-#'     geneID,
-#'     sep,
-#'     labelSize, titleSize,
-#'     minStart, maxEnd,
-#'     colorScheme
-#' )
-#' }
+#' grid::grid.draw(g)
 
 singleDomainPlotting <- function(
         df = NULL, geneID = "GeneID", sep = "|", labelSize = 12, titleSize = 12,
         minStart = NULL, maxEnd = NULL, colorPallete = "Set2",
-        showScore = NULL, showName = "plot", firstDist = 0.5,
-        nameType = "Labels", nameSize = 3, segmentSize = 5, nameColor = "#000000",
-        labelPos = "Above", font = "Arial"
+        showScore = NULL, showWeight = NULL, namePosition = "plot",
+        firstDist = 0.5, nameType = "Labels", nameSize = 3, segmentSize = 5,
+        nameColor = "#000000", labelPos = "Above", font = "Arial"
 ){
-    feature <- feature_id_mod <- end <- start <- NULL
+    feature <- feature_id_mod <- end <- start <- featureOri <- NULL
+    evalue <- bitscore <- weight <- NULL
 
     # parse parameters
     if (is.null(df)) return(ggplot() + theme_void())
@@ -543,34 +290,45 @@ singleDomainPlotting <- function(
         data = df, aes(
             x = start, xend = end, y = feature, yend = feature,
             color = as.factor(featureOri)
-        ),
-        linewidth = segmentSize, alpha = 1.0) +
+        ), linewidth = segmentSize, alpha = 1.0) +
         scale_color_manual(values = colorScheme)
 
     # add feature names
-    if ("plot" %in% showName) {
+    if ("plot" %in% namePosition) {
         if (nameType == "Labels") {
             if (labelPos == "Above") {
                 gg <- gg + geom_label(
-                    aes(label = str_wrap(feature_id_mod), x = (start+end)/2),
-                    color = "black", vjust = -0.5, size = nameSize, family = font
+                    aes(
+                        label = stringr::str_wrap(feature_id_mod),
+                        x = (start+end)/2
+                    ),
+                    color = "black", vjust = -0.5, size = nameSize, family=font
                 )
             } else if (labelPos == "Below") {
                 gg <- gg + geom_label(
-                    aes(label = str_wrap(feature_id_mod), x = (start+end)/2),
+                    aes(
+                        label = stringr::str_wrap(feature_id_mod),
+                        x = (start+end)/2
+                    ),
                     color = "black", vjust = 1.5, size = nameSize, family = font
                 )
             } else {
                 gg <- gg + geom_label(
-                    aes(label = str_wrap(feature_id_mod), x = (start+end)/2),
+                    aes(
+                        label = stringr::str_wrap(feature_id_mod),
+                        x = (start+end)/2
+                    ),
                     color = "black", size = nameSize, family = font
                 )
             }
         } else {
             gg <- gg + geom_text(
-                aes(label = str_wrap(feature_id_mod),
-                    x = (start+end)/2),
-                color = nameColor, check_overlap = TRUE, size = nameSize, family = font
+                aes(
+                    label = stringr::str_wrap(feature_id_mod),
+                    x = (start+end)/2
+                ),
+                color = nameColor, check_overlap = TRUE, size = nameSize,
+                family = font
             )
         }
     }
@@ -578,38 +336,41 @@ singleDomainPlotting <- function(
     if ("Bit-score" %in% showScore & "E-value" %in% showScore) {
         gg <- gg + geom_label(
             aes(
-                label = ifelse(evalue == "NA" & bitscore == "NA", "", str_wrap(
-                    paste0(
-                        "E-value: ", evalue, "; Bitscore: ", bitscore
+                label = ifelse(
+                    evalue == "NA" & bitscore == "NA", "", stringr::str_wrap(
+                        paste0("E-value: ", evalue, "; Bitscore: ", bitscore)
                     )
-                )),
-                x = (start+end)/2
-            ),
-            color = "black", vjust = 1.25
+                ), x = (start+end)/2
+            ), color = "black", vjust = 1.25
         )
     } else if ("Bit-score" %in% showScore) {
         gg <- gg + geom_label(
             aes(
-                label = ifelse(bitscore == "NA", "", str_wrap(
-                    paste0(
-                        "Bitscore: ", bitscore
-                    )
-                )),
-                x = (start+end)/2
-            ),
-            color = "black", vjust = 1.25
+                label = ifelse(bitscore == "NA", "", stringr::str_wrap(
+                    paste0("Bitscore: ", bitscore)
+                )), x = (start+end)/2
+            ), color = "black", vjust = 1.25
         )
     } else if ("E-value" %in% showScore) {
         gg <- gg + geom_label(
             aes(
-                label = ifelse(evalue == "NA", "", str_wrap(
-                    paste0(
-                        "E-value: ", evalue
-                    )
-                )),
-                x = (start+end)/2
-            ),
-            color = "black", vjust = 1.25
+                label = ifelse(evalue == "NA", "", stringr::str_wrap(
+                    paste0("E-value: ", evalue)
+                )), x = (start+end)/2
+            ), color = "black", vjust = 1.25
+        )
+    }
+    # add weight if selected
+    if ("Weight" %in% showWeight) {
+        vjustValue <- 1.25
+        if ("E-value" %in% showScore |  "Bit-score" %in% showScore)
+            vjustValue <- 2.25
+        gg <- gg + geom_label(
+            aes(
+                label = ifelse(weight == "NA", "", stringr::str_wrap(
+                    paste0("Weight: ", weight)
+                )), x = (start+end)/2
+            ), color = "black", vjust = vjustValue
         )
     }
     # theme format
@@ -629,10 +390,11 @@ singleDomainPlotting <- function(
         axis.text.x = element_text(size = labelSize))
     gg <- gg + theme(text = element_text(family = font))
     # add feature names on the axis (if required)
-    if ("axis" %in% showName) {
-        if ("plot" %in% showName | "legend" %in% showName) {
+    if ("axis" %in% namePosition) {
+        if ("plot" %in% namePosition | "legend" %in% namePosition) {
             gg <- gg + scale_y_discrete(
-                expand = c(0.075, 0), breaks = df$feature, labels = df$feature_type)
+                expand = c(0.075, 0), breaks = df$feature,
+                labels = df$feature_type)
         } else {
             gg <- gg + scale_y_discrete(
                 expand = c(0.075, 0), breaks = df$feature, labels = df$feature)
@@ -642,7 +404,7 @@ singleDomainPlotting <- function(
         gg <- gg + theme(axis.text.y = element_blank())
     }
     # add legend (if required)
-    if ("legend" %in% showName) {
+    if ("legend" %in% namePosition) {
         gg <- gg + theme(legend.position = "bottom")
     } else {
         gg <- gg + theme(legend.position = "none")
@@ -656,270 +418,11 @@ singleDomainPlotting <- function(
     return(gg)
 }
 
-# singleDomainPlotting <- function(
-#         df = NULL, geneID = "GeneID", sep = "|", labelSize = 12, titleSize = 12,
-#         minStart = NULL, maxEnd = NULL, colorPallete = "Set2",
-#         showScore = NULL, domainNamePos = "plot", firstDist = 0.5,
-#         nameType = "Labels", nameSize = 5, nameColor = "#000000", labelPos = "Above"
-# ){
-#     feature <- feature_id_mod <- end <- start <- NULL
-#
-#     # parse parameters
-#     if (is.null(df)) return(ggplot() + theme_void())
-#     if (is.null(minStart)) minStart <- min(df$start)
-#     if (is.null(maxEnd)) maxEnd <- max(df$end)
-#     if ("color" %in% colnames(df)) {
-#         colorScheme <- structure(
-#             df$color, .Names = df$featureOri
-#         )
-#     } else {
-#         colorScheme <- structure(
-#             head(
-#                 suppressWarnings(
-#                     RColorBrewer::brewer.pal(
-#                         nlevels(as.factor(df$feature)), colorPallete
-#                     )
-#                 ),
-#                 levels(as.factor(df$feature))
-#             ),
-#             .Names = levels(as.factor(df$feature)))
-#     }
-#
-#     # initiate ggplot object
-#     gg <- ggplot(df, aes(y = feature, x = end))
-#
-#     # draw lines for representing sequence length
-#     if ("length" %in% colnames(df))
-#         gg <- gg + geom_segment(
-#             data = df, size = 1, color = "#b2b2b2", alpha = 0.0,
-#             aes(x = 0, xend = length, y = feature, yend = feature))
-#     # draw features
-#     gg <- gg + geom_segment(
-#         data = df, aes(x = start, xend = end, y = feature, yend = feature, color = as.factor(featureOri)),
-#         linewidth = nameSize, lineend = "round", alpha = 0.7) +
-#         scale_color_manual(values = colorScheme)
-#
-#     # add feature names
-#     if (!("feature_id_mod" %in% colnames(df)))
-#         df$feature_id_mod <- df$feature_id
-#     if ("plot" %in% domainNamePos) {
-#         if (nameType == "Labels") {
-#             if (labelPos == "Above") {
-#                 gg <- gg + geom_label(
-#                     aes(label = str_wrap(feature_id_mod), x = (start+end)/2),
-#                     color = "black", vjust = -0.5
-#                 )
-#             } else if (labelPos == "Below") {
-#                 gg <- gg + geom_label(
-#                     aes(label = str_wrap(feature_id_mod), x = (start+end)/2),
-#                     color = "black", vjust = 1.5
-#                 )
-#             } else {
-#                 gg <- gg + geom_label(
-#                     aes(label = str_wrap(feature_id_mod), x = (start+end)/2),
-#                     color = "black", size = nameSize - 2
-#                 )
-#             }
-#         } else {
-#             gg <- gg + geom_text(
-#                 aes(label = str_wrap(feature_id_mod),
-#                     x = (start+end)/2),
-#                 color = nameColor, check_overlap = TRUE, size = nameSize - 2
-#             )
-#         }
-#     }
-#     # add scores if selected
-#     if ("Bit-score" %in% showScore & "E-value" %in% showScore) {
-#         gg <- gg + geom_label(
-#             aes(
-#                 label = ifelse(evalue == "NA" & bitscore == "NA", "", str_wrap(
-#                     paste0(
-#                         "E-value: ", evalue, "; Bitscore: ", bitscore
-#                     )
-#                 )),
-#                 x = (start+end)/2
-#             ),
-#             color = "black", vjust = 1.25
-#         )
-#     } else if ("Bit-score" %in% showScore) {
-#         gg <- gg + geom_label(
-#             aes(
-#                 label = ifelse(bitscore == "NA", "", str_wrap(
-#                     paste0(
-#                         "Bitscore: ", bitscore
-#                     )
-#                 )),
-#                 x = (start+end)/2
-#             ),
-#             color = "black", vjust = 1.25
-#         )
-#     } else if ("E-value" %in% showScore) {
-#         gg <- gg + geom_label(
-#             aes(
-#                 label = ifelse(evalue == "NA", "", str_wrap(
-#                     paste0(
-#                         "E-value: ", evalue
-#                     )
-#                 )),
-#                 x = (start+end)/2
-#             ),
-#             color = "black", vjust = 1.25
-#         )
-#     }
-#     # theme format
-#     gg <- gg + labs(
-#         title = paste0(gsub(":", sep, geneID)), color = "Feature"
-#     )
-#     gg <- gg + theme_minimal() + theme(panel.border = element_blank())
-#     # gg <- gg + theme(axis.ticks = element_blank())
-#     gg <- gg + theme(plot.title = element_text(face = "bold", size = titleSize))
-#     gg <- gg + theme(plot.title = element_text(hjust = 0.5))
-#     gg <- gg + theme(
-#         axis.title.x = element_blank(),
-#         axis.title.y = element_blank(),
-#         panel.grid.minor.x=element_blank(), panel.grid.major.x=element_blank())
-#     # add feature names on the axis (if required)
-#     if ("axis" %in% domainNamePos) {
-#         if ("plot" %in% domainNamePos | "legend" %in% domainNamePos) {
-#             gg <- gg + scale_y_discrete(
-#                 expand = c(0.075, 0), breaks = df$feature, labels = df$feature_type)
-#         } else {
-#             gg <- gg + scale_y_discrete(
-#                 expand = c(0.075, 0), breaks = df$feature, labels = df$feature)
-#         }
-#         gg <- gg + theme(
-#             axis.text.y = element_text(size = labelSize),
-#             axis.text.x = element_text(size = labelSize)
-#         )
-#     } else {
-#         gg <- gg + theme(axis.text.y = element_blank())
-#     }
-#     # add legend (if required)
-#     if ("legend" %in% domainNamePos) {
-#         gg <- gg + theme(legend.position = "bottom")
-#     } else {
-#         gg <- gg + theme(legend.position = "none")
-#     }
-#     # add space on the top of the plot (for feature name)
-#     gg <- gg + coord_cartesian(
-#         clip = 'off', ylim = c(1, nlevels(as.factor(df$feature)) + firstDist)
-#     )
-#     return(gg)
-# }
-
-
-#' Create architecure plot for a single protein
-#' @usage singleDomainPlotting2(df, geneID = "GeneID", sep = "|", labelSize = 12,
-#'     titleSize = 12, minStart = NULL, maxEnd = NULL, colorScheme)
-#' @param df domain dataframe for ploting containing the seed ID, ortholog ID,
-#' ortholog sequence length, feature names, start and end positions,
-#' feature weights (optional) and the status to determine if that feature is
-#' important for comparison the architecture between 2 proteins* (e.g. seed
-#' protein vs ortholog) (optional).
-#' @param geneID ID of seed or orthologous protein
-#' @param sep separate indicator for title. Default = "|".
-#' @param labelSize lable size. Default = 12.
-#' @param titleSize title size. Default = 12.
-#' @param minStart the smallest start position of all domains
-#' @param maxEnd the highest stop position of all domains
-#' @param colorScheme color scheme for all domain types
-#' @return Domain plot of a single protein as a ggplot object.
-#' @author Vinh Tran tran@bio.uni-frankfurt.de
-#' @seealso \code{\link{getQualColForVector}},
-#' \code{\link{parseDomainInput}}
-#' @import ggplot2
-#' @examples
-#' \dontrun{
-#' # get domain data
-#' domainFile <- system.file(
-#'     "extdata", "domainFiles/101621at6656.domains",
-#'     package = "PhyloProfile", mustWork = TRUE
-#' )
-#' seedID <- "101621at6656"
-#' domainDf <- parseDomainInput(seedID, domainFile, "file")
-#' df <- domainDf[
-#'     domainDf$orthoID == "101621at6656:AGRPL@224129@0:224129_0:001955:1",]
-#' # create color scheme for all domain types
-#' allFeatures <- levels(as.factor(df$feature))
-#' allColors <- getQualColForVector(allFeatures)
-#' colorScheme <- structure(
-#'     allColors,
-#'     .Names = allFeatures
-#' )
-#' # other parameters
-#' geneID <- "AGRPL@224129@0|224129_0:001955|1"
-#' sep <- "|"
-#' labelSize <- 9
-#' titleSize <- 9
-#' minStart <- min(df$start)
-#' maxEnd <- max(df$end)
-#' # do plotting
-#' PhyloProfile:::singleDomainPlotting(
-#'     df,
-#'     geneID,
-#'     sep,
-#'     labelSize, titleSize,
-#'     minStart, maxEnd,
-#'     colorScheme
-#' )
-#' }
-
-singleDomainPlotting2 <- function(
-    df = NULL, geneID = "GeneID", sep = "|", labelSize = 12, titleSize = 12,
-    minStart = NULL, maxEnd = NULL, colorScheme = NULL
-){
-    feature <- end <- start <- NULL
-    # parse parameters
-    if (is.null(df)) return(ggplot() + theme_void())
-    if (is.null(minStart)) minStart <- min(df$start)
-    if (is.null(maxEnd)) maxEnd <- max(df$end)
-    if (is.null(colorScheme)) {
-        colorScheme <- structure(
-            getQualColForVector(levels(as.factor(df$feature))),
-            .Names = levels(as.factor(df$feature)))}
-    gg <- ggplot(df, aes(y = feature, x = end, color = as.factor(feature))) +
-        geom_segment(
-            data = df, color = "white", linewidth = 0,
-            aes(y = feature, yend = feature, x = minStart, xend = maxEnd)) +
-        scale_color_manual(values = colorScheme)
-    # draw lines for representing sequence length
-    if ("length" %in% colnames(df))
-        gg <- gg + geom_segment(
-            data = df, linewidth = 1, color = "#b2b2b2",
-            aes(x = 0, xend = length, y = feature, yend = feature))
-    # draw line and points
-    gg <- gg + geom_segment(
-        data = df, aes(x = start, xend = end, y = feature, yend = feature),
-        linewidth = 1.5) +
-        geom_point(data = df, aes(y = feature, x = start),
-                    color = "#b2b2b2", size = 3, shape = 3) +
-        geom_point(data = df, aes(y = feature, x = end),
-                    color = "#edae52", size = 3, shape = 5)
-    # draw dashed line for domain path
-    gg <- gg + geom_segment(
-        data = df[df$path == "Y", ], linewidth = 3, linetype = "dashed",
-        aes(x = start, xend = end, y = feature, yend = feature))
-    # theme format
-    gg <- gg + scale_y_discrete(
-        expand = c(0.075, 0), breaks = df$feature, labels = df$yLabel)
-    gg <- gg + labs(title = paste0(gsub(":", sep, geneID)), y = "Feature")
-    gg <- gg + theme_minimal() + theme(panel.border = element_blank())
-    gg <- gg + theme(axis.ticks = element_blank())
-    gg <- gg + theme(plot.title = element_text(face = "bold", size = titleSize))
-    gg <- gg + theme(plot.title = element_text(hjust = 0.5))
-    gg <- gg + theme(
-        legend.position = "none", axis.title.x = element_blank(),
-        axis.text.y = element_text(size = labelSize),
-        axis.title.y = element_blank(),
-        panel.grid.minor.x=element_blank(), panel.grid.major.x=element_blank())
-    return(gg)
-}
-
 
 #' Create architecure plot for a pair of seed and ortholog protein
 #' @usage pairDomainPlotting(seed, ortho, seedDf, orthoDf, minStart, maxEnd,
-#'     labelSize, titleSize, showScore, showName, firstDist,  nameType,
-#'     nameSize, segmentSize, nameColor, labelPos, colorPallete, font)
+#'     labelSize, titleSize, showScore, showWeight, namePosition, firstDist,
+#'     nameType, nameSize, segmentSize, nameColor, labelPos, colorPallete, font)
 #' @param seed Seed ID
 #' @param ortho Ortho ID
 #' @param seedDf domain dataframe for seed domains containing the seed ID,
@@ -933,7 +436,8 @@ singleDomainPlotting2 <- function(
 #' @param labelSize lable size. Default = 12
 #' @param titleSize title size. Default = 12
 #' @param showScore show/hide E-values and Bit-scores. Default = NULL (hide)
-#' @param showName list of positions for domain names, choose from "plot",
+#' @param showWeight Show/hide feature weights. Default = NULL (hide)
+#' @param namePosition list of positions for domain names, choose from "plot",
 #' "legend" or "axis". Default: "plot"
 #' @param firstDist distance of the first domain to plot title. Default = 0.5
 #' @param nameType type of domain names, either "Texts" or "Labels" (default)
@@ -946,8 +450,10 @@ singleDomainPlotting2 <- function(
 #' @param font font of text. Default = Arial"
 #' @return Domain plot of a pair proteins as a arrangeGrob object.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom gridExtra grid.arrange
+#' @seealso \code{\link{singleDomainPlotting}}, \code{\link{sortDomains}},
+#' \code{\link{parseDomainInput}}
 #' @examples
-#' \dontrun{
 #' seed <- "101621at6656"
 #' ortho <- "101621at6656|AGRPL@224129@0|224129_0:001955|1"
 #' ortho <- gsub("\\|", ":", ortho)
@@ -957,22 +463,33 @@ singleDomainPlotting2 <- function(
 #'     package = "PhyloProfile", mustWork = TRUE
 #' )
 #' domainDf <- parseDomainInput(seed, domainFile, "file")
+#' domainDf$feature_id_mod <- domainDf$feature_id
 #' subdomainDf <- domainDf[grep(grepID, domainDf$seedID), ]
 #' subdomainDf$feature <- as.character(subdomainDf$feature)
 #' orthoDf <- subdomainDf[subdomainDf$orthoID == ortho,]
 #' seedDf <- subdomainDf[subdomainDf$orthoID != ortho,]
 #' minStart <- min(subdomainDf$start)
 #' maxEnd <- max(c(subdomainDf$end, subdomainDf$length))
-#' g <- pairDomainPlotting(seed,ortho,seedDf,orthoDf,minStart,maxEnd,9,9)
+#' # resolve overlapping domains
+#' seedDf <- PhyloProfile:::resolveOverlapFeatures(seedDf)
+#' orthoDf <- PhyloProfile:::resolveOverlapFeatures(orthoDf)
+#' # add feature colors
+#' featureColorDf <- PhyloProfile:::addFeatureColors(seedDf, orthoDf)
+#' seedDf <- featureColorDf[[1]]
+#' orthoDf <- featureColorDf[[2]]
+#' # do plot
+#' g <- PhyloProfile:::pairDomainPlotting(
+#'    seed,ortho,seedDf,orthoDf,minStart,maxEnd, font = "sans"
+#' )
 #' grid::grid.draw(g)
-#' }
 
 pairDomainPlotting <- function(
         seed = NULL, ortho = NULL, seedDf = NULL, orthoDf = NULL,
         minStart = 0, maxEnd = 999, labelSize = 12, titleSize = 12,
-        showScore = NULL, showName = "plot", firstDist = 0.5,
-        nameType = "Labels", nameSize = 3, segmentSize = 5, nameColor = "#000000", 
-        labelPos = "Above", colorPallete = "Paired", font = "Arial"
+        showScore = NULL, showWeight = NULL, namePosition = "plot",
+        firstDist = 0.5, nameType = "Labels", nameSize = 3, segmentSize = 5,
+        nameColor = "#000000",  labelPos = "Above", colorPallete = "Paired",
+        font = "Arial"
 ) {
     if(is.null(seed) | is.null(ortho) | is.null(seedDf) | is.null(orthoDf))
         stop("Seed/Ortho ID or domain dataframe is NULL!")
@@ -980,94 +497,29 @@ pairDomainPlotting <- function(
     sep <- "|"
     plotSeed <- singleDomainPlotting(
         seedDf, seed, sep, labelSize, titleSize, minStart, maxEnd, colorPallete,
-        showScore, showName, firstDist, nameType, nameSize, segmentSize, nameColor, labelPos, font)
+        showScore, showWeight, namePosition, firstDist, nameType, nameSize,
+        segmentSize, nameColor, labelPos, font
+    )
     if (ortho == seed) {
         g <- plotSeed
     } else {
         plotOrtho <- singleDomainPlotting(
-            orthoDf, ortho, sep, labelSize, titleSize, minStart, maxEnd, colorPallete,
-            showScore, showName, firstDist, nameType, nameSize, segmentSize, nameColor, labelPos, font)
-        if ("legend" %in% showName) {
+            orthoDf, ortho, sep, labelSize, titleSize, minStart, maxEnd,
+            colorPallete, showScore, showWeight, namePosition, firstDist,
+            nameType, nameSize, segmentSize, nameColor, labelPos, font
+        )
+        if ("legend" %in% namePosition) {
             g <- joinPlotMergeLegends(
                 seedDf, orthoDf, plotSeed, plotOrtho, position = "bottom", font
             )
         } else {
             seedHeight <- length(levels(as.factor(seedDf$feature)))
             orthoHeight <- length(levels(as.factor(orthoDf$feature)))
-            g <- grid.arrange(
+            g <- gridExtra::grid.arrange(
                 plotSeed, plotOrtho, nrow = 2,
                 heights = c(seedHeight, orthoHeight)
             )
         }
-    }
-    return(g)
-}
-
-#' Create architecure plot for a pair of seed and ortholog protein
-#' @usage pairDomainPlotting2(seed, ortho, seedDf, orthoDf, minStart, maxEnd,
-#'     labelSize, titleSize)
-#' @param seed Seed ID
-#' @param ortho Ortho ID
-#' @param seedDf domain dataframe for seed domains containing the seed ID,
-#' ortholog ID, sequence length, feature names, start and end positions,
-#' feature weights (optional) and the status to determine if that feature is
-#' important for comparison the architecture between 2 proteins* (e.g. seed
-#' protein vs ortholog) (optional).
-#' @param orthoDf domain dataframe for ortholog domains (same format as seedDf).
-#' @param minStart the smallest start position of all domains
-#' @param maxEnd the highest stop position of all domains
-#' @param labelSize lable size. Default = 12.
-#' @param titleSize title size. Default = 12.
-#' @return Domain plot of a pair proteins as a arrangeGrob object.
-#' @author Vinh Tran tran@bio.uni-frankfurt.de
-#' @examples
-#' \dontrun{
-#' seed <- "101621at6656"
-#' ortho <- "101621at6656|AGRPL@224129@0|224129_0:001955|1"
-#' ortho <- gsub("\\|", ":", ortho)
-#' grepID <- paste(seed, "#", ortho, sep = "")
-#' domainFile <- system.file(
-#'     "extdata", "domainFiles/101621at6656.domains",
-#'     package = "PhyloProfile", mustWork = TRUE
-#' )
-#' domainDf <- parseDomainInput(seed, domainFile, "file")
-#' subdomainDf <- domainDf[grep(grepID, domainDf$seedID), ]
-#' subdomainDf$feature <- as.character(subdomainDf$feature)
-#' orthoDf <- subdomainDf[subdomainDf$orthoID == ortho,]
-#' seedDf <- subdomainDf[subdomainDf$orthoID != ortho,]
-#' minStart <- min(subdomainDf$start)
-#' maxEnd <- max(c(subdomainDf$end, subdomainDf$length))
-#' g <- pairDomainPlotting(seed,ortho,seedDf,orthoDf,minStart,maxEnd,9,9)
-#' grid::grid.draw(g)
-#' }
-
-pairDomainPlotting2 <- function(
-    seed = NULL, ortho = NULL, seedDf = NULL, orthoDf = NULL,
-    minStart = 0, maxEnd = 999, labelSize = 12, titleSize = 12
-) {
-    if(is.null(seed) | is.null(ortho) | is.null(seedDf) | is.null(orthoDf))
-        stop("Seed/Ortho ID or domain dataframe is NULL!")
-    # create color scheme, so that the same features in seed & ortholog will
-    # have the same colors
-    featureSeed <- levels(as.factor(seedDf$feature))
-    featureOrtho <- levels(as.factor(orthoDf$feature))
-    allFeatures <- c(featureSeed, featureOrtho)
-    allColors <- getQualColForVector(allFeatures)
-    colorScheme <- structure(allColors, .Names = allFeatures)
-    # plot
-    sep <- "|"
-    plotOrtho <- singleDomainPlotting(
-        orthoDf, ortho, sep, labelSize, titleSize, minStart, maxEnd,colorScheme)
-    plotSeed <- singleDomainPlotting(
-        seedDf, seed, sep, labelSize, titleSize, minStart, maxEnd, colorScheme)
-    if (ortho == seed) {
-        g <- gridExtra::arrangeGrob(plotSeed, ncol = 1)
-    } else {
-        seedHeight <- length(levels(as.factor(seedDf$feature)))
-        orthoHeight <- length(levels(as.factor(orthoDf$feature)))
-        g <- gridExtra::arrangeGrob(
-            plotSeed, plotOrtho, ncol = 1, heights = c(seedHeight, orthoHeight)
-        )
     }
     return(g)
 }
@@ -1081,8 +533,8 @@ pairDomainPlotting2 <- function(
 #' @return Dataframe contains sorted domain list.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
-#' \dontrun{
 #' # get domain data
+#' seedID <- "101621at6656"
 #' domainFile <- system.file(
 #'     "extdata", "domainFiles/101621at6656.domains",
 #'     package = "PhyloProfile", mustWork = TRUE
@@ -1096,7 +548,6 @@ pairDomainPlotting2 <- function(
 #' seedDf <- subDf[subDf$orthoID != "101621at6656:DROME@7227@1:Q9VG04",]
 #' # sort
 #' PhyloProfile:::sortDomains(seedDf, orthoDf)
-#' }
 
 sortDomains <- function(seedDf, orthoDf){
     if (is.null(seedDf) | is.null(orthoDf))
@@ -1117,7 +568,8 @@ sortDomains <- function(seedDf, orthoDf){
 
     # convert feature column into a character vector
     orderedOrthoDf$feature <- as.character(orderedOrthoDf$feature)
-    # then convert it back into an ordered factor (to keep this order when plotting)
+    # then convert it back into an ordered factor
+    # (to keep this order when plotting)
     orderedOrthoDf$feature <- factor(
         orderedOrthoDf$feature, levels = unique(orderedOrthoDf$feature)
     )
@@ -1129,23 +581,36 @@ sortDomains <- function(seedDf, orthoDf){
 #' @description Sort domain dataframe of one protein based on a given list of
 #' ordered feature types
 #' @param domainDf domain dataframe
-#' @param featureTypeOrder vector of ordered feature types
+#' @param featureClassOrder vector of ordered feature classes
 #' @return Dataframe contains sorted domain list.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @importFrom dplyr left_join
 #' @examples
-#' \dontrun{
-#' NEED TO ADD AN EXAMPLE HERE
-#' }
+#' # get domain data
+#' seedID <- "101621at6656"
+#' domainFile <- system.file(
+#'     "extdata", "domainFiles/101621at6656.domains",
+#'     package = "PhyloProfile", mustWork = TRUE
+#' )
+#' domainDf <- parseDomainInput(seedID, domainFile, "file")
+#' # get seedDf and orthoDf
+#' subDf <- domainDf[
+#'     domainDf$seedID ==
+#'     "101621at6656#101621at6656:AGRPL@224129@0:224129_0:001955:1",]
+#' orthoDf <- subDf[subDf$orthoID == "101621at6656:DROME@7227@1:Q9VG04",]
+#' featureClassOrder <- c("pfam", "smart", "tmhmm", "coils", "signalp", "seg",
+#'     "flps")
+#' # sort
+#' PhyloProfile:::sortDomainsByList(orthoDf, featureClassOrder)
 
-sortDomainsByList <- function(domainDf = NULL, featureTypeOrder = NULL) {
-    if (is.null(domainDf) | is.null(featureTypeOrder))
+sortDomainsByList <- function(domainDf = NULL, featureClassOrder = NULL) {
+    if (is.null(domainDf) | is.null(featureClassOrder))
         stop("Domain data or feature type order is NULL!")
-    featureTypeOrder <- rev(featureTypeOrder[
-        featureTypeOrder %in% levels(as.factor(domainDf$feature_type))
+    featureClassOrder <- rev(featureClassOrder[
+        featureClassOrder %in% levels(as.factor(domainDf$feature_type))
     ])
     orderedDomainDf <- dplyr::left_join(
-        data.frame(feature_type = featureTypeOrder),
+        data.frame(feature_type = featureClassOrder),
         domainDf, by = "feature_type"
     )
     orderedDomainDf$feature <- factor(
@@ -1162,7 +627,6 @@ sortDomainsByList <- function(domainDf = NULL, featureTypeOrder = NULL) {
 #' @return Dataframe contains simlified domain names in yLabel column
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
-#' \dontrun{
 #' domainFile <- system.file(
 #'     "extdata", "domainFiles/101621at6656.domains",
 #'     package = "PhyloProfile", mustWork = TRUE
@@ -1170,7 +634,6 @@ sortDomainsByList <- function(domainDf = NULL, featureTypeOrder = NULL) {
 #' seedID <- "101621at6656"
 #' domainDf <- parseDomainInput(seedID, domainFile, "file")
 #' PhyloProfile:::modifyFeatureName(domainDf)
-#' }
 
 modifyFeatureName <- function(domainDf = NULL) {
     if (is.null(domainDf)) stop("Domain data cannot be NULL!")
@@ -1191,6 +654,41 @@ modifyFeatureName <- function(domainDf = NULL) {
 #' @param font font of text
 #' @return joined plots with merged legend as a grid object
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom gridExtra grid.arrange
+#' @examples
+#' seed <- "101621at6656"
+#' ortho <- "101621at6656|AGRPL@224129@0|224129_0:001955|1"
+#' ortho <- gsub("\\|", ":", ortho)
+#' grepID <- paste(seed, "#", ortho, sep = "")
+#' domainFile <- system.file(
+#'     "extdata", "domainFiles/101621at6656.domains",
+#'     package = "PhyloProfile", mustWork = TRUE
+#' )
+#' domainDf <- parseDomainInput(seed, domainFile, "file")
+#' domainDf$feature_id_mod <- domainDf$feature_id
+#' subdomainDf <- domainDf[grep(grepID, domainDf$seedID), ]
+#' subdomainDf$feature <- as.character(subdomainDf$feature)
+#' orthoDf <- subdomainDf[subdomainDf$orthoID == ortho,]
+#' seedDf <- subdomainDf[subdomainDf$orthoID != ortho,]
+#' minStart <- min(subdomainDf$start)
+#' maxEnd <- max(c(subdomainDf$end, subdomainDf$length))
+#' # resolve overlapping domains
+#' seedDf <- PhyloProfile:::resolveOverlapFeatures(seedDf)
+#' orthoDf <- PhyloProfile:::resolveOverlapFeatures(orthoDf)
+#' # add feature colors
+#' featureColorDf <- PhyloProfile:::addFeatureColors(seedDf, orthoDf)
+#' seedDf <- featureColorDf[[1]]
+#' orthoDf <- featureColorDf[[2]]
+#' # generate plots
+#' plotSeed <- PhyloProfile:::singleDomainPlotting(
+#'     seedDf, seed, minStart = minStart, maxEnd = maxEnd, font = "sans"
+#' )
+#' plotOrtho <- PhyloProfile:::singleDomainPlotting(
+#'     orthoDf, ortho, minStart = minStart, maxEnd = maxEnd, font = "sans"
+#' )
+#' # merge plots
+#' PhyloProfile:::joinPlotMergeLegends(
+#'     seedDf, orthoDf, plotSeed, plotOrtho, "bottom", font = "sans")
 
 joinPlotMergeLegends <- function(
         df1 = NULL, df2 = NULL, plot1 = NULL, plot2 = NULL,
@@ -1199,11 +697,12 @@ joinPlotMergeLegends <- function(
     if (is.null(plot1) | is.null(df1)) stop("No plot data given!")
     if (is.null(plot2) | is.null(df2))
         return(plot1 + theme(legend.position = position))
+    featureOri <- NULL
     # remove legend of the original plots
     plot1 <- plot1 + theme(legend.position = "none")
     plot2 <- plot2 + theme(legend.position = "none")
     # combine plot1 and 2
-    combined_plot <- grid.arrange(
+    combined_plot <- gridExtra::grid.arrange(
         plot1, plot2, ncol = 1,
         heights = c(
             length(levels(as.factor(df1$feature))),
@@ -1232,53 +731,19 @@ joinPlotMergeLegends <- function(
     # extract legend from the temp plot above
     getOnlyLegend <- function(plot) {
         plotTable <- ggplot_gtable(ggplot_build(plot))
-        legendPlot <- which(sapply(plotTable$grobs, function(x) x$name) == "guide-box")
+        legendPlot <- which(
+            vapply(
+                plotTable$grobs, function(x) x$name, character(1)
+            ) == "guide-box"
+        )
         legend <- plotTable$grobs[[legendPlot]]
         return(legend)
     }
     legend <- getOnlyLegend(tmpPlot)
     # final combined plot with shared legend
-    combined <- grid.arrange(combined_plot, legend, nrow = 2, heights = c(10, 1))
-    return(combined)
-}
-
-
-#' Join multiple plots and merge legends
-#' @description See: https://github.com/tidyverse/ggplot2/wiki
-#' /Share-a-legend-between-two-ggplot2-graphs
-#' @param ... List of plots, seperated by comma
-#' @param ncol number of columns for final plot
-#' @param nrow number of row for final plot
-#' @param position position of legend (bottom or right)
-
-gridArrangeSharedLegend <- function (
-        ..., ncol = length(list(...)), nrow = 1, position = c("bottom", "right")
-) {
-    plots <- list(...)
-    position <- match.arg(position)
-    g <- ggplotGrob(plots[[1]] + theme(legend.position = position))$grobs
-    legend <- g[[which(sapply(g, function(x) x$name) == "guide-box")]]
-    lheight <- sum(legend$height)
-    lwidth <- sum(legend$width)
-    gl <- lapply(plots, function(x) x + theme(legend.position = "none"))
-    gl <- c(gl, ncol = ncol, nrow = nrow)
-
-    combined <- switch(
-        position,
-        "bottom" = gridExtra::arrangeGrob(
-            do.call(arrangeGrob, gl),
-            legend,
-            ncol = 1,
-            heights = grid::unit.c(unit(1, "npc") - lheight, lheight)
-        ),
-        "right" = gridExtra::arrangeGrob(
-            do.call(arrangeGrob, gl),
-            legend,
-            ncol = 2,
-            widths = grid::unit.c(unit(1, "npc") - lwidth, lwidth)
-        )
+    combined <- gridExtra::grid.arrange(
+        combined_plot, legend, nrow = 2, heights = c(10, 1)
     )
-
     return(combined)
 }
 
@@ -1288,15 +753,28 @@ gridArrangeSharedLegend <- function (
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @importFrom dplyr group_by add_count
 #' @examples
-#' \dontrun{
-#' NEED TO ADD AN EXAMPLE HERE
-#' }
+#' # get domain data
+#' seedID <- "101621at6656"
+#' domainFile <- system.file(
+#'     "extdata", "domainFiles/101621at6656.domains",
+#'     package = "PhyloProfile", mustWork = TRUE
+#' )
+#' domainDf <- parseDomainInput(seedID, domainFile, "file")
+#' # get seedDf and orthoDf
+#' subDf <- domainDf[
+#'     domainDf$seedID ==
+#'     "101621at6656#101621at6656:AGRPL@224129@0:224129_0:001955:1",]
+#' orthoDf <- subDf[subDf$orthoID == "101621at6656:DROME@7227@1:Q9VG04",]
+#' # check overlap features
+#' PhyloProfile:::checkOverlapDomains(orthoDf)
 
 checkOverlapDomains <- function(domainDf) {
     if (is.null(domainDf)) stop("Domain data cannot be NULL!")
     feature_type <- NULL
     df <- domainDf[, c("feature", "feature_type", "start", "end")]
-    df <- data.frame(df %>% dplyr::group_by(feature_type) %>% dplyr::add_count(feature_type))
+    df <- data.frame(
+        df %>% dplyr::group_by(feature_type) %>% dplyr::add_count(feature_type)
+    )
     df$tmp <- paste(df$feature_type, df$end, sep = "_")
     overlappedType <- lapply(
         df$tmp[df$n > 1],
@@ -1309,7 +787,8 @@ checkOverlapDomains <- function(domainDf) {
             type <- df$feature_type[df$tmp == x][1]
 
             subDf <- df[
-                !(df$tmp == x) & df$feature_type == type & df$start < ed & df$end > st,
+                !(df$tmp == x) & df$feature_type == type &
+                    df$start < ed & df$end > st,
             ]
             if (nrow(subDf) > 0) {
                 if(!(subDf$feature[1] == df$feature[df$tmp == x]))
@@ -1326,9 +805,20 @@ checkOverlapDomains <- function(domainDf) {
 #' domains of the same type that are not overlapped
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @examples
-#' \dontrun{
-#' NEED TO ADD AN EXAMPLE HERE
-#' }
+#' # get domain data
+#' seedID <- "101621at6656"
+#' domainFile <- system.file(
+#'     "extdata", "domainFiles/101621at6656.domains",
+#'     package = "PhyloProfile", mustWork = TRUE
+#' )
+#' domainDf <- parseDomainInput(seedID, domainFile, "file")
+#' # get seedDf and orthoDf
+#' subDf <- domainDf[
+#'     domainDf$seedID ==
+#'     "101621at6656#101621at6656:AGRPL@224129@0:224129_0:001955:1",]
+#' orthoDf <- subDf[subDf$orthoID == "101621at6656:DROME@7227@1:Q9VG04",]
+#' # resolve overlapped featuers
+#' PhyloProfile:::resolveOverlapFeatures(orthoDf)
 
 resolveOverlapFeatures <- function(domainDf) {
     if (is.null(domainDf)) stop("Domain data cannot be NULL!")
@@ -1364,11 +854,25 @@ resolveOverlapFeatures <- function(domainDf) {
 #' @return 2 dataframes (seedDf and orthoDf) with an additional column for the
 #' assigned colors to each feature instance
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom RColorBrewer brewer.pal
 #' @importFrom utils head
+#' @importFrom dplyr count
 #' @examples
-#' \dontrun{
-#' NEED TO ADD AN EXAMPLE HERE
-#' }
+#' # get domain data
+#' seedID <- "101621at6656"
+#' domainFile <- system.file(
+#'     "extdata", "domainFiles/101621at6656.domains",
+#'     package = "PhyloProfile", mustWork = TRUE
+#' )
+#' domainDf <- parseDomainInput(seedID, domainFile, "file")
+#' # get seedDf and orthoDf
+#' subDf <- domainDf[
+#'     domainDf$seedID ==
+#'     "101621at6656#101621at6656:AGRPL@224129@0:224129_0:001955:1",]
+#' orthoDf <- subDf[subDf$orthoID == "101621at6656:DROME@7227@1:Q9VG04",]
+#' seedDf <- subDf[subDf$orthoID != "101621at6656:DROME@7227@1:Q9VG04",]
+#' # add colors to features
+#' PhyloProfile:::addFeatureColors(seedDf, orthoDf)
 
 addFeatureColors <- function(
         seedDf = NULL, orthoDf = NULL, colorType = "all",
@@ -1378,21 +882,24 @@ addFeatureColors <- function(
     feature <- NULL
     featureSeedCount <- seedDf %>% dplyr::count(feature)
     featureOrthoCount <- orthoDf %>% dplyr::count(feature)
-    featureCount <- merge(featureSeedCount, featureOrthoCount, by = "feature", all = TRUE)
+    featureCount <- merge(
+        featureSeedCount, featureOrthoCount, by = "feature", all = TRUE
+    )
     featureCount$type <- "unique"
     featureCount$type[featureCount$n.x == featureCount$n.y] <- "shared"
-    if (ignoreInstanceNo == TRUE)
-        featureCount$type[!is.na(featureCount$n.x) & !is.na(featureCount$n.y)] <- "shared"
-
+    if (ignoreInstanceNo == TRUE) {
+        featureCount$type[
+            !is.na(featureCount$n.x) & !is.na(featureCount$n.y)] <- "shared"
+    }
     featureCount$feature <- as.character(featureCount$feature)
-    sharedFeatures <- unique(featureCount$feature[featureCount$type == "shared"])
-    uniqueFeatures <- unique(featureCount$feature[featureCount$type == "unique"])
+    sharedFeatures <-unique(featureCount$feature[featureCount$type == "shared"])
+    uniqueFeatures <-unique(featureCount$feature[featureCount$type == "unique"])
     allFeatures <- c(sharedFeatures, uniqueFeatures)
 
     if (colorType == "Unique" & length(uniqueFeatures) == 0)
-        colorType = "All"
+        colorType <- "All"
     if (colorType == "Shared" & length(sharedFeatures) == 0)
-        colorType = "All"
+        colorType <- "All"
 
     if (colorType == "Unique") {
         sharedFeaturesColors <- rep("#C9C9C9", length(sharedFeatures))
@@ -1400,7 +907,8 @@ addFeatureColors <- function(
         if (checkColorPallete(uniqueFeatures, colorPallete) == TRUE) {
             uniqueFeaturesColors <-
                 suppressWarnings(head(
-                    RColorBrewer::brewer.pal(length(uniqueFeatures), colorPallete),
+                    RColorBrewer::brewer.pal(
+                        length(uniqueFeatures), colorPallete),
                     length(uniqueFeatures)
                 ))
         }
@@ -1412,7 +920,8 @@ addFeatureColors <- function(
         if (checkColorPallete(sharedFeatures, colorPallete) == TRUE) {
             sharedFeaturesColors <-
                 suppressWarnings(head(
-                    RColorBrewer::brewer.pal(length(sharedFeatures), colorPallete),
+                    RColorBrewer::brewer.pal(
+                        length(sharedFeatures), colorPallete),
                     length(sharedFeatures)
                 ))
         }
@@ -1435,7 +944,8 @@ addFeatureColors <- function(
         tmpDf$X2[tmpDf$X2 == ""] <- tmpDf$X1[tmpDf$X2 == ""]
         typeColorDf <- data.frame(
             colors = head(
-                suppressWarnings(RColorBrewer::brewer.pal(nlevels(as.factor(tmpDf$X1)), colorPallete)),
+                suppressWarnings(RColorBrewer::brewer.pal(
+                    nlevels(as.factor(tmpDf$X1)), colorPallete)),
                 nlevels(as.factor(tmpDf$X1))
             ),
             X1 = levels(as.factor(tmpDf$X1))

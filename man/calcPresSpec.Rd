@@ -20,10 +20,11 @@ A data frame with % of present species in each supertaxon
 Calculate percentage of present species in each super taxon
 }
 \examples{
-# NOTE: for internal testing only - not recommended for outside using
+# NOTE: for internal testing only
+library(dplyr)
 data("profileWithTaxonomy", package="PhyloProfile")
-taxaCount <- plyr::count(profileWithTaxonomy, "supertaxon")
-taxaCount$freq <- 1
+taxaCount <- profileWithTaxonomy \%>\% dplyr::count(supertaxon)
+taxaCount$n <- 1
 calcPresSpec(profileWithTaxonomy, taxaCount)
 }
 \seealso{

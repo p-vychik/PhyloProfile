@@ -22,9 +22,11 @@
 #' @param taxDB Path to the taxonomy DB files
 #' @return A list of identified core genes.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom dplyr count
 #' @seealso \code{\link{parseInfoProfile}} for creating a full processed
 #' profile dataframe
 #' @examples
+#' library(dplyr)
 #' data("fullProcessedProfile", package="PhyloProfile")
 #' rankName <- "class"
 #' refTaxon <- "Mammalia"
@@ -34,7 +36,7 @@
 #' sortedInputTaxa <- sortInputTaxa(
 #'     taxonIDs, rankName, refTaxon, NULL, NULL
 #' )
-#' taxaCount <- plyr::count(sortedInputTaxa, "supertaxon")
+#' taxaCount <- sortedInputTaxa %>% dplyr::count(supertaxon)
 #' var1Cutoff <- c(0.75, 1.0)
 #' var2Cutoff <- c(0.75, 1.0)
 #' percentCutoff <- c(0.0, 1.0)
@@ -53,10 +55,10 @@ getCoreGene <- function(
     var1Cutoff = c(0, 1), var2Cutoff = c(0, 1),
     percentCutoff = c(0, 1), coreCoverage = 100, taxDB = NULL
 ) {
-    var1 <- var2 <- 0
     if (is.null(profileDt)) stop("Processed profile cannot be NULL!")
     if (is.null(rankName)) stop("Rank name cannot be NULL!")
-    supertaxonID <- mVar1 <- mVar2 <- presSpec <- Freq <- NULL
+    var1 <- var2 <- 0
+    supertaxonID <- mVar1 <- mVar2 <- presSpec <- geneID <- Freq <- NULL
     # get ID list of chosen taxa & main input profile
     taxaList <- getNameList(taxDB)
     if ("none" %in% taxaCore) {
@@ -93,8 +95,7 @@ getCoreGene <- function(
             profileDt, supertaxonID %in% superID & presSpec >= percentCutoff[1]
             & presSpec <= percentCutoff[2])
         # get supertaxa present in each geneID
-        supertaxonCount <- as.data.frame(
-            plyr::count(data, c("geneID", "supertaxonID")))
+        supertaxonCount <- data %>% dplyr::count(geneID, supertaxonID)
         # count no. supertaxa for each gene & min no. supertaxa muss be present
         count <- as.data.frame(table(supertaxonCount$geneID))
         requireCoverage <- length(superID) * (coreCoverage / 100)

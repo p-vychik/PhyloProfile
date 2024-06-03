@@ -4,12 +4,12 @@
 \alias{sortDomainsByList}
 \title{Sort one domain dataframe based on list of ordered feature types}
 \usage{
-sortDomainsByList(domainDf = NULL, featureTypeOrder = NULL)
+sortDomainsByList(domainDf = NULL, featureClassOrder = NULL)
 }
 \arguments{
 \item{domainDf}{domain dataframe}
 
-\item{featureTypeOrder}{vector of ordered feature types}
+\item{featureClassOrder}{vector of ordered feature classes}
 }
 \value{
 Dataframe contains sorted domain list.
@@ -19,9 +19,22 @@ Sort domain dataframe of one protein based on a given list of
 ordered feature types
 }
 \examples{
-\dontrun{
-NEED TO ADD AN EXAMPLE HERE
-}
+# get domain data
+seedID <- "101621at6656"
+domainFile <- system.file(
+    "extdata", "domainFiles/101621at6656.domains",
+    package = "PhyloProfile", mustWork = TRUE
+)
+domainDf <- parseDomainInput(seedID, domainFile, "file")
+# get seedDf and orthoDf
+subDf <- domainDf[
+    domainDf$seedID ==
+    "101621at6656#101621at6656:AGRPL@224129@0:224129_0:001955:1",]
+orthoDf <- subDf[subDf$orthoID == "101621at6656:DROME@7227@1:Q9VG04",]
+featureClassOrder <- c("pfam", "smart", "tmhmm", "coils", "signalp", "seg",
+    "flps")
+# sort
+PhyloProfile:::sortDomainsByList(orthoDf, featureClassOrder)
 }
 \author{
 Vinh Tran tran@bio.uni-frankfurt.de

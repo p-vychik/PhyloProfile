@@ -18,12 +18,10 @@ Domain file and its complete directory path for the selected protein.
 Get domain file from a folder for a seed protein
 }
 \examples{
-\dontrun{
 domainPath <- paste0(
     path.package("PhyloProfile", quiet = FALSE), "/extdata/domainFiles"
 )
-getDomainFolder("OG_1009", domainPath)
-}
+PhyloProfile:::getDomainFolder("101621at6656", domainPath)
 }
 \author{
 Vinh Tran tran@bio.uni-frankfurt.de

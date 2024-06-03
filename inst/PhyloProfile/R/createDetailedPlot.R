@@ -23,7 +23,8 @@ createDetailedPlotUI <- function(id) {
 }
 
 createDetailedPlot <- function(
-    input, output, session, data, var1ID, var2ID, detailedText, detailedHeight
+    input, output, session, data, var1ID, var2ID, detailedText, detailedHeight,
+    font
 ){
     # simplify ortho IDs if they are in BIONF format ---------------------------
     plotData <- reactive({
@@ -49,7 +50,7 @@ createDetailedPlot <- function(
     
     # render detailed plot -----------------------------------------------------
     output$detailPlot <- renderPlot({
-        detailPlot(plotData(), detailedText(), var1ID(), var2ID())
+        detailPlot(plotData(), detailedText(), var1ID(), var2ID(), font())
     })
 
     output$detailPlot.ui <- renderUI({
@@ -69,7 +70,7 @@ createDetailedPlot <- function(
             c("detailedPlot.pdf")
         },
         content = function(file) {
-            g <- detailPlot(data(), detailedText(), var1ID(), var2ID())
+            g <- detailPlot(data(), detailedText(), var1ID(), var2ID(), font())
             ggsave(
                 file,
                 plot = g,
@@ -153,10 +154,11 @@ createDetailedPlot <- function(
 #' @param detailedText text size (input$detailedText)
 #' @param var1ID name of variable 1 (input$var1ID)
 #' @param var2ID name of variable 2 (input$var2ID)
+#' @param font font of text. Default = Arial"
 #' @return detailed plot (ggplot object)
 #' @author Vinh Tran {tran@bio.uni-frankfurt.de}
 
-detailPlot <- function(selDf, detailedText, var1ID, var2ID){
+detailPlot <- function(selDf, detailedText, var1ID, var2ID, font = "Arial"){
     selDf$xLabel <- paste(selDf$orthoID, " (", selDf$fullName, ")", sep = "")
 
     # create joined DF for plotting var1 next to var2
@@ -188,7 +190,8 @@ detailPlot <- function(selDf, detailedText, var1ID, var2ID){
     gp <- gp + theme(axis.text.x = element_text(angle = 90, hjust = 1),
                      axis.text = element_text(size = detailedText),
                      axis.title = element_text(size = detailedText),
-                     legend.text = element_text(size = detailedText)
+                     legend.text = element_text(size = detailedText),
+                     text = element_text(family = font)
     )
     return(gp)
 }

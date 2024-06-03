@@ -85,7 +85,7 @@ writePlottingScript <- function(settingsFile) {
             taxDB = taxDB
         )",
 
-        "taxaCount <- plyr::count(sortedTaxa, 'supertaxon')",
+        "taxaCount <- sortedTaxa %>% dplyr::count(supertaxon)",
 
         "fullData <- parseInfoProfile(
             inputDf = inputDf,

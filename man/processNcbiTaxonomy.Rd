@@ -17,8 +17,8 @@ needed for PhyloProfile, including taxon IDs, their scientific names,
 systematic ranks, and parent (next higher) rank IDs.
 }
 \examples{
-?processNcbiTaxonomy
 \dontrun{
+?processNcbiTaxonomy
 preProcessedTaxonomy <- PhyloProfile:::processNcbiTaxonomy()
 # save to text (tab-delimited) file
 write.table(

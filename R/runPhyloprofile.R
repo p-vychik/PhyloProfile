@@ -6,20 +6,22 @@
 #' @param port Port (e.g. port = 8888)
 #' @return A shiny application - GUI version of PhyloProfile
 #' @import BiocStyle
-#' @import DT
 #' @importFrom colourpicker colourInput
-#' @import energy
+#' @rawNamespace import(data.table, except = c(first, last, between))
+#' @import dplyr
+#' @importFrom DT dataTableOutput renderDataTable
 #' @import ExperimentHub
-#' @import shinyBS
-#' @import shinycssloaders
-#' @import shinyFiles
-#' @import stringr
-#' @import yaml
-#' @rawNamespace import(RCurl, except = reset)
-#' @rawNamespace import(shinyjs, except = colourInput)
+#' @importFrom extrafont fonts font_import
+#' @importFrom shinyBS bsPopover bsButton bsAlert popify bsModal updateButton 
+#' closeAlert createAlert
+#' @importFrom shinycssloaders withSpinner
+#' @importFrom shinyjs enable disable reset html toggleState
+#' @importFrom shinyFiles shinyDirButton shinyDirChoose parseDirPath
+#' @importFrom yaml read_yaml write_yaml
+#' @importFrom RCurl url.exists
 #' @examples
-#' ?runPhyloProfile
 #' \dontrun{
+#' ?runPhyloProfile
 #' runPhyloProfile()
 #' }
 

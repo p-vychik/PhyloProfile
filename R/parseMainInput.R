@@ -75,6 +75,7 @@ checkInputValidity <- function(filein) {
 #' @importFrom xml2 read_xml
 #' @importFrom xml2 xml_find_all
 #' @importFrom xml2 xml_attr
+#' @importFrom data.table dcast setDT
 #' @examples
 #' inputFile <- system.file(
 #'     "extdata", "test.main.xml", package = "PhyloProfile", mustWork = TRUE

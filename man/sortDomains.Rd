@@ -20,8 +20,8 @@ based on the dataframe of the its paired protein, in order to bring the
 common domain feature in the same order which make it easy for comparing.
 }
 \examples{
-\dontrun{
 # get domain data
+seedID <- "101621at6656"
 domainFile <- system.file(
     "extdata", "domainFiles/101621at6656.domains",
     package = "PhyloProfile", mustWork = TRUE
@@ -35,7 +35,6 @@ orthoDf <- subDf[subDf$orthoID == "101621at6656:DROME@7227@1:Q9VG04",]
 seedDf <- subDf[subDf$orthoID != "101621at6656:DROME@7227@1:Q9VG04",]
 # sort
 PhyloProfile:::sortDomains(seedDf, orthoDf)
-}
 }
 \author{
 Vinh Tran tran@bio.uni-frankfurt.de

@@ -17,7 +17,7 @@ sequence, length and domain annotations (tab delimited) for input OMA protein
 Get taxonomy ID, sequence and annotation for one OMA protein
 }
 \examples{
-print("Uncomment the following line to run the function")
+### Uncomment the following line to run the function
 # getOmaDataForOneOrtholog("HUMAN29397")
 }
 \author{

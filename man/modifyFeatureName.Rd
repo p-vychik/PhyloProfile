@@ -18,7 +18,6 @@ LCR for low complexity regions, remove tool names from domain name) and add
 weight to feature names (if available)
 }
 \examples{
-\dontrun{
 domainFile <- system.file(
     "extdata", "domainFiles/101621at6656.domains",
     package = "PhyloProfile", mustWork = TRUE
@@ -26,7 +25,6 @@ domainFile <- system.file(
 seedID <- "101621at6656"
 domainDf <- parseDomainInput(seedID, domainFile, "file")
 PhyloProfile:::modifyFeatureName(domainDf)
-}
 }
 \author{
 Vinh Tran tran@bio.uni-frankfurt.de

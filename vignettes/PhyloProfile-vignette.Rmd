@@ -194,7 +194,8 @@ taxonIDs <- levels(as.factor(fullProcessedProfile$ncbiID))
 sortedInputTaxa <- sortInputTaxa(
     taxonIDs, rankName, refTaxon, NULL, NULL, NULL
 )
-taxaCount <- plyr::count(sortedInputTaxa, "supertaxon")
+library(dplyr)
+taxaCount <- sortedInputTaxa %>% dplyr::count(supertaxon)
 
 #' Set cutoff for 2 additional variables and the percentage of present species
 #' in each supertaxon
@@ -241,7 +242,7 @@ taxonIDs <- levels(as.factor(fullProcessedProfile$ncbiID))
 sortedInputTaxa <- sortInputTaxa(
     taxonIDs, rankName, refTaxon, NULL, NULL, NULL
 )
-taxaCount <- plyr::count(sortedInputTaxa, "supertaxon")
+taxaCount <- sortedInputTaxa %>% dplyr::count(supertaxon)
 
 #' Identify core genes
 getCoreGene(
@@ -452,6 +453,13 @@ info <- c(seedID, orthoID)
 
 #' Get data for 2 selected genes from input file
 domainDf <- parseDomainInput(seedID, domainFile, "file")
+
+#' Modify feature IDs
+domainDf$feature_id_mod <- domainDf$feature_id
+domainDf$feature_id_mod <- gsub("SINGLE", "LCR", domainDf$feature_id_mod)
+domainDf$feature_id_mod[domainDf$feature_type == "coils"] <- "Coils"
+domainDf$feature_id_mod[domainDf$feature_type == "seg"] <- "LCR"
+domainDf$feature_id_mod[domainDf$feature_type == "tmhmm"] <- "TM"
 
 #' Generate plot
 plot <- createArchiPlot(info, domainDf, 9, 9)

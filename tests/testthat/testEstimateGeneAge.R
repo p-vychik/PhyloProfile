@@ -1,6 +1,7 @@
 context("test estimation of gene ages")
 
 test_that("test estimation of gene ages", {
+    library(dplyr)
     data("fullProcessedProfile", package="PhyloProfile")
     rankName <- "class"
     refTaxon <- "Mammalia"
@@ -11,7 +12,7 @@ test_that("test estimation of gene ages", {
     sortedInputTaxa <- sortInputTaxa(
         taxonIDs, rankName, refTaxon, NULL
     )
-    taxaCount <- plyr::count(sortedInputTaxa, "supertaxon")
+    taxaCount <- sortedInputTaxa %>% dplyr::count(supertaxon)
     geneAge <- estimateGeneAge(
         fullProcessedProfile, taxaCount,
         rankName, refTaxon,

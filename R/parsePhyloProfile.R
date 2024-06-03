@@ -247,7 +247,7 @@ getSelectedTaxonNames <- function(
 #' @return A taxonomy matrix for the input taxa ordered by the selected
 #' reference taxon. This matrix is sorted either based on the NCBI taxonomy
 #' info, or based on an user-defined taxonomy tree (if provided).
-#' @importFrom ape read.tree
+#' @importFrom ape read.tree root
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @export
 #' @seealso \code{\link{getNameList}}, \code{\link{getTaxonomyMatrix}},
@@ -357,16 +357,18 @@ sortInputTaxa <- function(
 #' or kingdom)
 #' @return A data frame with % of present species in each supertaxon
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom dplyr count
 #' @seealso \code{\link{profileWithTaxonomy}} for a demo input data
 #' @examples
-#' # NOTE: for internal testing only - not recommended for outside using
+#' # NOTE: for internal testing only
+#' library(dplyr)
 #' data("profileWithTaxonomy", package="PhyloProfile")
-#' taxaCount <- plyr::count(profileWithTaxonomy, "supertaxon")
-#' taxaCount$freq <- 1
+#' taxaCount <- profileWithTaxonomy %>% dplyr::count(supertaxon)
+#' taxaCount$n <- 1
 #' calcPresSpec(profileWithTaxonomy, taxaCount)
 
 calcPresSpec <- function(profileWithTax, taxaCount){
-    paralog <- abbrName <- NULL
+    paralog <- abbrName <- geneID <- supertaxon <- NULL
     if (missing(profileWithTax)) return("No input data given")
     if (missing(taxaCount)) return("No supertaxon count given")
     profileWithTax <- profileWithTax[profileWithTax$orthoID != "NA", ]
@@ -380,24 +382,24 @@ calcPresSpec <- function(profileWithTax, taxaCount){
     geneIDSupertaxon <- geneIDSupertaxon[!duplicated(geneIDSupertaxon), ]
     # remove NA rows from profileWithTax
     profileWithTaxNoNA <- profileWithTax[profileWithTax$orthoID != "NA", ]
+    profileWithTaxNoNA <- profileWithTax[!(is.na(profileWithTax$orthoID)), ]
     # count present frequency of supertaxon for each gene
-    geneSupertaxonCount <- plyr::count(
-        profileWithTaxNoNA, c("geneID", "supertaxon")
-    )
+    geneSupertaxonCount <- profileWithTaxNoNA %>%
+        dplyr::count(geneID, supertaxon)
     # merge with taxaCount to get total number of species of each supertaxon
     # and calculate presSpec
     presSpecDt <- merge(
         geneSupertaxonCount, taxaCount, by = "supertaxon", all.x = TRUE
     )
-    specCount <- plyr::count(geneIDSupertaxon, c("geneID", "supertaxon"))
+    specCount <- geneIDSupertaxon %>% dplyr::count(geneID, supertaxon)
     presSpecDt <- merge(
         presSpecDt, specCount, by = c("geneID", "supertaxon")
     )
-    presSpecDt$presSpec <- presSpecDt$freq / presSpecDt$freq.y
+    presSpecDt$presSpec <- presSpecDt$n / presSpecDt$n.y
     presSpecDt <- presSpecDt[presSpecDt$presSpec <= 1, ]
     presSpecDt <- presSpecDt[order(presSpecDt$geneID), ]
     presSpecDt <- presSpecDt[
-        , c("geneID", "supertaxon", "presSpec", "freq", "freq.y")
+        , c("geneID", "supertaxon", "presSpec", "n", "n.y")
     ]
     colnames(presSpecDt) <- c(
         "geneID", "supertaxon", "presSpec", "presentTaxa", "totalTaxa"
@@ -434,16 +436,18 @@ calcPresSpec <- function(profileWithTax, taxaCount){
 #' e.g. estimation of gene age (?estimateGeneAge) or identification of core gene
 #' (?getCoreGene).
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom dplyr count
 #' @export
 #' @seealso \code{\link{createLongMatrix}}, \code{\link{sortInputTaxa}},
 #' \code{\link{calcPresSpec}}, \code{\link{mainLongRaw}}
 #' @examples
+#' library(dplyr)
 #' data("mainLongRaw", package="PhyloProfile")
 #' taxonIDs <- getInputTaxaID(mainLongRaw)
 #' sortedInputTaxa <- sortInputTaxa(
 #'     taxonIDs, "class", "Mammalia", NULL, NULL
 #' )
-#' taxaCount <- plyr::count(sortedInputTaxa, "supertaxon")
+#' taxaCount <- sortedInputTaxa %>% dplyr::count(supertaxon)
 #' coorthoCOMax <- 999
 #' parseInfoProfile(
 #'     mainLongRaw, sortedInputTaxa, taxaCount, coorthoCOMax
@@ -454,13 +458,14 @@ parseInfoProfile <- function(
 ) {
     if (is.null(inputDf) | is.null(sortedInputTaxa))
         stop("Input profiles and sorted taxonomy data cannot be NULL!")
+    geneID <- ncbiID <- NULL
     if (ncol(inputDf) > 3) {
         if (ncol(inputDf) < 5) colnames(inputDf)[4] <- "var1"
         else colnames(inputDf)[c(4,5)] <- c("var1", "var2")
     }
     if (coorthoCOMax < 1) coorthoCOMax <- 1
     # count number of inparalogs & calculate frequency of all supertaxa
-    paralogCount <- plyr::count(inputDf, c("geneID", "ncbiID"))
+    paralogCount <- inputDf %>% dplyr::count(geneID, ncbiID)
     inputDf <- merge(inputDf, paralogCount, by = c("geneID", "ncbiID"))
     colnames(inputDf)[ncol(inputDf)] <- "paralog"
     # filter by number of coorthologs
@@ -469,7 +474,7 @@ parseInfoProfile <- function(
     taxaMdData <- merge(inputDf, sortedInputTaxa, by = "ncbiID")
     # merge with taxaCount to get number of species
     fullMdData <- merge(taxaMdData, taxaCount, by = ("supertaxon"), all.x=TRUE)
-    names(fullMdData)[names(fullMdData) == "freq"] <- "numberSpec"
+    names(fullMdData)[names(fullMdData) == "n"] <- "numberSpec"
     fullMdData$fullName <- as.vector(fullMdData$fullName)
     names(fullMdData)[names(fullMdData) == "orthoID.x"] <- "orthoID"
     fullMdData <- fullMdData[!duplicated(fullMdData), ]
@@ -526,6 +531,7 @@ parseInfoProfile <- function(
 #' # NOTE: this function require some intermediate steps using the results from
 #' # other functions. If you would like to get a full processed data from the
 #' # raw input, please use the function fromInputToProfile() instead!
+#' library(dplyr)
 #' data("fullProcessedProfile", package="PhyloProfile")
 #' rankName <- "class"
 #' refTaxon <- "Mammalia"
@@ -543,7 +549,7 @@ parseInfoProfile <- function(
 #' sortedInputTaxa <- sortInputTaxa(
 #'     taxonIDs, rankName, refTaxon, NULL, NULL
 #' )
-#' taxaCount <- plyr::count(sortedInputTaxa, "supertaxon")
+#' taxaCount <- sortedInputTaxa %>% dplyr::count(supertaxon)
 #' filterProfileData(
 #'     fullProcessedProfile,
 #'     taxaCount,
@@ -796,6 +802,7 @@ reduceProfile <- function(filteredProfile) {
 #' variables var1, var2, % of species present in each supertaxon, and the
 #' categories of seed genes (or ortholog groups).
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom dplyr count
 #' @export
 #' @seealso \code{\link{createLongMatrix}}, \code{\link{getInputTaxaID}},
 #' \code{\link{getInputTaxaName}}, \code{\link{sortInputTaxa}},
@@ -857,6 +864,7 @@ fromInputToProfile <- function(
 ) {
     if (missing(rawInput) | missing(rankName)) return("Missing input")
     if (is.null(rawInput) | is.null(rankName)) return("Missing input")
+    supertaxon <- NULL
     # convert raw input into long format
     inputDf <- createLongMatrix(rawInput)
     # get input taxon IDs and names
@@ -866,7 +874,7 @@ fromInputToProfile <- function(
         inputTaxonID, rankName, refTaxon, taxaTree, sortedTaxonList, taxDB
     )
     # count present taxa in each supertaxon
-    taxaCount <- plyr::count(sortedInputTaxa, "supertaxon")
+    taxaCount <- sortedInputTaxa %>% dplyr::count(supertaxon)
     # parse info (additional values...) into profile df
     fullMdData <- parseInfoProfile(inputDf, sortedInputTaxa, taxaCount)
     # filter profile
