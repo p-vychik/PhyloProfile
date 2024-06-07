@@ -1757,14 +1757,15 @@ shinyServer(function(input, output, session) {
             for (i in seq_len(3)) {
                 longDataframe[, i] <- as.factor(longDataframe[, i])
             }
-            if (ncol(longDataframe) > 3) {
+            if (ncol(longDataframe) > 3 & ncol(longDataframe) < 6) {
                 for (j in seq(4, ncol(longDataframe))){
                     longDataframe[,j] <- suppressWarnings(
                         as.numeric(as.character(longDataframe[,j]))
                     )
                 }
             }
-
+            if (ncol(longDataframe) == 6) 
+                longDataframe[, 6] <- as.factor(longDataframe[, 6])
             # remove duplicated lines
             longDataframe <- longDataframe[!duplicated(longDataframe),]
             # update number of genes to plot based on input
@@ -2002,7 +2003,13 @@ shinyServer(function(input, output, session) {
 
             # return preData
             if (nrow(data) == 0) return()
-            colnames(data) <- c("geneID", "ncbiID", "orthoID", "var1", "var2")
+            if (ncol(data) < 6) {
+                colnames(data) <- c("geneID","ncbiID","orthoID","var1","var2")
+            } else {
+                colnames(data) <- c(
+                    "geneID", "ncbiID", "orthoID", "var1", "var2", "geneName"
+                )
+            }
             return(data)
         })
     })
@@ -2146,8 +2153,22 @@ shinyServer(function(input, output, session) {
                 clusteredGeneIDs <- as.factor(row.names(datNew))
 
                 # sort original data according to clusteredGeneIDs
-                dataHeat$geneID <- factor(dataHeat$geneID, levels=clusteredGeneIDs)
-
+                dataHeat$geneID <- factor(
+                    dataHeat$geneID, levels = clusteredGeneIDs
+                )
+                orderedName <- unlist(
+                    vapply(
+                        levels(dataHeat$geneID), 
+                        function(x)
+                            as.character(
+                                unique(dataHeat$geneName[dataHeat$geneID == x])
+                            ), 
+                        character(1)
+                    )
+                )
+                dataHeat$geneName <- factor(
+                    dataHeat$geneName, levels = orderedName
+                )
                 dataHeat <- dataHeat[!is.na(dataHeat$geneID),]
                 return(dataHeat)
             })
@@ -2176,6 +2197,18 @@ shinyServer(function(input, output, session) {
     })
 
     # =========================== MAIN PROFILE TAB =============================
+    
+    # * update choices for geneIdType ------------------------------------------
+    observe({
+        df <- dataHeat()
+        if (all(as.character(df$geneID) == as.character(df$geneName))) {
+            updateRadioButtons(
+                session, inputId = "geneIdType",
+                choices = list("Gene IDs" = "geneID"),
+                selected = "geneID"
+            )
+        } 
+    })
 
     # * render popup for selecting rank and return list of subset taxa ---------
     mainTaxaName <- callModule(
@@ -2187,7 +2220,8 @@ shinyServer(function(input, output, session) {
     )
 
     # * get list of taxa for highlighting --------------------------------------
-    output$taxonHighlight.ui <- renderUI({
+    # output$taxonHighlight.ui <- renderUI({
+    observe({
         filein <- input$mainInput
         if (
             input$demoData == "arthropoda" | input$demoData == "ampk-tor" |
@@ -2195,32 +2229,27 @@ shinyServer(function(input, output, session) {
         ) {
             filein <- 1
         }
-
-        if (is.null(filein)) return(selectInput("taxonHighlight", "", "none"))
-        if (v$doPlot == FALSE) return(selectInput("taxonHighlight", "", "none"))
-        else {
-            choice <- inputTaxonName()
-            out <- levels(factor(choice$fullName))
-            if (input$applyMainTaxa == TRUE) {
-                out <- mainTaxaName()
-                selectizeInput(
-                    "taxonHighlight", "", out, selected = out, multiple = TRUE,
-                    options = list(placeholder = 'none')
-                )
-            } else {
-                selectizeInput(
-                    "taxonHighlight", "", out, multiple = TRUE,
-                    options = list(placeholder = 'none')
-                )
-            }
+        choice <- inputTaxonName()
+        out <- levels(factor(choice$fullName))
+        if (input$applyMainTaxa == TRUE) {
+            outSub <- mainTaxaName()
+            updateSelectizeInput(
+                session, "taxonHighlight", server = TRUE,
+                choices = out, selected = outSub
+            )
+        } else {
+            updateSelectizeInput(
+                session, "taxonHighlight", server = TRUE,
+                choices = out
+            )
         }
     })
 
     # * get list of genes for highlighting -------------------------------------
    observe({
-        geneList <- dataHeat()
-        out <- levels(factor(geneList$geneID))
-
+        df <- dataHeat()
+        idNameDf <- unique(df[,c("geneID","geneName")])
+        out <- setNames(idNameDf$geneID, idNameDf$geneName)
         if (!(is.null(input$geneHighlightFile))) {
             fileHighlight <- input$geneHighlightFile
             highlightList <- read.table(
@@ -2362,6 +2391,7 @@ shinyServer(function(input, output, session) {
         if (input$autoUpdate == TRUE) {
             inputPara <- list(
                 "xAxis" = input$xAxis,
+                "geneIdType" = input$geneIdType,
                 "var1ID" = input$var1ID,
                 "var2ID"  = input$var2ID,
                 "midVar1" = input$midVar1,
@@ -2394,6 +2424,7 @@ shinyServer(function(input, output, session) {
             inputPara <- isolate(
                 list(
                     "xAxis" = input$xAxis,
+                    "geneIdType" = input$geneIdType,
                     "var1ID" = input$var1ID,
                     "var2ID"  = input$var2ID,
                     "midVar1" = input$midVar1,
@@ -2480,7 +2511,9 @@ shinyServer(function(input, output, session) {
         if (v$doPlot == FALSE) return(selectizeInput("inSeq", "", "all"))
         else {
             data <- getFullData()
-            outAll <- c("all", as.list(levels(factor(data$geneID))))
+            idNameDf <- unique(data[,c("geneID","geneName")])
+            idNameList <- setNames(idNameDf$geneID, idNameDf$geneName)
+            outAll <- c(as.factor("all"), idNameList)
             if (input$addGeneAgeCustomProfile == TRUE) {
                 outAll <- as.list(selectedgeneAge())
                 outAll <- outAll[[1]]
@@ -2677,6 +2710,7 @@ shinyServer(function(input, output, session) {
         inputPara <- isolate(
             list(
                 "xAxis" = input$xAxisSelected,
+                "geneIdType" = input$geneIdType,
                 "var1ID" = input$var1ID,
                 "var2ID"  = input$var2ID,
                 "midVar1" = input$midVar1,

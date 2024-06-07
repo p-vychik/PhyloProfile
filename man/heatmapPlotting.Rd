@@ -11,19 +11,20 @@ heatmapPlotting(data = NULL, parm = NULL)
 full or subset profiles)}
 
 \item{parm}{plot parameters, including (1) type of x-axis "taxa" or
-"genes" - default = "taxa"; (2+3) names of 2 variables var1ID and var2ID -
-default = "var1" & "var2"; (4+5) mid value and color for mid value of var1 -
-default is 0.5 and #FFFFFF; (6) color for lowest var1 - default = "#FF8C00";
-(7) color for highest var1 - default = "#4682B4"; (8+9) mid value and color
-for mid value of var2 - default is 1 and #FFFFFF;(10) color for lowest var2 -
-default = "#FFFFFF", (11) color for highest var2 - default = "#F0E68C", (12)
-color of co-orthologs - default = "#07D000"; (13+14+15) text sizes for x, y
-axis and legend - default = 9 for each; (16) legend position "top", "bottom",
-"right", "left" or "none" - default = "top"; (17) zoom ratio of the
-co-ortholog dots from -1 to 3 - default = 0; (18) angle of x-axis from 0 to
-90 - default = 60; (19) show/hide separate line for reference taxon 1/0 -
-default = 0; (20) enable/disable coloring gene categories TRUE/FALSE -
-default = FALSE; (21) enable/disable coloring duplicated ortholog IDs
+"genes" - default = "taxa"; (2) display gene IDs (default) or gene names;
+(3+4) names of 2 variables var1ID and var2ID - default = "var1" & "var2"; 
+(5+6) mid value and color for mid value of var1 -
+default is 0.5 and #FFFFFF; (7) color for lowest var1 - default = "#FF8C00";
+(8) color for highest var1 - default = "#4682B4"; (9+10) mid value and color
+for mid value of var2 - default is 1 and #FFFFFF;(11) color for lowest var2 -
+default = "#FFFFFF", (12) color for highest var2 - default = "#F0E68C", (13)
+color of co-orthologs - default = "#07D000"; (14+15+16) text sizes for x, y
+axis and legend - default = 9 for each; (17) legend position "top", "bottom",
+"right", "left" or "none" - default = "top"; (18) zoom ratio of the
+co-ortholog dots from -1 to 3 - default = 0; (19) angle of x-axis from 0 to
+90 - default = 60; (20) show/hide separate line for reference taxon 1/0 -
+default = 0; (21) enable/disable coloring gene categories TRUE/FALSE -
+default = FALSE; (22) enable/disable coloring duplicated ortholog IDs
 TRUE/FALSE - default=FALSE). NOTE: Leave blank or NULL to use default values.}
 }
 \value{
@@ -37,6 +38,7 @@ data("finalProcessedProfile", package="PhyloProfile")
 plotDf <- dataMainPlot(finalProcessedProfile)
 plotParameter <- list(
     "xAxis" = "taxa",
+    "geneIdType" = "geneID",
     "var1ID" = "FAS_FW",
     "var2ID"  = "FAS_BW",
     "midVar1" = 0.5,

@@ -35,6 +35,7 @@ data("finalProcessedProfile", package="PhyloProfile")
 plotDf <- dataMainPlot(finalProcessedProfile)
 plotParameter <- list(
     "xAxis" = "taxa",
+    "geneIdType" = "geneID",
     "var1ID" = "FAS_FW",
     "var2ID"  = "FAS_BW",
     "midVar1" = 0.5,

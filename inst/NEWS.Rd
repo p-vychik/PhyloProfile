@@ -6,6 +6,7 @@
   \itemize{
     \item improved domain plot #110
     \item option to change font
+    \item option to show gene names
   }
 }
 

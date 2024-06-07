@@ -269,13 +269,15 @@ createLongMatrix <- function(inputFile = NULL){
     for (i in seq_len(3)) {
         longDataframe[, i] <- as.factor(longDataframe[, i])
     }
-    if (ncol(longDataframe) > 3) {
+    if (ncol(longDataframe) > 3 & ncol(longDataframe) < 6) {
         for (j in seq(4, ncol(longDataframe))){
             longDataframe[,j] <- suppressWarnings(
                 as.numeric(as.character(longDataframe[,j]))
             )
         }
     }
+    if (ncol(longDataframe) == 6) 
+        longDataframe[, 6] <- as.factor(longDataframe[, 6])
 
     # remove duplicated lines
     longDataframe <- longDataframe[!duplicated(longDataframe),]

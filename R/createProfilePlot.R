@@ -206,19 +206,20 @@ dataCustomizedPlot <- function(
 #' @param data dataframe for plotting the heatmap phylogentic profile (either
 #' full or subset profiles)
 #' @param parm plot parameters, including (1) type of x-axis "taxa" or
-#' "genes" - default = "taxa"; (2+3) names of 2 variables var1ID and var2ID -
-#' default = "var1" & "var2"; (4+5) mid value and color for mid value of var1 -
-#' default is 0.5 and #FFFFFF; (6) color for lowest var1 - default = "#FF8C00";
-#' (7) color for highest var1 - default = "#4682B4"; (8+9) mid value and color
-#' for mid value of var2 - default is 1 and #FFFFFF;(10) color for lowest var2 -
-#' default = "#FFFFFF", (11) color for highest var2 - default = "#F0E68C", (12)
-#' color of co-orthologs - default = "#07D000"; (13+14+15) text sizes for x, y
-#' axis and legend - default = 9 for each; (16) legend position "top", "bottom",
-#' "right", "left" or "none" - default = "top"; (17) zoom ratio of the
-#' co-ortholog dots from -1 to 3 - default = 0; (18) angle of x-axis from 0 to
-#' 90 - default = 60; (19) show/hide separate line for reference taxon 1/0 -
-#' default = 0; (20) enable/disable coloring gene categories TRUE/FALSE -
-#' default = FALSE; (21) enable/disable coloring duplicated ortholog IDs
+#' "genes" - default = "taxa"; (2) display gene IDs (default) or gene names;
+#' (3+4) names of 2 variables var1ID and var2ID - default = "var1" & "var2"; 
+#' (5+6) mid value and color for mid value of var1 -
+#' default is 0.5 and #FFFFFF; (7) color for lowest var1 - default = "#FF8C00";
+#' (8) color for highest var1 - default = "#4682B4"; (9+10) mid value and color
+#' for mid value of var2 - default is 1 and #FFFFFF;(11) color for lowest var2 -
+#' default = "#FFFFFF", (12) color for highest var2 - default = "#F0E68C", (13)
+#' color of co-orthologs - default = "#07D000"; (14+15+16) text sizes for x, y
+#' axis and legend - default = 9 for each; (17) legend position "top", "bottom",
+#' "right", "left" or "none" - default = "top"; (18) zoom ratio of the
+#' co-ortholog dots from -1 to 3 - default = 0; (19) angle of x-axis from 0 to
+#' 90 - default = 60; (20) show/hide separate line for reference taxon 1/0 -
+#' default = 0; (21) enable/disable coloring gene categories TRUE/FALSE -
+#' default = FALSE; (22) enable/disable coloring duplicated ortholog IDs
 #' TRUE/FALSE - default=FALSE). NOTE: Leave blank or NULL to use default values.
 #' @return A profile heatmap plot as a ggplot object.
 #' @import ggplot2
@@ -229,6 +230,7 @@ dataCustomizedPlot <- function(
 #' plotDf <- dataMainPlot(finalProcessedProfile)
 #' plotParameter <- list(
 #'     "xAxis" = "taxa",
+#'     "geneIdType" = "geneID",
 #'     "var1ID" = "FAS_FW",
 #'     "var2ID"  = "FAS_BW",
 #'     "midVar1" = 0.5,
@@ -258,7 +260,8 @@ heatmapPlotting <- function(data = NULL, parm = NULL){
     if (is.null(data)) stop("Input data cannot be NULL!")
     if (is.null(parm))
         parm <- list(
-            "xAxis" = "taxa", "var1ID" = "var1", "var2ID"  = "var2",
+            "xAxis" = "taxa", "geneIdType" = "geneName", 
+            "var1ID" = "var1", "var2ID"  = "var2",
             "midVar1" = 0.5, "midColorVar1" =  "#FFFFFF",
             "lowColorVar1" =  "#FF8C00", "highColorVar1" = "#4682B4",
             "midVar2" = 1, "midColorVar2" =  "#FFFFFF",
@@ -266,12 +269,14 @@ heatmapPlotting <- function(data = NULL, parm = NULL){
             "paraColor" = "#07D000", "xSize" = 8, "ySize" = 8, "legendSize" = 8,
             "mainLegend" = "top", "dotZoom" = 0, "xAngle" = 60, "guideline" = 0,
             "colorByGroup" = FALSE,"catColors" = NULL,"colorByOrthoID" = FALSE)
-    geneID <- supertaxon <- category <-var1<-var2 <- presSpec <- paralog <- NULL
+    geneID<-geneName<-supertaxon<-category<-var1<-var2<- presSpec<-paralog<-NULL
     orthoFreq <- xmin <- xmax <- ymin <- ymax <- NULL
-
     ### create heatmap plot
+    if (!(is.null(parm$geneIdType))) {
+        if (parm$geneIdType == "geneName") data$geneID <- data$geneName
+    }   
     # create geom_tile & scale_fill_gradient for var2 OR gene category
-    if (parm$xAxis == "genes") p <- ggplot(data,aes(x = geneID, y = supertaxon))
+    if (parm$xAxis == "genes") p <- ggplot(data,aes(x=geneID, y=supertaxon))
     else p <- ggplot(data, aes(y = geneID, x = supertaxon))
     if (parm$colorByGroup == TRUE) {
         p <- p + geom_tile(aes(fill = factor(category)), alpha = 0.3)
@@ -411,6 +416,7 @@ heatmapPlotting <- function(data = NULL, parm = NULL){
 #' plotDf <- dataMainPlot(finalProcessedProfile)
 #' plotParameter <- list(
 #'     "xAxis" = "taxa",
+#'     "geneIdType" = "geneID",
 #'     "var1ID" = "FAS_FW",
 #'     "var2ID"  = "FAS_BW",
 #'     "midVar1" = 0.5,
@@ -523,6 +529,7 @@ highlightProfilePlot <- function(
 #' plotDf <- dataMainPlot(finalProcessedProfile)
 #' plotParameter <- list(
 #'     "xAxis" = "taxa",
+#'     "geneIdType" = "geneID",
 #'     "var1ID" = "FAS_FW",
 #'     "var2ID"  = "FAS_BW",
 #'     "midVar1" = 0.5,

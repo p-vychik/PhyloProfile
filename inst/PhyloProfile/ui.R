@@ -27,12 +27,12 @@ shinyUI(
                             selected = "taxa",
                             inline = TRUE
                         ),
-                        hr(),
-                        checkboxInput(
-                            "autoUpdate",
-                            strong(em("Auto update plot")),
-                            value = FALSE,
-                            width = NULL
+                        radioButtons(
+                            inputId = "geneIdType",
+                            label = "Display genes using:",
+                            choices = list("Gene IDs" = "geneID","Gene names" = "geneName"),
+                            selected = "geneName",
+                            inline = TRUE
                         ),
                         checkboxInput(
                             "keepOrder",
@@ -707,7 +707,12 @@ shinyUI(
                         column(
                             8,
                             style = "padding:0px;",
-                            uiOutput("taxonHighlight.ui")
+                            selectizeInput(
+                                "taxonHighlight","", NULL, multiple=TRUE,
+                                options = list(placeholder = 'none')
+                            )
+                            # ,
+                            # uiOutput("taxonHighlight.ui")
                         ),
                         column(
                             4,
@@ -740,6 +745,12 @@ shinyUI(
                         ),
                         uiOutput("superRankSelect.ui"),
                         hr(),
+                        checkboxInput(
+                            "autoUpdate",
+                            strong(em("Auto update plot")),
+                            value = FALSE,
+                            width = NULL
+                        ),
                         shinyBS::bsButton(
                             "updateBtn", "Update plot", style = "warning",
                             icon("sync"), disabled = FALSE
