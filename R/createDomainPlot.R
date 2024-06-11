@@ -837,6 +837,76 @@ resolveOverlapFeatures <- function(domainDf) {
     return(domainDf)
 }
 
+#' Linearize PFAM/SMART annotations by best e-value/bitscore
+#' @export
+#' @param domainDf input domain dataframe
+#' @param orthoID ID of protein that needs to be linearized
+#' @param value type of values that will be used for linearized, either evalue
+#' (default) or bitscore
+#' @return Domain dataframe of the selected protein after linearization
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom dplyr arrange
+#' @examples
+#' demoDomainDf <- data.frame(
+#'     orthoID = rep("protID", 4),
+#'     start = c(1, 5, 100, 80),
+#'     end = c(30, 40, 130, 110),
+#'     evalue = c(0.001, 0.0005, 0.2, 0.004),
+#'     feature_type = c(rep("pfam", 2), rep("smart", 2)),
+#'     feature_id = c("pf1", "pf2", "sm1", "sm2")
+#' )
+#' linearizeArchitecture(demoDomainDf, "protID", "evalue")
+
+linearizeArchitecture <- function(
+        domainDf = NULL, orthoID = NULL, value = "evalue"
+) {
+    if (is.null(domainDf) | is.null(orthoID)) stop("Input data is NULL!")
+    evalue <- bitscore <- start <- end <- NULL
+    # Sort the dataframe by start position and then by evalue or bitscore
+    if (value == "evalue") {
+        domainDf <- domainDf %>% dplyr::arrange(start, evalue)
+    } else if (value == "bitscore") {
+        domainDf <- domainDf %>% dplyr::arrange(start, bitscore)
+    } else stop("Incorrect value specified! Either 'evalue' or 'bitscore'")
+    
+    # Get lines that need to be excluded
+    pfamRows <- rownames(domainDf[domainDf$orthoID == orthoID & 
+                    domainDf$feature_type %in% c("pfam","smart"),])
+    exclude_lines <- vapply(
+        seq_len(length(pfamRows)-1),
+        function(i) {
+            if (domainDf[pfamRows[i],]$end >= domainDf[pfamRows[i+1],]$start) {
+                # Exclude the row with the higher evalue / lower bitscore
+                if (value == "evalue") {
+                    if (
+                        domainDf[pfamRows[i],]$evalue > 
+                        domainDf[pfamRows[i+1],]$evalue
+                    ) {
+                        return((pfamRows[i]))
+                    } else {
+                        return((pfamRows[i+1]))
+                    }
+                } else {
+                    if (
+                        domainDf[pfamRows[i],]$bitscore < 
+                        domainDf[pfamRows[i+1],]$bitscore
+                    ) {
+                        return((pfamRows[i]))
+                    } else {
+                        return((pfamRows[i+1]))
+                    }
+                }
+                
+            } else {
+                return("0")
+            }
+        },
+        character(1)
+    )
+    # return domainDf after removing overlapped features with higher e-values
+    outDf <- domainDf[!(row.names(domainDf) %in% exclude_lines), ]
+    return(outDf[outDf$orthoID == orthoID,])
+}
 
 #' Add colors for each feature/domain
 #' @description Add colors to features/domains of 2 domain dataframes. Users can

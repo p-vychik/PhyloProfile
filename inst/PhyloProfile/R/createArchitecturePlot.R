@@ -75,10 +75,11 @@ createArchitecturePlotUI <- function(id) {
             ),
             column(
                 3,
-                checkboxGroupInput(
-                    ns("showInstance"),
-                    "Show only instances with",
+                selectInput(
+                    ns("linearizationBy"),
+                    "Linearizing architecture using",
                     choices = c(
+                        "None" = "none",
                         "Best E-value" = "evalue",
                         "Best Bit-score" = "bitscore",
                         "Paths" = "path"
@@ -261,10 +262,7 @@ createArchitecturePlot <- function(
             updateSelectInput(
                 session, "excludeNames",
                 "Exclude feature names of",
-                choices = c(
-                    "flps","seg","coils","signalp","tmhmm",
-                    "smart","pfam"
-                )
+                choices = c("seg","coils","signalp","tmhmm","smart","pfam")
             )
         } else if (
             "axis" %in% input$namePostion | "legend" %in% input$namePostion
@@ -273,10 +271,9 @@ createArchitecturePlot <- function(
                 session, "excludeNames",
                 "Exclude feature names of",
                 choices = c(
-                    "flps","seg","coils","signalp","tmhmm",
-                    "smart","pfam"
+                    "flps","seg","coils","signalp","tmhmm","smart","pfam"
                 ),
-                selected = c("tmhmm","signalp","flps","seg","coils")
+                selected = c("tmhmm","signalp","seg","coils")
             )
         }
     })
@@ -385,19 +382,25 @@ createArchitecturePlot <- function(
                 outDf <- rbind(outDf,naOutDf)
             }
             # get only best instances
-            if ("evalue" %in% input$showInstance) {
-                naOutDf <- outDf[is.na(outDf$evalue),]
-                outDf <- outDf %>% dplyr::group_by(feature, orthoID) %>%
-                    dplyr::filter(evalue == min(evalue))
-                outDf <- rbind(outDf,naOutDf)
+            if ("evalue" %in% input$linearizationBy) {
+                linearizedDfs <- lapply(
+                    levels(as.factor(outDf$orthoID)),
+                    function(orthoID) {
+                        return(linearizeArchitecture(outDf, orthoID, "evalue"))
+                    }
+                )
+                outDf <- do.call(rbind, linearizedDfs)
             }
-            if ("bitscore" %in% input$showInstance) {
-                naOutDf <- outDf[is.na(outDf$bitscore),]
-                outDf <- outDf %>% dplyr::group_by(feature, orthoID) %>%
-                    dplyr::filter(bitscore == max(bitscore))
-                outDf <- rbind(outDf,naOutDf)
+            if ("bitscore" %in% input$linearizationBy) {
+                linearizedDfs <- lapply(
+                    levels(as.factor(outDf$orthoID)),
+                    function(orthoID) {
+                        return(linearizeArchitecture(outDf, orthoID,"bitscore"))
+                    }
+                )
+                outDf <- do.call(rbind, linearizedDfs)
             }
-            if ("path" %in% input$showInstance) {
+            if ("path" %in% input$linearizationBy) {
                 outDf <- outDf %>% dplyr::group_by(feature) %>%
                     dplyr::filter(path == "Y")
             }
