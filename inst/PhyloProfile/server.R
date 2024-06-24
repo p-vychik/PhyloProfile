@@ -159,7 +159,7 @@ shinyServer(function(input, output, session) {
     i_cluster <- FALSE
     i_profileType <- i_distMethod <- i_clusterMethod <- NULL
     i_xAxis <- NULL
-    i_colorByGroup <- i_ordering <- i_geneCategory <- NULL
+    i_colorByGroup <- i_orderGenes <- i_geneCategory <- NULL
     if (!is.null(configFile)) {
         if (file.exists(configFile)) {
             configs <- yaml::read_yaml(configFile)
@@ -176,7 +176,7 @@ shinyServer(function(input, output, session) {
             i_clusterMethod <- configs$clusterMethod
             i_xAxis <- configs$xAxis
             i_colorByGroup <- configs$colorByGroup
-            i_ordering <- configs$ordering
+            i_orderGenes <- configs$orderGenes
             i_geneCategory <- configs$geneCategory
         } else configFile <- NULL
 
@@ -248,11 +248,11 @@ shinyServer(function(input, output, session) {
             )
         }
     })
-    # * render ordering option -------------------------------------------------
+    # * render orderGenes option -----------------------------------------------
     observe({
-        if (!is.null(i_ordering)) {
+        if (!is.null(i_orderGenes)) {
             updateCheckboxInput(
-                session, "ordering", value = as.logical(i_ordering)
+                session, "orderGenes", value = i_orderGenes
             )
         }
     })
@@ -660,6 +660,81 @@ shinyServer(function(input, output, session) {
 
     output$taxDbPath <- renderText({
         return(getTaxDBpath())
+    })
+    
+    # * render upload input for sorted gene list -------------------------------
+    output$inputSortedGenes.ui <- renderUI({
+        filein <- input$mainInput
+        if (!(is.null(filein) & input$demoData == "none")) {
+            fileInput("inputSortedGenes", "")
+        }
+    })
+    
+    checkInputSortedGenes <- reactive({
+        req(input$mainInput)
+        filein <- input$inputSortedGenes
+        if (!(is.null(filein))) {
+            sortedGeneInputDf <- read.table(
+                file = filein$datapath,
+                header = FALSE,
+                check.names = FALSE,
+                comment.char = "",
+                fill = FALSE
+            )
+            sortedGenes <- unique(sortedGeneInputDf$V1)
+            allGenes <- as.character(unique(getMainInput()[,c("geneID")]))
+            if (!(all(sortedGeneInputDf$V1 %in% allGenes))) {
+                if (length(setdiff(allGenes, sortedGenes)) > 0) {
+                    return(
+                        list(missing = setdiff(allGenes, sortedGenes))
+                    )
+                } else if (length(setdiff(sortedGenes, allGenes)) > 0){
+                    return(
+                        list(more = setdiff(sortedGenes, allGenes))
+                    )
+                } else {
+                    # actually this condition will never happen
+                    return(
+                        list(
+                            diff = union(
+                                setdiff(allGenes, sortedGenes),
+                                setdiff(sortedGenes, allGenes)
+                            )
+                        )
+                    )
+                }
+            } else return(list(sortedGenes = sortedGenes))
+        }
+    })
+    
+    output$checkSortedGenes.ui <- renderUI({
+        req(input$mainInput)
+        checkStatus <- checkInputSortedGenes()
+        if (length(checkStatus) == 0) return(strong(em("Please upload file!")))
+        if (names(checkStatus[1]) == "missing") {
+            msg <- paste0(
+                "<p><em><span style=\"color: #ff0000;\">ERROR: ",
+                "Some genes missings from the list! ",
+                "(", checkStatus[1],")",
+                "</span></em></p>"
+            )
+        } else if (names(checkStatus[1]) == "more"){
+            msg <- paste0(
+                "<p><em><span style=\"color: #ff0000;\">WARNING: ",
+                "Some genes from the list not present in the input! ",
+                "(", checkStatus[1],")",
+                "</span></em></p>"
+            )
+        } else if (names(checkStatus[1]) == "diff") {
+            msg <- paste0(
+                "<p><em><span style=\"color: #ff0000;\">ERROR: ",
+                "Gene IDs from the list are not identical with the ",
+                "IDs in the phylogenetic profile input! ",
+                "(", checkStatus[1],")",
+                "</span></em></p>"
+            )
+        } else msg <- NULL
+        HTML(msg)
     })
 
     # * check the validity of input tree file and render checkNewick.ui --------
@@ -1683,10 +1758,10 @@ shinyServer(function(input, output, session) {
         }
     })
 
-    # * check if "no ordering gene IDs" has been checked -----------------------
+    # * check if genes ordered by distances has been selected ------------------
     output$applyClusterCheck.ui <- renderUI({
-        if (input$ordering == FALSE) {
-            HTML('<p><em>(Check "Ordering sequence IDs" check box in
+        if (input$orderGenes != "profile similarity") {
+            HTML('<p><em>(Choose "Order seed IDs by profile similarity" in
                  <strong>Input & settings tab</strong>&nbsp;to enable this
                  function)</em></p>')
         }
@@ -1694,7 +1769,7 @@ shinyServer(function(input, output, session) {
 
     # * enable clustering ------------------------------------------------------
     observe({
-        if (input$ordering == FALSE) {
+        if (input$orderGenes != "profile similarity") {
             updateCheckboxInput(
                 session, "applyCluster", value = FALSE
             )
@@ -1972,7 +2047,9 @@ shinyServer(function(input, output, session) {
         if (is.na(endIndex)) endIndex <- 1000
 
         withProgress(message = 'Subseting data...', value = 0.5, {
-            longDataframe <- unsortID(longDataframe, input$ordering)
+            longDataframe <- sortGeneIDs(
+                longDataframe, input$orderGenes, checkInputSortedGenes()
+            )
             listIn <- input$geneList
             if (!is.null(listIn)) {
                 list <- read.table(file = listIn$datapath, header = FALSE)

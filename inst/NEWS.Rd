@@ -2,11 +2,12 @@
 \title{PhyloProfile news}
 \encoding{UTF-8}
 
-\section{Version 1.18.1}{
+\section{Version 1.20.0}{
   \itemize{
     \item improved domain plot #110
     \item option to change font
     \item option to show gene names
+    \item option to sort genes by defined list
   }
 }
 

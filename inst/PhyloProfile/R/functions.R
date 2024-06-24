@@ -1,13 +1,23 @@
 #' Function to keep user defined geneID order
 #' @param data data frame contains gene ID column
-#' @param order TRUE or FALSE (from input$ordering)
+#' @param orderType either "none", "alphabetically", "by profile similarity" or
+#' "by a sorted list" (from input$orderGenes)
+#' @param geneOrder named list of gene IDs. Either "more" (input list has more
+#' genes than the main input), "missing" (some gene IDs are missing from the 
+#' input list) or "sortedGenes" (genes should be ordered by this list)
 #' @return data either sorted or non-sorted
 #' @author Vinh Tran {tran@bio.uni-frankfurt.de}
-unsortID <- function(data, order){
+sortGeneIDs <- function(data, orderType, geneOrder){
     data$geneID <- as.factor(data$geneID)
-    if (order == FALSE) {
+    if (orderType == "none") {
         # keep user defined geneID order
         data$geneID <- factor(data$geneID, levels = unique(data$geneID))
+    } else if (orderType == "user defined") {
+        # keep user defined geneID order 
+        if (length(geneOrder[1]) == 0) return(data)
+        if (names(geneOrder[1]) == "sortedGenes") {
+            data$geneID <- factor(data$geneID, levels = geneOrder$sortedGenes)
+        }
     }
     return(data)
 }

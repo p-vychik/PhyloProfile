@@ -482,6 +482,20 @@ parseInfoProfile <- function(
     fullMdData <- fullMdData[!duplicated(fullMdData), ]
     if (!("geneName" %in% colnames(fullMdData)))
         fullMdData$geneName <- fullMdData$geneID
+    # sort geneName based on the order of geneID
+    orderedName <- unlist(
+        vapply(
+            levels(fullMdData$geneID), 
+            function(x)
+                as.character(
+                    unique(fullMdData$geneName[fullMdData$geneID == x])
+                ), 
+            character(1)
+        )
+    )
+    fullMdData$geneName <- factor(
+        fullMdData$geneName, levels = orderedName
+    )
     return(fullMdData)
 }
 

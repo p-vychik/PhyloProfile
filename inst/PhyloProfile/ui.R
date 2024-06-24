@@ -598,14 +598,27 @@ shinyUI(
                         ),
 
                         hr(),
-
-                        checkboxInput(
-                            "ordering",
-                            strong("Order seed IDs"),
-                            value = TRUE
+                        
+                        # ** Sort gene IDs options -----------------------------
+                        strong(h4("Order seed IDs")),
+                        radioButtons(
+                            inputId = "orderGenes",
+                            label = "",
+                            choices = list(
+                                "none", "alphabetically",
+                                "profile similarity", "user defined"
+                            ),
+                            selected = "profile similarity",
+                            inline = TRUE
                         ),
-                        hr(),
-
+                        conditionalPanel(
+                            condition = "input.orderGenes
+                                        == 'user defined'",
+                            uiOutput("inputSortedGenes.ui"),
+                            uiOutput("checkSortedGenes.ui")
+                        ),
+                        
+                        # ** Sort taxa options ---------------------------------
                         strong(h4("Order taxa")),
                         radioButtons(
                             inputId = "orderTaxa",
