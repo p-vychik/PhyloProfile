@@ -4,6 +4,7 @@
 
 \section{Version 1.20.0}{
   \itemize{
+    \item added UMAP clustering
     \item improved domain plot #110
     \item option to change font
     \item option to show gene names

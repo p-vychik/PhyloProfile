@@ -3,7 +3,7 @@ sourceFiles = list.files(path = "R", pattern = "*.R$", full.names = TRUE)
 lapply(sourceFiles, source, .GlobalEnv)
 if (is.null(extrafont::fonts())) extrafont::font_import()
 
-#' MAIN UI ====================================================================
+#' MAIN UI =====================================================================
 shinyUI(
     fluidPage(
         includeCSS("www/custom.css"),
@@ -598,7 +598,7 @@ shinyUI(
                         ),
 
                         hr(),
-                        
+
                         # ** Sort gene IDs options -----------------------------
                         strong(h4("Order seed IDs")),
                         radioButtons(
@@ -617,7 +617,7 @@ shinyUI(
                             uiOutput("inputSortedGenes.ui"),
                             uiOutput("checkSortedGenes.ui")
                         ),
-                        
+
                         # ** Sort taxa options ---------------------------------
                         strong(h4("Order taxa")),
                         radioButtons(
@@ -854,6 +854,140 @@ shinyUI(
                             condition = "input.do > 0",
                             createProfilePlotUI("customizedProfile")
                         )
+                    )
+                )
+            ),
+
+            # UMAP CLUSTERING TAB ==============================================
+            tabPanel(
+                "UMAP clustering",
+                # * Top panel for plot configuration ---------------------------
+                wellPanel(
+                    fluidRow(
+                        column(
+                            2,
+                            radioButtons(
+                                "umapDataType", "Data type:",
+                                c("Binary" = "binary", "Non-binary" = "nonbinary"),
+                                inline = TRUE
+                            )
+                        ),
+                        column(
+                            2,
+                            sliderInput(
+                                "umapAlpha", "Transparent level", min = 0, 
+                                max = 1, step = 0.05, value = 0.5, width=200
+                            )
+                        ),
+                        column(
+                            4,
+                            column(
+                                4,
+                                createPlotSize(
+                                    "umapPlot.width", "Plot width", 700
+                                )
+                            ),
+                            column(
+                                4,
+                                createPlotSize(
+                                    "umapPlot.height", "Plot height", 400
+                                )
+                            ),
+                            column(
+                                4,
+                                createTextSize(
+                                    "umapPlot.textsize", "Text size", 12
+                                )
+                            )
+                        ),
+                        column(
+                            4,
+                            column(
+                                6,
+                                numericInput(
+                                    "umapLabelNr", 
+                                    "Max number of labels", 
+                                    min = 3, value = 5, step = 1
+                                ),
+                                shinyBS::bsPopover(
+                                    "umapLabelNr", "",
+                                    paste("Only the most frequent labels",
+                                          "will be shown"),
+                                    "bottom"
+                                ),
+                            ),
+                            column(
+                                6,
+                                selectInput(
+                                    "colorPalleteUmap",
+                                    "Color pallete",
+                                    choices = c(
+                                        "Paired", "Set1", "Set2", "Set3", 
+                                        "Accent", "Dark2"
+                                    ),
+                                    selected = "Dark2"
+                                )
+                            )
+                        )
+                    )
+                ),
+                sidebarLayout(
+                    # * Sidebar panel for data filter --------------------------
+                    sidebarPanel(
+                        selectInput(
+                            "umapRank", label = "Taxonomy rank for labels",
+                            choices = getTaxonomyRanks(),
+                            selected = "phylum"
+                        ),
+                        uiOutput("umapTaxa.ui"),
+                        sliderInput(
+                            "umapCutoff", "Value cutoff", min = 0, max = 1, 
+                            step = 0.05, value = 0, width = '100%'
+                        ),
+                        strong("Add following data to Customized profile"),
+                        checkboxInput("addSpecUmap", em("Selected taxa")),
+                        shinyBS::bsPopover(
+                            "addSpecUmap", "",
+                            paste("This option is not yet available!"),
+                            "bottom"
+                        ),
+                        checkboxInput("addGeneUmap", em("Selected genes")),
+                        uiOutput("addUmapCustomProfileCheck.ui")
+                    ),
+                    # * Main panel for plot and tables -------------------------
+                    mainPanel(
+                        column(
+                            6,
+                            em(
+                                "Brush and double-click to zoom",
+                                style = "color:darkblue"
+                            )
+                        ),
+                        uiOutput("umapPlot.ui"),
+                        br(),
+                        column(
+                            5,
+                            column(
+                                6,
+                                downloadButton(
+                                    "umapDownloadPlot","Download plot",class = "butDL"
+                                )
+                            ),
+                            column(
+                                6,
+                                downloadButton(
+                                    "umapDownloadData","Download UMAP data",class = "butDL"
+                                ),
+                                shinyBS::bsPopover(
+                                    "umapDownloadData", "",
+                                    paste("Use plotUmap() to manually create",
+                                          "UMAP plot!"),
+                                    "bottom"
+                                )
+                            )
+                        ),
+                        br(),
+                        uiOutput("umapTable.ui")
                     )
                 )
             ),

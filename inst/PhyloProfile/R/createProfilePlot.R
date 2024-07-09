@@ -43,7 +43,6 @@ createProfilePlot <- function(input, output, session,
         if (is.null(data())) stop("Profile data is NULL!")
         if (typeProfile() == "customizedProfile") {
             if (is.null(inTaxa()) | is.null(inSeq())) return()
-
             dataHeat <- dataCustomizedPlot(data(), inTaxa(), inSeq())
             if (applyCluster() == TRUE) {
                 dataHeat <- dataCustomizedPlot(
@@ -124,7 +123,7 @@ createProfilePlot <- function(input, output, session,
 
     output$profileDownload <- downloadHandler(
         filename = function() {
-            c("profile.pdf")
+            c("profile.svg")
         },
         content = function(file) {
             ggsave(
@@ -137,7 +136,7 @@ createProfilePlot <- function(input, output, session,
                 ),
                 width = parameters()$width * 0.056458333,
                 height = parameters()$height * 0.056458333,
-                units = "cm", dpi = 300, device = "pdf", limitsize = FALSE
+                units = "cm", dpi = 300, device = "svg", limitsize = FALSE
             )
         }
     )

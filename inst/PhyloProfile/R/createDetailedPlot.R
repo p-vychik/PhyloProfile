@@ -31,12 +31,12 @@ createDetailedPlot <- function(
         plotDf <- data()
         if (
             checkBionfFormat(
-                plotDf$orthoID[1], plotDf$geneID[1], 
+                plotDf$orthoID[1], plotDf$geneID[1],
                 gsub('ncbi','',plotDf$abbrName[1])
             )
         ) {
             plotDf <- within(
-                plotDf, 
+                plotDf,
                 orthoMod <- data.frame(
                     do.call(
                         'rbind', strsplit(as.character(orthoID),'|', fixed=TRUE)
@@ -47,7 +47,7 @@ createDetailedPlot <- function(
         }
         return(plotDf)
     })
-    
+
     # render detailed plot -----------------------------------------------------
     output$detailPlot <- renderPlot({
         detailPlot(plotData(), detailedText(), var1ID(), var2ID(), font())
@@ -67,7 +67,7 @@ createDetailedPlot <- function(
 
     output$downloadDetailed <- downloadHandler(
         filename = function() {
-            c("detailedPlot.pdf")
+            c("detailedPlot.svg")
         },
         content = function(file) {
             g <- detailPlot(data(), detailedText(), var1ID(), var2ID(), font())
@@ -78,7 +78,7 @@ createDetailedPlot <- function(
                 height = detailedHeight() * 0.056458333,
                 units = "cm",
                 dpi = 300,
-                device = "pdf",
+                device = "svg",
                 limitsize = FALSE
             )
         }
@@ -88,7 +88,7 @@ createDetailedPlot <- function(
     pointInfoDetail <- reactive({
         selDf <- data()
         selDf$orthoID <- as.character(selDf$orthoID)
-        
+
         # if only one ortholog, get directly from data()
         if (nrow(selDf) == 1) {
             seedID <- as.character(selDf$geneID)
@@ -107,22 +107,22 @@ createDetailedPlot <- function(
             orthoID <- as.character(selDf$orthoID[corX])
             taxID <- as.character(selDf$abbrName[corX])
         }
-        
+
         # get var1, var2
         var1 <- as.list(selDf$var1[selDf$orthoID == orthoID])
         var1 <- as.character(var1[!is.na(var1)])
         var2 <- as.list(selDf$var2[selDf$orthoID == orthoID])
         var2 <- as.character(var2[!is.na(var2)])
         if (length(var2) == 0) var2 = "NA"
-        
+
         ncbiID <- selDf[selDf$orthoID == orthoID, ]$abbrName
         ncbiID <- as.character(ncbiID[!is.na(ncbiID)][1])
 
         # return info
-        if (is.na(orthoID)) 
+        if (is.na(orthoID))
             return(NULL)
         else {
-            if (orthoID != "NA") 
+            if (orthoID != "NA")
                 return(c(seedID, orthoID, var1, var2, ncbiID))
         }
     })

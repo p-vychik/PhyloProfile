@@ -661,7 +661,7 @@ shinyServer(function(input, output, session) {
     output$taxDbPath <- renderText({
         return(getTaxDBpath())
     })
-    
+
     # * render upload input for sorted gene list -------------------------------
     output$inputSortedGenes.ui <- renderUI({
         filein <- input$mainInput
@@ -669,7 +669,7 @@ shinyServer(function(input, output, session) {
             fileInput("inputSortedGenes", "")
         }
     })
-    
+
     checkInputSortedGenes <- reactive({
         req(input$mainInput)
         filein <- input$inputSortedGenes
@@ -706,7 +706,7 @@ shinyServer(function(input, output, session) {
             } else return(list(sortedGenes = sortedGenes))
         }
     })
-    
+
     output$checkSortedGenes.ui <- renderUI({
         req(input$mainInput)
         checkStatus <- checkInputSortedGenes()
@@ -1839,7 +1839,7 @@ shinyServer(function(input, output, session) {
                     )
                 }
             }
-            if (ncol(longDataframe) == 6) 
+            if (ncol(longDataframe) == 6)
                 longDataframe[, 6] <- as.factor(longDataframe[, 6])
             # remove duplicated lines
             longDataframe <- longDataframe[!duplicated(longDataframe),]
@@ -2235,11 +2235,11 @@ shinyServer(function(input, output, session) {
                 )
                 orderedName <- unlist(
                     vapply(
-                        levels(dataHeat$geneID), 
+                        levels(dataHeat$geneID),
                         function(x)
                             as.character(
                                 unique(dataHeat$geneName[dataHeat$geneID == x])
-                            ), 
+                            ),
                         character(1)
                     )
                 )
@@ -2274,7 +2274,7 @@ shinyServer(function(input, output, session) {
     })
 
     # =========================== MAIN PROFILE TAB =============================
-    
+
     # * update choices for geneIdType ------------------------------------------
     observe({
         df <- dataHeat()
@@ -2284,7 +2284,7 @@ shinyServer(function(input, output, session) {
                 choices = list("Gene IDs" = "geneID"),
                 selected = "geneID"
             )
-        } 
+        }
     })
 
     # * render popup for selecting rank and return list of subset taxa ---------
@@ -2600,6 +2600,9 @@ shinyServer(function(input, output, session) {
                 outAll <- as.list(coreGeneDf())
             } else if (input$addGCGenesCustomProfile == TRUE) {
                 outAll <- as.list(candidateGenes())
+            } else if (input$addGeneUmap == TRUE) {
+                umapGenes <- umapSelectedGenes()
+                if (nrow(umapGenes) > 0) outAll <- unique(umapGenes$geneID)
             } else {
                 if (!is.null(fileCustom)) {
                     customList <- read.table(
@@ -2609,6 +2612,7 @@ shinyServer(function(input, output, session) {
                     outAll <- as.list(levels(customList$V1))
                 }
             }
+            if (length(outAll) == 0) outAll <- c("all")
             if (outAll[1] == "all") {
                 selectizeInput(
                     "inSeq", "", outAll, selected = "all", multiple = TRUE
@@ -2838,6 +2842,267 @@ shinyServer(function(input, output, session) {
         superRank = reactive(input$cusSuperRankSelect),
         allTaxa = allInputTaxa
     )
+
+    # ========================= UMAP CLUSTERING PLOT ===========================
+    observe({shinyjs::disable("addSpecUmap")})
+    # * data for UMAP clustering -----------------------------------------------
+    umapData <- reactive({
+        req(getMainInput())
+        if(is.null(getMainInput())) stop("Input data is NULL!")
+        withProgress(
+            message = "Preparing data for clustering...", value = 0.5, {
+                umapData <- prepareUmapData(
+                    getMainInput(), input$umapRank, "taxa", getTaxDBpath(),
+                    input$umapCutoff
+                )
+                return(umapData)
+            }
+        )
+    })
+
+    # * UMAP clustered data ----------------------------------------------------
+    umapCluster <- reactive({
+        req(umapData())
+        withProgress(
+            message = "Performing UMAP clustering...", value = 0.5, {
+                umapData.umap <- umapClustering(umapData(), "taxa", input$umapDataType)
+                return(umapData.umap)
+            }
+        )
+    })
+
+    # * generate list of UMAP labels -------------------------------------------
+    output$umapTaxa.ui <- renderUI({
+        req(umapData())
+        df <- umapData()
+        maxFreqDf <- data.frame(
+            df %>% group_by(Label) %>% summarise(max = max(Freq))
+        )
+        minFreq <- tail(sort(unique(maxFreqDf$max)), input$umapLabelNr)[1]
+        keepLabel <- unique(df$Label[df$Freq >= minFreq])
+        df$Label[!(df$Label %in% keepLabel)] <- "[Other]"
+        selectInput(
+            "excludeUmapTaxa", "Choose taxa to hide", multiple = TRUE,
+            c("None", levels(as.factor(df$Label))), selected = "None"
+        )
+    })
+
+    # * create UMAP plot -------------------------------------------------------
+    ranges <- reactiveValues(x = NULL, y = NULL)
+    
+    umapPlotData <- reactive({
+        req(getMainInput())
+        if(is.null(getMainInput())) stop("Input data is NULL!")
+        req(umapCluster())
+        req(umapData())
+        plotDf <- createUmapPlotData(
+            umapCluster(), umapData(), labelNr = input$umapLabelNr,
+            excludeTaxa = input$excludeUmapTaxa
+        )
+        return(plotDf)
+    })
+
+    output$umapPlot <- renderPlot({
+        req(getMainInput())
+        if(is.null(getMainInput())) stop("Input data is NULL!")
+        withProgress(
+            message = "Plotting...", value = 0.5, {
+                g <- plotUmap(
+                    umapPlotData(), colorPalette = input$colorPalleteUmap, 
+                    transparent = input$umapAlpha, 
+                    textSize = input$umapPlot.textsize
+                )
+                g + coord_cartesian(
+                    xlim = ranges$x, ylim = ranges$y, expand = TRUE
+                )
+            }
+        )
+    })
+    
+    output$umapPlot.ui <- renderUI({
+        shinycssloaders::withSpinner(
+            plotOutput(
+                "umapPlot",
+                height = input$umapPlot.height,
+                width = input$umapPlot.width,
+                click = "umapClick",
+                dblclick = "umapdblClick",
+                brush = brushOpts(
+                    id = "umapBrush",
+                    delay = input$brushDelay,
+                    delayType = input$brushPolicy,
+                    direction = input$brushDir,
+                    resetOnNew = TRUE
+                )
+            )
+        )
+    })
+    
+    # When a double-click happens, check if there's a brush on the plot
+    # If so, zoom to the brush bounds; if not, reset the zoom.
+    observeEvent(input$umapdblClick, {
+        brush <- input$umapBrush
+        if (!is.null(brush)) {
+            ranges$x <- c(brush$xmin, brush$xmax)
+            ranges$y <- c(brush$ymin, brush$ymax)
+            
+        } else {
+            ranges$x <- NULL
+            ranges$y <- NULL
+        }
+    })
+    
+    # * download UMAP plot & data ----------------------------------------------
+    output$umapDownloadPlot <- downloadHandler(
+        filename = function() {
+            c("umap.pdf")
+        },
+        content = function(file) {
+            ggsave(
+                file,
+                plot = plotUmap(
+                    umapPlotData(), colorPalette = input$colorPalleteUmap, 
+                    transparent = input$umapAlpha, 
+                    textSize = input$umapPlot.textsize
+                ) + coord_cartesian(
+                    xlim = ranges$x, ylim = ranges$y, expand = TRUE),
+                width = input$umapPlot.width * 0.056458333,
+                height = input$umapPlot.height * 0.056458333,
+                units = "cm", dpi = 300, device = "pdf", limitsize = FALSE
+            )
+        }
+    )
+    
+    output$umapDownloadData <- downloadHandler(
+        filename = function() {
+            c("umapData.RData")
+        },
+        content = function(fileName) {
+            data4umap <- umapData()
+            umapClusteredData <- umapCluster()
+            umapPlotData <- umapPlotData()
+            save(data4umap, umapClusteredData, umapPlotData, file = fileName)
+        }
+    )
+
+    # * create brushed UMAP table ----------------------------------------------
+    brushedUmapData <- reactive({
+        # get list of selected gene(s)
+        if (is.null(input$umapBrush))
+            return()
+        else {
+            xmin <- input$umapBrush$xmin
+            xmax <- input$umapBrush$xmax
+            ymin <- input$umapBrush$ymin
+            ymax <- input$umapBrush$ymax
+            return(
+                umapPlotData() %>%
+                    filter(X >= xmin & X <= xmax & Y >= ymin & Y <= ymax)
+            )
+        }
+    })
+
+    output$umapTable.ui <- renderUI({
+        list(
+            hr(),
+            h4("SELECTED TAXA"),
+            DT::dataTableOutput("umapSpec.table"),
+            hr(),
+            h4("SELECTED SEED GENES"),
+            DT::dataTableOutput("umapSeed.table")
+        )
+    })
+
+    umapSelectedTaxa <- reactive({
+        if (is.null(input$umapBrush$ymin)) {
+            shinyjs::disable("umapZoomIn")
+            shinyjs::disable("umapZoomOut")
+            shinyjs::disable("addSpecUmap")
+            return()
+        } else {
+            shinyjs::enable("umapZoomIn")
+            shinyjs::enable("umapZoomOut")
+            shinyjs::enable("addSpecUmap")
+        }
+        df <- as.data.frame(brushedUmapData())
+        specDf <- df %>% select(ncbiID, Label, Freq)
+        specDf$id <- as.numeric(gsub("ncbi","",specDf$ncbiID))
+        taxonNameDf <- PhyloProfile::id2name(specDf$id, currentNCBIinfo)
+        specDf <- left_join(
+            specDf, taxonNameDf %>% select(ncbiID, fullName),
+            by = c("id" = "ncbiID")
+        )
+        specDf <- specDf %>% select(ncbiID, fullName, Label, Freq)
+        return(specDf)
+    })
+
+    output$umapSpec.table <- DT::renderDataTable(
+        options = list(searching = TRUE, pageLength = 10
+    ),{
+        umapSelectedTaxa()
+    })
+
+    umapSelectedGenes <- reactive({
+        if (is.null(input$umapBrush$ymin)){
+            shinyjs::disable("addGeneUmap")
+            return()
+        } else {
+            if (input$addClusterCustomProfile == FALSE
+                & input$addGeneAgeCustomProfile == FALSE
+                & input$addCoreGeneCustomProfile == FALSE
+                & input$addGCGenesCustomProfile == FALSE) {
+                shinyjs::enable("addGeneUmap")
+            } else {
+                shinyjs::disable("addGeneUmap")
+            }
+        }
+
+        df <- as.data.frame(brushedUmapData())
+        specDf <- df %>% select(ncbiID, Label, Freq)
+        removeDf <- df %>% select(where(~ all(. == -1)))
+        meltedDf <- data.frame(melt(
+            as.data.table(
+                df %>% select(-c(colnames(removeDf), Label, Freq, X, Y))
+            ),
+            id.vars = "ncbiID", variable.name = "geneID"
+        ))
+        geneDf <- meltedDf %>% filter(value >= 0) %>%
+            select(geneID, ncbiID, value)
+        colnames(geneDf)[colnames(geneDf) == "value"] <- input$var1ID
+        return(geneDf)
+    })
+
+    output$umapSeed.table <- DT::renderDataTable(
+        options = list(searching = TRUE, pageLength = 10
+    ),{
+        umapSelectedGenes()
+    })
+    
+    # ** check if genes are added anywhere else to the customized profile ------
+    observe({
+        if (input$addClusterCustomProfile == TRUE
+            | input$addGeneAgeCustomProfile == TRUE
+            | input$addCoreGeneCustomProfile == TRUE
+            | input$addGCGenesCustomProfile == TRUE) {
+            shinyjs::disable("addGeneUmap")
+        } else {
+            shinyjs::enable("addGeneUmap")
+        }
+    })
+    
+    output$addUmapCustomProfileCheck.ui <- renderUI({
+        if (input$addClusterCustomProfile == TRUE
+            | input$addGeneAgeCustomProfile == TRUE
+            | input$addCoreGeneCustomProfile == TRUE |
+            input$addGCGenesCustomProfile == TRUE ) {
+            HTML('<p><em>(Uncheck "Add to Customized profile" check box in
+                 <strong>Profile clustering</strong> or
+                 <strong>Gene age estimation</strong> or
+                 <strong>Core genes finding</strong> or
+                 <strong>Group comparison</strong>
+                 &nbsp;to enable this function)</em></p>')
+        }
+    })
 
     # ============================== POINT INFO ================================
 
@@ -3591,7 +3856,8 @@ shinyServer(function(input, output, session) {
     observe({
         if (input$addGeneAgeCustomProfile == TRUE
             | input$addCoreGeneCustomProfile == TRUE
-            | input$addGCGenesCustomProfile == TRUE) {
+            | input$addGCGenesCustomProfile == TRUE
+            | input$addGeneUmap == TRUE) {
             shinyjs::disable("addClusterCustomProfile")
         } else {
             shinyjs::enable("addClusterCustomProfile")
@@ -3600,12 +3866,14 @@ shinyServer(function(input, output, session) {
 
     output$addClusterCustomProfileCheck.ui <- renderUI({
         if (input$addGeneAgeCustomProfile == TRUE
-            | input$addCoreGeneCustomProfile == TRUE |
-            input$addGCGenesCustomProfile == TRUE ) {
+            | input$addCoreGeneCustomProfile == TRUE
+            | input$addGCGenesCustomProfile == TRUE
+            | input$addGeneUmap == TRUE) {
             HTML('<p><em>(Uncheck "Add to Customized profile" check box in
                  <strong>Gene age estimation</strong> or
                  <strong>Core genes finding</strong> or
-                 <strong>Group comparison</strong>
+                 <strong>Group comparison</strong> or
+                 <strong>UMAP clustering (Selected genes)</strong>
                  &nbsp;to enable this function)</em></p>')
         }
     })
@@ -3849,7 +4117,8 @@ shinyServer(function(input, output, session) {
     observe({
         if (input$addClusterCustomProfile == TRUE
             | input$addCoreGeneCustomProfile == TRUE
-            | input$addGCGenesCustomProfile == TRUE ) {
+            | input$addGCGenesCustomProfile == TRUE
+            | input$addGeneUmap == TRUE) {
             shinyjs::disable("addGeneAgeCustomProfile")
         } else {
             shinyjs::enable("addGeneAgeCustomProfile")
@@ -3859,11 +4128,13 @@ shinyServer(function(input, output, session) {
     output$addGeneAgeCustomProfileCheck.ui <- renderUI({
         if (input$addClusterCustomProfile == TRUE
             | input$addCoreGeneCustomProfile == TRUE
-            | input$addGCGenesCustomProfile == TRUE) {
+            | input$addGCGenesCustomProfile == TRUE
+            | input$addGeneUmap == TRUE) {
             HTML('<p><em>(Uncheck "Add to Customized profile" check box in
            <strong>Profile clustering</strong> or
            <strong>Core genes finding</strong> or
-           <strong>Group comparison</strong>
+           <strong>Group comparison</strong> or
+           <strong>UMAP clustering (Selected genes)</strong>
            &nbsp;to enable this function)</em></p>')
         }
     })
@@ -3978,7 +4249,8 @@ shinyServer(function(input, output, session) {
     observe({
         if (input$addClusterCustomProfile == TRUE
             | input$addGeneAgeCustomProfile == TRUE
-            | input$addGCGenesCustomProfile == TRUE) {
+            | input$addGCGenesCustomProfile == TRUE
+            | input$addGeneUmap == TRUE) {
             shinyjs::disable("addCoreGeneCustomProfile")
         } else {
             shinyjs::enable("addCoreGeneCustomProfile")
@@ -3988,11 +4260,13 @@ shinyServer(function(input, output, session) {
     output$addCoreGeneCustomProfileCheck.ui <- renderUI({
         if (input$addClusterCustomProfile == TRUE
             | input$addGeneAgeCustomProfile == TRUE
-            | input$addGCGenesCustomProfile == TRUE) {
+            | input$addGCGenesCustomProfile == TRUE
+            | input$addGeneUmap == TRUE) {
             HTML('<p><em>(Uncheck "Add to Customized profile" check box in
            <strong>Profiles clustering</strong> or
            <strong>Gene age estimating</strong> or
-           <strong>Group Comparioson</strong>
+           <strong>Group Comparioson</strong> or
+           <strong>UMAP clustering (Selected genes)</strong>
            &nbsp;to enable this function)</em></p>')
         }
     })
@@ -4075,9 +4349,10 @@ shinyServer(function(input, output, session) {
 
     # ** check if genes are added anywhere else to the customized profile ------
     observe({
-        if (input$addGeneAgeCustomProfile == TRUE |
-            input$addCoreGeneCustomProfile == TRUE |
-            input$addClusterCustomProfile == TRUE) {
+        if (input$addGeneAgeCustomProfile == TRUE
+            | input$addCoreGeneCustomProfile == TRUE
+            | input$addClusterCustomProfile == TRUE
+            | input$addGeneUmap == TRUE) {
             shinyjs::disable("addGCGenesCustomProfile")
         } else {
             shinyjs::enable("addGCGenesCustomProfile")
@@ -4085,14 +4360,16 @@ shinyServer(function(input, output, session) {
     })
 
     output$addGCCustomProfileCheck <- renderUI({
-        if (input$addGeneAgeCustomProfile == TRUE |
-            input$addCoreGeneCustomProfile == TRUE |
-            input$addClusterCustomProfile == TRUE) {
+        if (input$addGeneAgeCustomProfile == TRUE
+            | input$addCoreGeneCustomProfile == TRUE
+            | input$addClusterCustomProfile == TRUE
+            | input$addGeneUmap == TRUE) {
             HTML(
                 '<p><em>(Uncheck "Add to Customized profile" check box in
                  <strong>Gene age estimation</strong> or
                 <strong>Profile clustering</strong> or
-                <strong>Core genes finding</strong>
+                <strong>Core genes finding</strong> or
+                <strong>UMAP clustering (Selected genes)</strong>
                 &nbsp;to enable this function)</em></p>'
             )
         }

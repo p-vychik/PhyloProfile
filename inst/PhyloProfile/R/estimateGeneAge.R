@@ -53,7 +53,7 @@ plotGeneAge <- function(input, output, session,
 
     output$geneAgePlotDownload <- downloadHandler(
         filename = function() {
-            "geneAgePlot.pdf"
+            "geneAgePlot.svg"
         },
         content = function(file) {
             ggsave(
@@ -63,7 +63,7 @@ plotGeneAge <- function(input, output, session,
                 ),
                 width = 800 * geneAgeWidth() * 0.056458333,
                 height = 300 * geneAgeHeight() * 0.056458333,
-                units = "cm", dpi = 300, device = "pdf"
+                units = "cm", dpi = 300, device = "svg"
             )
         }
     )
