@@ -2845,6 +2845,29 @@ shinyServer(function(input, output, session) {
 
     # ========================= UMAP CLUSTERING PLOT ===========================
     observe({shinyjs::disable("addSpecUmap")})
+    # * update variables for data filtering -------------------------------------
+    observe({
+        req(getMainInput())
+        inputDf <- getMainInput()
+        if (ncol(inputDf) == 5) {
+            choiceList <- c("var1", "var2", "both")
+            names(choiceList) <- c(
+                colnames(inputDf)[4], colnames(inputDf)[5], "Both"
+            )
+            updateSelectInput(
+                session, "umapFilterVar", choices = choiceList, selected = "both"
+            )
+        } else if (ncol(inputDf) == 4) {
+            choiceList <- "var1"
+            names(choiceList) <- colnames(inputDf)[4]
+            updateSelectInput(session, "umapFilterVar", choices = choiceList)
+        } else if (ncol(inputDf) == 3) {
+            shinyjs::disable("umapFilterVar")
+            shinyjs::disable("umapCutoff")
+            shinyjs::disable("umapDataType")
+        }
+    })
+    
     # * data for UMAP clustering -----------------------------------------------
     umapData <- reactive({
         req(getMainInput())
@@ -2853,7 +2876,7 @@ shinyServer(function(input, output, session) {
             message = "Preparing data for clustering...", value = 0.5, {
                 umapData <- prepareUmapData(
                     getMainInput(), input$umapRank, "taxa", getTaxDBpath(),
-                    input$umapCutoff
+                    input$umapFilterVar, input$umapCutoff
                 )
                 return(umapData)
             }
@@ -3056,7 +3079,6 @@ shinyServer(function(input, output, session) {
                 shinyjs::disable("addGeneUmap")
             }
         }
-
         df <- as.data.frame(brushedUmapData())
         specDf <- df %>% select(ncbiID, Label, Freq)
         removeDf <- df %>% select(where(~ all(. == -1)))

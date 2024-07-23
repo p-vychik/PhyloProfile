@@ -5,7 +5,7 @@
 \title{Prepare data for UMAP}
 \usage{
 prepareUmapData(longDf = NULL, taxonRank = NULL, type = "taxa", 
-    taxDB = NULL, cutoff = 0)
+    taxDB = NULL, filterVar = "both", cutoff = 0)
 }
 \arguments{
 \item{longDf}{input phyloprofile file in long format}
@@ -15,6 +15,9 @@ prepareUmapData(longDf = NULL, taxonRank = NULL, type = "taxa",
 \item{type}{type of clustering, either "taxa" (default) or "genes"}
 
 \item{taxDB}{path to taxonomy database}
+
+\item{filterVar}{choose variable (either "var1", "var2" or "both") to filter 
+the data. Default: "both"}
 
 \item{cutoff}{cutoff to filter data values. Default: 0}
 }

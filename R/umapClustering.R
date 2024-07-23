@@ -1,11 +1,13 @@
 #' Prepare data for UMAP
 #' @export
 #' @usage prepareUmapData(longDf = NULL, taxonRank = NULL, type = "taxa", 
-#'     taxDB = NULL, cutoff = 0)
+#'     taxDB = NULL, filterVar = "both", cutoff = 0)
 #' @param longDf input phyloprofile file in long format
 #' @param taxonRank taxonomy rank for labels (e.g. "phylum")
 #' @param type type of clustering, either "taxa" (default) or "genes"
 #' @param taxDB path to taxonomy database
+#' @param filterVar choose variable (either "var1", "var2" or "both") to filter 
+#' the data. Default: "both"
 #' @param cutoff cutoff to filter data values. Default: 0
 #' @return A dataframe in wide format
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
@@ -17,14 +19,36 @@
 #' prepareUmapData(longDf, "phylum")
 
 prepareUmapData <- function(
-    longDf = NULL, taxonRank = NULL, type = "taxa", taxDB = NULL, cutoff = 0
+        longDf = NULL, taxonRank = NULL, type = "taxa", taxDB = NULL, 
+        filterVar = "both", cutoff = 0
 ) {
     if (is.null(longDf)) stop("Input data cannot be NULL")
     if (is.null(taxonRank)) stop("Taxon rank must be specified!")
     FAS_F <- FAS_B <- geneID <- ncbiID <- abbrName <- fullName <- NULL
+    var1 <- var2 <- NULL
     # filter and subset input df
-    longDfSub <- longDf %>% filter(FAS_F >= cutoff & FAS_B >= cutoff) %>% 
-        select(geneID, ncbiID, FAS_F)
+    filterFlag <- 1
+    if (ncol(longDf) == 5) {
+        colnames(longDf) <- c("geneID", "ncbiID", "orthoID", "var1", "var2")
+    } else if (ncol(longDf) == 4) {
+        colnames(longDf) <- c("geneID", "ncbiID", "orthoID", "var1")
+    } else if (ncol(longDf) == 3) {
+        colnames(longDf) <- c("geneID", "ncbiID", "orthoID")
+        longDf$var1 <- 1
+        filterFlag <- 0
+    }
+    if (filterFlag == 1) {
+        if (filterVar == "both") {
+            longDfSub <- longDf %>% filter(var1 >= cutoff & var2 >= cutoff)
+        } else if (filterVar == "var1") {
+            longDfSub <- longDf %>% filter(var1 >= cutoff)
+        } else if (filterVar == "var2") {
+            longDfSub <- longDf %>% filter(var2 >= cutoff)
+        }
+        
+    } else  longDfSub <- longDf
+    longDfSub <- longDfSub %>% select(geneID, ncbiID, var1)
+    
     # get taxon names for input taxa based on a selected supertaxon rank
     taxMatrix <- getTaxonomyMatrix(taxDB)
     nameList <- getNameList(taxDB)
@@ -38,7 +62,7 @@ prepareUmapData <- function(
     # transform to wide format, add taxon names and ortholog count
     if (type == "taxa") {
         wideDf <- data.table::dcast(
-            setDT(longDfSub), ncbiID ~ geneID, value.var = c("FAS_F"), 
+            setDT(longDfSub), ncbiID ~ geneID, value.var = c("var1"), 
             fun.aggregate = max, fill = -1
         )
         wideDf <- dplyr::left_join(
@@ -49,12 +73,13 @@ prepareUmapData <- function(
         seedWithTax <- longDfSub %>% select(geneID, ncbiID)
         seedWithTax <- seedWithTax[!duplicated(seedWithTax),]
         countDf <- data.frame(table(seedWithTax$ncbiID))
+        colnames(countDf) <- c("ncbiID", "Freq")
         wideDf <- dplyr::left_join(
-            data.frame(wideDf), countDf, by = c("ncbiID" = "Var1")
+            data.frame(wideDf), countDf, by = c("ncbiID")
         )
     } else {
         wideDf <- data.table::dcast(
-            setDT(longDfSub), geneID ~ ncbiID, value.var = c("FAS_F"), 
+            setDT(longDfSub), geneID ~ ncbiID, value.var = c("var1"), 
             fun.aggregate = max, fill = -1
         )
         wideDf$Label <- wideDf$geneID
@@ -62,8 +87,9 @@ prepareUmapData <- function(
         seedWithTax <- longDfSub %>% select(geneID, ncbiID)
         seedWithTax <- seedWithTax[!duplicated(seedWithTax),]
         countDf <- data.frame(table(longDfSub$geneID))
+        colnames(countDf) <- c("geneID", "Freq")
         wideDf <- dplyr::left_join(
-            data.frame(wideDf), countDf, by = c("geneID" = "Var1")
+            data.frame(wideDf), countDf, by = c("geneID")
         )
     }
     return(wideDf)

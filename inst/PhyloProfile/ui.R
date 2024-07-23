@@ -940,8 +940,15 @@ shinyUI(
                             selected = "phylum"
                         ),
                         uiOutput("umapTaxa.ui"),
+                        selectInput(
+                            "umapFilterVar", 
+                            "Choose variable for data filtering",
+                            choices = c("Var1" = "var1", "Var2" = "var2", 
+                                        "Both" = "both"),
+                            selected = "both"
+                        ),
                         sliderInput(
-                            "umapCutoff", "Value cutoff", min = 0, max = 1, 
+                            "umapCutoff", "Filter cutoff", min = 0, max = 1, 
                             step = 0.05, value = 0, width = '100%'
                         ),
                         strong("Add following data to Customized profile"),
