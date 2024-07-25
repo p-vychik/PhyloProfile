@@ -192,7 +192,9 @@ shinyUI(
                             6,
                             conditionalPanel(
                                 condition = "output.checkOmaInput",
-                                shinyBS::bsButton("openOmaWindows", "Get data from OMA"),
+                                shinyBS::bsButton(
+                                    "openOmaWindows", "Get data from OMA"
+                                ),
                                 br()
                             )
                         )
@@ -875,7 +877,7 @@ shinyUI(
                         column(
                             2,
                             sliderInput(
-                                "umapAlpha", "Transparent level", min = 0, 
+                                "umapAlpha", "Transparent level", min = 0,
                                 max = 1, step = 0.05, value = 0.5, width=200
                             )
                         ),
@@ -905,8 +907,8 @@ shinyUI(
                             column(
                                 6,
                                 numericInput(
-                                    "umapLabelNr", 
-                                    "Max number of labels", 
+                                    "umapLabelNr",
+                                    "Max number of labels",
                                     min = 3, value = 5, step = 1
                                 ),
                                 shinyBS::bsPopover(
@@ -922,7 +924,7 @@ shinyUI(
                                     "colorPalleteUmap",
                                     "Color pallete",
                                     choices = c(
-                                        "Paired", "Set1", "Set2", "Set3", 
+                                        "Paired", "Set1", "Set2", "Set3",
                                         "Accent", "Dark2"
                                     ),
                                     selected = "Dark2"
@@ -941,14 +943,14 @@ shinyUI(
                         ),
                         uiOutput("umapTaxa.ui"),
                         selectInput(
-                            "umapFilterVar", 
+                            "umapFilterVar",
                             "Choose variable for data filtering",
-                            choices = c("Var1" = "var1", "Var2" = "var2", 
+                            choices = c("Var1" = "var1", "Var2" = "var2",
                                         "Both" = "both"),
                             selected = "both"
                         ),
                         sliderInput(
-                            "umapCutoff", "Filter cutoff", min = 0, max = 1, 
+                            "umapCutoff", "Filter cutoff", min = 0, max = 1,
                             step = 0.05, value = 0, width = '100%'
                         ),
                         strong("Add following data to Customized profile"),
@@ -1430,9 +1432,38 @@ shinyUI(
             # DATA DOWNLOAD TAB ================================================
             navbarMenu(
                 "Export data",
+
                 # * Export data ------------------------------------------------
                 downloadFilteredMainUI("filteredMainDownload"),
                 downloadFilteredCustomizedUI("filteredCustomizedDownload"),
+
+                # * Export processed data --------------------------------------
+                tabPanel(
+                    "Processed data",
+                    h4(strong("Download processed data")),
+                    shinyBS::bsAlert("descDownloadProcessedDataUI"),
+                    strong("Output dir:"),
+                    br(), br(),
+                    shinyFiles::shinyDirButton(
+                        "procDataOutDir",
+                        "Select output directory" ,
+                        title = paste(
+                            "Please select output directory"
+                        ),
+                        buttonType = "default", class = NULL
+                    ),
+                    br(),br(),
+                    uiOutput("procDataOutDir.ui"),
+                    br(),
+                    shinyBS::bsButton(
+                        "doDownloadProcData",
+                        "Download",
+                        style = "warning",
+                        icon("file-export")
+                    ),
+                    hr(),
+                    verbatimTextOutput("downloadProcDataStatus")
+                ),
 
                 # * Export plot settings ---------------------------------------
                 tabPanel(
@@ -1441,7 +1472,7 @@ shinyUI(
                     shinyBS::bsAlert("descExportSettingUI"),
                     radioButtons(
                         inputId = "exportSetting",
-                        label = "as:",
+                        label = "Export as:",
                         choices = list(
                             "a list" = "list",
                             "an Rscript" = "rscript"

@@ -414,7 +414,29 @@ shinyServer(function(input, output, session) {
             strong(a("Download demo data", href = url, target = "_blank"))
         } else if (input$demoData == "preCalcDt") {
             em("Input from config file")
-        } else fileInput("mainInput", h5("Upload input file:"))
+        } else {
+            list(
+                radioButtons(
+                    "mainInputType", "Upload input:",
+                    choices = c("file","folder"), selected = "file",
+                    inline = TRUE
+                ),
+                conditionalPanel(
+                    condition = "input.mainInputType == 'file'",
+                    fileInput("mainInput", "")
+                ),
+                conditionalPanel(
+                    condition = "input.mainInputType == 'folder'",
+                    shinyFiles::shinyDirButton(
+                        "mainInputDir", "Browse folder" ,
+                        title = "Please select a folder",
+                        buttonType = "default", class = NULL
+                    ),
+                    br(), br(),
+                    verbatimTextOutput("mainInputDirInfo")
+                )
+            )
+        }
     })
 
     output$domainInputFile.ui <- renderUI({
@@ -453,6 +475,31 @@ shinyServer(function(input, output, session) {
             )
             em(a("Data description", href = url, target = "_blank"))
         }
+    })
+
+    # * check main input folder ------------------------------------------------
+    getMainInputDir <- reactive({
+        shinyFiles::shinyDirChoose(
+            input, "mainInputDir", roots = homePath, session = session
+        )
+        outputPath <- shinyFiles::parseDirPath(homePath, input$mainInputDir)
+        return(replaceHomeCharacter(as.character(outputPath)))
+    })
+
+    checkMainInputDir <- reactive({
+        mainDir <- getMainInputDir()
+        rdsFiles <- list.files(pattern = "\\.rds$", ignore.case = TRUE)
+        return(length(rdsFiles))
+    })
+
+    output$mainInputDirInfo <- renderText({
+        req(getMainInputDir())
+        if (checkMainInputDir() == 0) {
+            paste(
+                "Required RDS files not found!",
+                "Please upload a single input file!"
+            )
+        } else getMainInputDir()
     })
 
     # * check OMA input --------------------------------------------------------
@@ -2606,7 +2653,7 @@ shinyServer(function(input, output, session) {
             shinyjs::disable("plotCustom")
         } else shinyjs::enable("plotCustom")
     })
-    
+
     # * get list of all sequence IDs for customized profile -----
     output$cusGene.ui <- renderUI({
         filein <- input$mainInput
@@ -2625,11 +2672,11 @@ shinyServer(function(input, output, session) {
         if (v$doPlot == FALSE) {
             if (input$addGeneUmap == TRUE) {
                 umapGenes <- umapSelectedGenes()
-                if (is.null(umapGenes)) 
+                if (is.null(umapGenes))
                     return(selectizeInput("inSeq", "", "all"))
-                if (nrow(umapGenes) > 0) 
+                if (nrow(umapGenes) > 0)
                     return(selectizeInput(
-                        "inSeq", "", unique(umapGenes$geneID), 
+                        "inSeq", "", unique(umapGenes$geneID),
                         selected = unique(umapGenes$geneID), multiple = TRUE
                     ))
             } else return(selectizeInput("inSeq", "", "all"))
@@ -2649,7 +2696,7 @@ shinyServer(function(input, output, session) {
                 outAll <- as.list(candidateGenes())
             } else if (input$addGeneUmap == TRUE) {
                 umapGenes <- umapSelectedGenes()
-                if (is.null(umapGenes)) 
+                if (is.null(umapGenes))
                     return(selectizeInput("inSeq", "", "all"))
                 if (nrow(umapGenes) > 0) outAll <- unique(umapGenes$geneID)
             } else {
@@ -2697,7 +2744,7 @@ shinyServer(function(input, output, session) {
         if (v$doPlot == FALSE) {
             if (input$addSpecUmap == TRUE) {
                 umapTaxa <- umapSelectedTaxa()
-                if (is.null(umapTaxa)) 
+                if (is.null(umapTaxa))
                     return(selectInput("inTaxa", "", "all"))
                 if (nrow(umapTaxa) > 0) out <- unique(umapTaxa$fullName)
                 selectizeInput("inTaxa","",out, selected = out, multiple = TRUE)
@@ -2710,7 +2757,7 @@ shinyServer(function(input, output, session) {
                 selectizeInput("inTaxa","",out, selected = out, multiple = TRUE)
             } else if (input$addSpecUmap == TRUE) {
                 umapTaxa <- umapSelectedTaxa()
-                if (is.null(umapTaxa)) 
+                if (is.null(umapTaxa))
                     return(selectInput("inTaxa", "", "all"))
                 if (nrow(umapTaxa) > 0) out <- unique(umapTaxa$fullName)
                 selectizeInput("inTaxa","",out, selected = out, multiple = TRUE)
@@ -2905,7 +2952,7 @@ shinyServer(function(input, output, session) {
 
     # ========================= UMAP CLUSTERING PLOT ===========================
     shinyjs::disable("addSpecUmap")
-    
+
     # * update variables for data filtering ------------------------------------
     observe({
         req(getMainInput())
@@ -2928,7 +2975,7 @@ shinyServer(function(input, output, session) {
             shinyjs::disable("umapDataType")
         }
     })
-    
+
     # * data for UMAP clustering -----------------------------------------------
     umapData <- reactive({
         req(getMainInput())
@@ -2973,7 +3020,7 @@ shinyServer(function(input, output, session) {
 
     # * create UMAP plot -------------------------------------------------------
     ranges <- reactiveValues(x = NULL, y = NULL)
-    
+
     umapPlotData <- reactive({
         req(getMainInput())
         if(is.null(getMainInput())) stop("Input data is NULL!")
@@ -2992,8 +3039,8 @@ shinyServer(function(input, output, session) {
         withProgress(
             message = "Plotting...", value = 0.5, {
                 g <- plotUmap(
-                    umapPlotData(), colorPalette = input$colorPalleteUmap, 
-                    transparent = input$umapAlpha, 
+                    umapPlotData(), colorPalette = input$colorPalleteUmap,
+                    transparent = input$umapAlpha,
                     textSize = input$umapPlot.textsize
                 )
                 g + coord_cartesian(
@@ -3002,7 +3049,7 @@ shinyServer(function(input, output, session) {
             }
         )
     })
-    
+
     output$umapPlot.ui <- renderUI({
         shinycssloaders::withSpinner(
             plotOutput(
@@ -3021,7 +3068,7 @@ shinyServer(function(input, output, session) {
             )
         )
     })
-    
+
     # When a double-click happens, check if there's a brush on the plot
     # If so, zoom to the brush bounds; if not, reset the zoom.
     observeEvent(input$umapdblClick, {
@@ -3029,13 +3076,13 @@ shinyServer(function(input, output, session) {
         if (!is.null(brush)) {
             ranges$x <- c(brush$xmin, brush$xmax)
             ranges$y <- c(brush$ymin, brush$ymax)
-            
+
         } else {
             ranges$x <- NULL
             ranges$y <- NULL
         }
     })
-    
+
     # * download UMAP plot & data ----------------------------------------------
     output$umapDownloadPlot <- downloadHandler(
         filename = function() {
@@ -3045,8 +3092,8 @@ shinyServer(function(input, output, session) {
             ggsave(
                 file,
                 plot = plotUmap(
-                    umapPlotData(), colorPalette = input$colorPalleteUmap, 
-                    transparent = input$umapAlpha, 
+                    umapPlotData(), colorPalette = input$colorPalleteUmap,
+                    transparent = input$umapAlpha,
                     textSize = input$umapPlot.textsize
                 ) + coord_cartesian(
                     xlim = ranges$x, ylim = ranges$y, expand = TRUE),
@@ -3056,7 +3103,7 @@ shinyServer(function(input, output, session) {
             )
         }
     )
-    
+
     output$umapDownloadData <- downloadHandler(
         filename = function() {
             c("umapData.RData")
@@ -3166,7 +3213,7 @@ shinyServer(function(input, output, session) {
     ),{
         umapSelectedGenes()
     })
-    
+
     # ** check if genes are added anywhere else to the customized profile ------
     observe({
         if (input$addClusterCustomProfile == TRUE
@@ -3178,7 +3225,7 @@ shinyServer(function(input, output, session) {
             shinyjs::enable("addGeneUmap")
         }
     })
-    
+
     output$addUmapCustomProfileCheck.ui <- renderUI({
         if (input$addClusterCustomProfile == TRUE
             | input$addGeneAgeCustomProfile == TRUE
@@ -3799,8 +3846,87 @@ shinyServer(function(input, output, session) {
         inTaxa = reactive(input$inTaxa)
     )
 
+    # ======================== PROCESSED DATA DOWNLOADING ======================
+    # * description for plot settings downloading ------------------------------
+    observe({
+        desc = paste(
+            "Here you can download the processed data in RDS format.",
+            "These data allows for faster analysis, particularly useful when",
+            "dealing with a large number of genes and taxa. To reuse the data,",
+            "simply upload a folder containing these RDS files."
+        )
+
+        if (input$tabs == "Processed data") {
+            shinyBS::createAlert(
+                session, "descDownloadProcessedDataUI",
+                "descDownloadProcessedData", content = desc, append = FALSE
+            )
+        }
+    })
+
+    # * get output path --------------------------------------------------------
+    getProcDataPath <- reactive({
+        shinyFiles::shinyDirChoose(
+            input, "procDataOutDir", roots = homePath, session = session
+        )
+        settingPath <- shinyFiles::parseDirPath(homePath, input$procDataOutDir)
+        return(replaceHomeCharacter(as.character(settingPath)))
+    })
+
+    output$procDataOutDir.ui <- renderUI({
+        req(getProcDataPath())
+        em(getProcDataPath())
+    })
+
+    # * do export processed data -----------------------------------------------
+    observe({
+        if (v$doPlot) shinyjs::enable("doDownloadProcData")
+        else shinyjs::disable("doDownloadProcData")
+    })
+
+    downloadProcData <- function() {
+        filein <- input$mainInput
+        outDirName <- filein$name
+        outDirName <- gsub("[^[:alnum:] ]", "_", outDirName)
+        outFolder <- paste0(getProcDataPath(), "/", outDirName)
+        if (dir.exists(outFolder)) {
+            if (
+                file.exists(paste0(outFolder, "/longDf.rds")) |
+                file.exists(paste0(outFolder, "/sortedtaxaList.rds")) |
+                file.exists(paste0(outFolder, "/preData.rds")) |
+                file.exists(paste0(outFolder, "/fullMdData.rds"))
+            ) {
+                message("Other RDS files found! Please select a new output folder!")
+                return()
+            }
+        } else dir.create(file.path(outFolder), showWarnings = TRUE)
+        
+        if (nrow(getFullData()) > 0) {
+            saveRDS(getMainInput(), file = paste0(outFolder, "/longDf.rds")) 
+            saveRDS(sortedtaxaList(), file = paste0(outFolder, "/sortedtaxaList.rds"))
+            saveRDS(preData(), file = paste0(outFolder, "/preData.rds"))
+            saveRDS(getFullData(), file = paste0(outFolder, "/fullData.rds"))
+            msg <- paste("Done! Data have been saved at", outFolder)
+            message(msg)
+            shinyjs::disable("doDownloadProcData")
+        }
+    }
+
+    observeEvent(input$doDownloadProcData, {
+        req(length(getProcDataPath()) > 0)
+        withCallingHandlers({
+            shinyjs::html("downloadProcDataStatus", "")
+            downloadProcData()
+        },
+        message = function(m) {
+            shinyjs::html(
+                id = "downloadProcDataStatus", html = m$message, add = TRUE
+            )
+        })
+    })
+
     # ======================== PLOT SETTINGS DOWNLOADING =======================
-    # ** description for plot settings downloading -----------------------------
+    # * description for plot settings downloading -----------------------------
     observe({
         desc = paste(
             "Here you can download the plot settings (such as plot size, font",
@@ -3820,7 +3946,7 @@ shinyServer(function(input, output, session) {
         }
     })
 
-    # ** render output file name -----------------------------------------------
+    # * render output file name -----------------------------------------------
     output$settingFile.ui <- renderUI({
         if (input$exportSetting == "list") {
             textInput(
@@ -3842,7 +3968,7 @@ shinyServer(function(input, output, session) {
 
     })
 
-    # ** do export plot settings -----------------------------------------------
+    # * do export plot settings -----------------------------------------------
     getPlotSettings <- function(){
         rawInput <- ""
         if (input$demoData == "preCalcDt") {
