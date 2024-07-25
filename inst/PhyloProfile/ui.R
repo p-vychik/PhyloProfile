@@ -851,7 +851,7 @@ shinyUI(
                         ),
 
                         conditionalPanel(
-                            condition = "input.do > 0",
+                            condition = "input.do > 0 | input.plotCustom > 0",
                             createProfilePlotUI("customizedProfile")
                         )
                     )
@@ -955,7 +955,8 @@ shinyUI(
                         checkboxInput("addSpecUmap", em("Selected taxa")),
                         shinyBS::bsPopover(
                             "addSpecUmap", "",
-                            paste("This option is not yet available!"),
+                            paste("Only available when working with the",
+                                  "lowest taxonomy rank!"),
                             "bottom"
                         ),
                         checkboxInput("addGeneUmap", em("Selected genes")),

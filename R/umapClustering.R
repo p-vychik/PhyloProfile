@@ -28,7 +28,11 @@ prepareUmapData <- function(
     var1 <- var2 <- NULL
     # filter and subset input df
     filterFlag <- 1
-    if (ncol(longDf) == 5) {
+    if (ncol(longDf) == 6) {
+        colnames(longDf) <- c(
+            "geneID", "ncbiID", "orthoID", "var1", "var2", "geneName"
+        )
+    } else if (ncol(longDf) == 5) {
         colnames(longDf) <- c("geneID", "ncbiID", "orthoID", "var1", "var2")
     } else if (ncol(longDf) == 4) {
         colnames(longDf) <- c("geneID", "ncbiID", "orthoID", "var1")

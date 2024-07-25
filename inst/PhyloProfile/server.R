@@ -1757,6 +1757,15 @@ shinyServer(function(input, output, session) {
             shinyBS::updateButton(session, "do", disabled = TRUE)
         }
     })
+    w <- reactiveValues(doCusPlot = FALSE)
+    observeEvent(input$plotCustom, {
+        w$doCusPlot <- input$plotCustom
+        filein <- input$mainInput
+        if (is.null(filein) & input$demoData == "none") {
+            w$doCusPlot <- FALSE
+            shinyBS::updateButton(session, "plotCustom", disabled = TRUE)
+        }
+    })
 
     # * check if genes ordered by distances has been selected ------------------
     output$applyClusterCheck.ui <- renderUI({
@@ -1979,7 +1988,7 @@ shinyServer(function(input, output, session) {
 
     # * sort taxonomy data of input taxa ---------------------------------------
     sortedtaxaList <- reactive({
-        req(v$doPlot)
+        req(isTruthy(v$doPlot)|isTruthy(w$doCusPlot))
         req(input$rankSelect)
         req(input$inSelect)
         withProgress(message = 'Sorting input taxa...', value = 0.5, {
@@ -2031,7 +2040,7 @@ shinyServer(function(input, output, session) {
 
     # * get subset data for plotting (default 30 genes if > 50 genes) ----------
     preData <- reactive({
-        req(v$doPlot)
+        req(isTruthy(v$doPlot)|isTruthy(w$doCusPlot))
         longDataframe <- getMainInput()
         req(longDataframe)
         # isolate start and end gene index
@@ -2045,31 +2054,53 @@ shinyServer(function(input, output, session) {
         }
 
         if (is.na(endIndex)) endIndex <- 1000
-
         withProgress(message = 'Subseting data...', value = 0.5, {
             longDataframe <- sortGeneIDs(
                 longDataframe, input$orderGenes, checkInputSortedGenes()
             )
-            listIn <- input$geneList
-            if (!is.null(listIn)) {
-                list <- read.table(file = listIn$datapath, header = FALSE)
-                listGeneOri <- unique(list$V1)
-                # update number of endIndex
-                if (length(listGeneOri) <= 1500) {
-                    updateNumericInput(
-                        session,
-                        "endIndex", value = length(listGeneOri)
-                    )
+            # filter preData based on UMAP selection
+            data <- longDataframe
+            if (!(v$doPlot)) {
+                if (isTruthy(input$addSpecUmap)|isTruthy(input$addGeneUmap)) {
+                    selectedTaxa <- longDataframe$ncbiID
+                    if (input$addSpecUmap) {
+                        umapTaxa <- umapSelectedTaxa()
+                        selectedTaxa <- unique(head(umapTaxa$ncbiID))
+                    }
+                    umapGenes <- umapSelectedGenes()
+                    selectedGenes <- unique(umapGenes$geneID)
+                    if (length(selectedGenes) > 0) {
+                        data <- longDataframe %>% filter(
+                            geneID %in% selectedGenes & ncbiID %in% selectedTaxa
+                        )
+                        data$geneID <- droplevels(data$geneID)
+                        data$ncbiID <- droplevels(data$ncbiID)
+                    } else {
+                        return()
+                    }
                 }
-                if (startIndex <= length(listGeneOri)) {
-                    listGene <- listGeneOri[startIndex:endIndex]
-                } else listGene <- listGeneOri
-                listGene <- listGene[!is.na(listGene)]
-                data <- longDataframe[longDataframe$geneID %in% listGene, ]
             } else {
-                subsetID <-
-                    levels(longDataframe$geneID)[startIndex:endIndex]
-                data <- longDataframe[longDataframe$geneID %in% subsetID, ]
+                listIn <- input$geneList
+                if (!is.null(listIn)) {
+                    list <- read.table(file = listIn$datapath, header = FALSE)
+                    listGeneOri <- unique(list$V1)
+                    # update number of endIndex
+                    if (length(listGeneOri) <= 1500) {
+                        updateNumericInput(
+                            session,
+                            "endIndex", value = length(listGeneOri)
+                        )
+                    }
+                    if (startIndex <= length(listGeneOri)) {
+                        listGene <- listGeneOri[startIndex:endIndex]
+                    } else listGene <- listGeneOri
+                    listGene <- listGene[!is.na(listGene)]
+                    data <- longDataframe[longDataframe$geneID %in% listGene, ]
+                } else {
+                    subsetID <-
+                        levels(longDataframe$geneID)[startIndex:endIndex]
+                    data <- longDataframe[longDataframe$geneID %in% subsetID, ]
+                }
             }
 
             if (ncol(data) < 5) {
@@ -2093,7 +2124,7 @@ shinyServer(function(input, output, session) {
 
     # * creating main dataframe for subset taxa (in species/strain level) ------
     getFullData <- reactive({
-        req(v$doPlot)
+        req(isTruthy(v$doPlot)|isTruthy(w$doCusPlot))
         req(preData())
         req(getCountTaxa())
         req(sortedtaxaList())
@@ -2118,7 +2149,7 @@ shinyServer(function(input, output, session) {
 
     # * filter full data -------------------------------------------------------
     filteredDataHeat <- reactive({
-        req(v$doPlot)
+        req(isTruthy(v$doPlot)|isTruthy(w$doCusPlot))
         {
             input$plotCustom
             input$updateBtn
@@ -2202,7 +2233,7 @@ shinyServer(function(input, output, session) {
 
     # * heatmap data input -----------------------------------------------------
     dataHeat <- reactive({
-        req(v$doPlot)
+        req(isTruthy(v$doPlot)|isTruthy(w$doCusPlot))
         req(filteredDataHeat())
         dataHeat <- reduceProfile(filteredDataHeat())
         return(dataHeat)
@@ -2210,8 +2241,9 @@ shinyServer(function(input, output, session) {
 
     # * clustered heatmap data -------------------------------------------------
     clusteredDataHeat <- reactive({
-        req(v$doPlot)
+        req(isTruthy(v$doPlot)|isTruthy(w$doCusPlot))
         dataHeat <- dataHeat()
+        if (nlevels(dataHeat$supertaxon) == 1) return(dataHeat)
         if (!is.null(i_clusterMethod)) clusterMethod <- i_clusterMethod
         else clusterMethod <- input$clusterMethod
 
@@ -2254,7 +2286,7 @@ shinyServer(function(input, output, session) {
 
     # * get list of all input (super)taxa and their ncbi IDs -------------------
     allInputTaxa <- reactive({
-        req(v$doPlot)
+        req(isTruthy(v$doPlot)|isTruthy(w$doCusPlot))
         {
             input$plotCustom
             input$updateBtn
@@ -2569,7 +2601,12 @@ shinyServer(function(input, output, session) {
     )
 
     # ======================== CUSTOMIZED PROFILE TAB ==========================
-
+    observe({
+        if ("all" %in% input$inSeq & "all" %in% input$inTaxa) {
+            shinyjs::disable("plotCustom")
+        } else shinyjs::enable("plotCustom")
+    })
+    
     # * get list of all sequence IDs for customized profile -----
     output$cusGene.ui <- renderUI({
         filein <- input$mainInput
@@ -2585,8 +2622,18 @@ shinyServer(function(input, output, session) {
         if (is.null(filein) & is.null(fileCustom)) {
             return(selectizeInput("inSeq", "", "all"))
         }
-        if (v$doPlot == FALSE) return(selectizeInput("inSeq", "", "all"))
-        else {
+        if (v$doPlot == FALSE) {
+            if (input$addGeneUmap == TRUE) {
+                umapGenes <- umapSelectedGenes()
+                if (is.null(umapGenes)) 
+                    return(selectizeInput("inSeq", "", "all"))
+                if (nrow(umapGenes) > 0) 
+                    return(selectizeInput(
+                        "inSeq", "", unique(umapGenes$geneID), 
+                        selected = unique(umapGenes$geneID), multiple = TRUE
+                    ))
+            } else return(selectizeInput("inSeq", "", "all"))
+        } else {
             data <- getFullData()
             idNameDf <- unique(data[,c("geneID","geneName")])
             idNameList <- setNames(idNameDf$geneID, idNameDf$geneName)
@@ -2602,6 +2649,8 @@ shinyServer(function(input, output, session) {
                 outAll <- as.list(candidateGenes())
             } else if (input$addGeneUmap == TRUE) {
                 umapGenes <- umapSelectedGenes()
+                if (is.null(umapGenes)) 
+                    return(selectizeInput("inSeq", "", "all"))
                 if (nrow(umapGenes) > 0) outAll <- unique(umapGenes$geneID)
             } else {
                 if (!is.null(fileCustom)) {
@@ -2645,20 +2694,31 @@ shinyServer(function(input, output, session) {
         }
 
         if (is.null(filein)) return(selectInput("inTaxa", "", "all"))
-        if (v$doPlot == FALSE) return(selectInput("inTaxa", "", "all"))
-        else {
+        if (v$doPlot == FALSE) {
+            if (input$addSpecUmap == TRUE) {
+                umapTaxa <- umapSelectedTaxa()
+                if (is.null(umapTaxa)) 
+                    return(selectInput("inTaxa", "", "all"))
+                if (nrow(umapTaxa) > 0) out <- unique(umapTaxa$fullName)
+                selectizeInput("inTaxa","",out, selected = out, multiple = TRUE)
+            } else return(selectInput("inTaxa", "", "all"))
+        } else {
             choice <- inputTaxonName()
             out <- c("all", as.list(levels(factor(choice$fullName))))
             if (input$applyCusTaxa == TRUE) {
                 out <- cusTaxaName()
+                selectizeInput("inTaxa","",out, selected = out, multiple = TRUE)
+            } else if (input$addSpecUmap == TRUE) {
+                umapTaxa <- umapSelectedTaxa()
+                if (is.null(umapTaxa)) 
+                    return(selectInput("inTaxa", "", "all"))
+                if (nrow(umapTaxa) > 0) out <- unique(umapTaxa$fullName)
                 selectizeInput("inTaxa","",out, selected = out, multiple = TRUE)
             } else {
                 selectizeInput("inTaxa","",out,selected = out[1], multiple=TRUE)
             }
         }
     })
-
-
 
     # * render list of superRanks for adding vertical lines --------------------
     output$cusSuperRankSelect.ui <- renderUI({
@@ -2844,8 +2904,9 @@ shinyServer(function(input, output, session) {
     )
 
     # ========================= UMAP CLUSTERING PLOT ===========================
-    observe({shinyjs::disable("addSpecUmap")})
-    # * update variables for data filtering -------------------------------------
+    shinyjs::disable("addSpecUmap")
+    
+    # * update variables for data filtering ------------------------------------
     observe({
         req(getMainInput())
         inputDf <- getMainInput()
@@ -2855,7 +2916,7 @@ shinyServer(function(input, output, session) {
                 colnames(inputDf)[4], colnames(inputDf)[5], "Both"
             )
             updateSelectInput(
-                session, "umapFilterVar", choices = choiceList, selected = "both"
+                session, "umapFilterVar", choices = choiceList, selected="both"
             )
         } else if (ncol(inputDf) == 4) {
             choiceList <- "var1"
@@ -3040,12 +3101,17 @@ shinyServer(function(input, output, session) {
         if (is.null(input$umapBrush$ymin)) {
             shinyjs::disable("umapZoomIn")
             shinyjs::disable("umapZoomOut")
+            # updateCheckboxInput(session, "addSpecUmap", value = FALSE)
             shinyjs::disable("addSpecUmap")
             return()
         } else {
             shinyjs::enable("umapZoomIn")
             shinyjs::enable("umapZoomOut")
-            shinyjs::enable("addSpecUmap")
+            lowestRank <- getLowestRank(getMainInput(), getTaxDBpath())
+            # enable add taxa to cus. profile only when lowest rank is selected
+            if (lowestRank == input$rankSelect) {
+                shinyjs::enable("addSpecUmap")
+            } else shinyjs::disable("addSpecUmap")
         }
         df <- as.data.frame(brushedUmapData())
         specDf <- df %>% select(ncbiID, Label, Freq)
@@ -3067,6 +3133,7 @@ shinyServer(function(input, output, session) {
 
     umapSelectedGenes <- reactive({
         if (is.null(input$umapBrush$ymin)){
+            # updateCheckboxInput(session, "addGeneUmap", value = FALSE)
             shinyjs::disable("addGeneUmap")
             return()
         } else {
