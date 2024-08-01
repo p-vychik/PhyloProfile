@@ -4,7 +4,7 @@
 \alias{createUmapPlotData}
 \title{Create UMAP cluster plot}
 \usage{
-createUmapPlotData(umapData = NULL, data4umap = NULL, labelNr = 5, 
+createUmapPlotData(umapData = NULL, data4umap = NULL, freqCutoff = 0, 
     excludeTaxa = "None")
 }
 \arguments{
@@ -12,7 +12,7 @@ createUmapPlotData(umapData = NULL, data4umap = NULL, labelNr = 5,
 
 \item{data4umap}{data for UMAP clustering (output from prepareUmapData())}
 
-\item{labelNr}{maximal number of labels. Default: 5}
+\item{freqCutoff}{gene/taxon frequency cutoff}
 
 \item{excludeTaxa}{hide taxa from plot. Default: "None"}
 }

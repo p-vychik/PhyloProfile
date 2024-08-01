@@ -330,9 +330,9 @@ shinyServer(function(input, output, session) {
         filein <- input$mainInput
         if (is.null(filein) & input$demoData == "none") {
             msg <- paste0(
-                "PhyloProfile is ready to use! Please
-        <em>upload an input file</em> or
-        <em>select a demo data</em><br /> to begin!
+                "PhyloProfile is ready to use! Please upload
+        <em>an input file</em>, <em>a folder of pre-processed data</em>, or
+        select <em>a demo data</em><br /> to begin!
         To learn more about the <em>input data</em>, please visit
         <span style=\"text-decoration: underline;\">
         <a href=\"https://github.com/BIONF/PhyloProfile/wiki/Input-Data\">
@@ -505,7 +505,10 @@ shinyServer(function(input, output, session) {
                 "Required RDS file(s) not found!",
                 "Please upload a single input file!"
             )
-        } else getMainInputDir()
+        } else {
+            shinyBS::closeAlert(session, "inputMsg")
+            getMainInputDir()
+        }
     })
 
     # * check OMA input --------------------------------------------------------
@@ -3108,7 +3111,8 @@ shinyServer(function(input, output, session) {
             message = "Preparing data for clustering...", value = 0.5, {
                 umapData <- prepareUmapData(
                     getMainInput(), input$umapRank, "taxa", getTaxDBpath(),
-                    input$umapFilterVar, input$umapCutoff
+                    input$umapFilterVar, input$umapCutoff, 
+                    input$umapGroupLabelsBy
                 )
                 return(umapData)
             }
@@ -3120,7 +3124,9 @@ shinyServer(function(input, output, session) {
         req(umapData())
         withProgress(
             message = "Performing UMAP clustering...", value = 0.5, {
-                umapData.umap <- umapClustering(umapData(), "taxa", input$umapDataType)
+                umapData.umap <- umapClustering(
+                    umapData(), "taxa", input$umapDataType
+                )
                 return(umapData.umap)
             }
         )
@@ -3129,16 +3135,22 @@ shinyServer(function(input, output, session) {
     # * generate list of UMAP labels -------------------------------------------
     output$umapTaxa.ui <- renderUI({
         req(umapData())
-        df <- umapData()
-        maxFreqDf <- data.frame(
-            df %>% group_by(Label) %>% summarise(max = max(Freq))
-        )
-        minFreq <- tail(sort(unique(maxFreqDf$max)), input$umapLabelNr)[1]
-        keepLabel <- unique(df$Label[df$Freq >= minFreq])
-        df$Label[!(df$Label %in% keepLabel)] <- "[Other]"
+        df <- groupLabelUmapData(umapData(), input$umapLabelNr)
         selectInput(
             "excludeUmapTaxa", "Choose taxa to hide", multiple = TRUE,
-            c("None", levels(as.factor(df$Label))), selected = "None"
+            c(levels(as.factor(df$Label))), selected = NULL
+        )
+    })
+    
+    # * update umapLabelNr based on the freq of genes/taxa ---------------------
+    observe({
+        req(umapData())
+        df <- umapData()
+        freqList <- sort(unique(umapData()$n))
+        selectFreq <- tail(freqList, 5)[1]
+        updateSliderInput(
+            session, "umapLabelNr", "Freq cutoff", min = freqList[1],
+            max = tail(freqList, 1), step = 1, value = selectFreq
         )
     })
 
@@ -3151,7 +3163,7 @@ shinyServer(function(input, output, session) {
         req(umapCluster())
         req(umapData())
         plotDf <- createUmapPlotData(
-            umapCluster(), umapData(), labelNr = input$umapLabelNr,
+            umapCluster(), umapData(), freqCutoff = input$umapLabelNr, 
             excludeTaxa = input$excludeUmapTaxa
         )
         return(plotDf)
@@ -3272,7 +3284,6 @@ shinyServer(function(input, output, session) {
         if (is.null(input$umapBrush$ymin)) {
             shinyjs::disable("umapZoomIn")
             shinyjs::disable("umapZoomOut")
-            # updateCheckboxInput(session, "addSpecUmap", value = FALSE)
             shinyjs::disable("addSpecUmap")
             return()
         } else {
@@ -3285,14 +3296,17 @@ shinyServer(function(input, output, session) {
             } else shinyjs::disable("addSpecUmap")
         }
         df <- as.data.frame(brushedUmapData())
-        specDf <- df %>% select(ncbiID, Label, Freq)
+        specDf <- df %>% select(ncbiID, Label, Freq, n)
         specDf$id <- as.numeric(gsub("ncbi","",specDf$ncbiID))
         taxonNameDf <- PhyloProfile::id2name(specDf$id, currentNCBIinfo)
         specDf <- left_join(
             specDf, taxonNameDf %>% select(ncbiID, fullName),
             by = c("id" = "ncbiID")
         )
-        specDf <- specDf %>% select(ncbiID, fullName, Label, Freq)
+        specDf <- specDf %>% select(ncbiID, fullName, Label, Freq, n)
+        colnames(specDf) <- c(
+            "NCBI taxon ID", "Taxon name", "Label", "Number of genes", "Freq"
+        )
         return(specDf)
     })
 
@@ -3304,7 +3318,6 @@ shinyServer(function(input, output, session) {
 
     umapSelectedGenes <- reactive({
         if (is.null(input$umapBrush$ymin)){
-            # updateCheckboxInput(session, "addGeneUmap", value = FALSE)
             shinyjs::disable("addGeneUmap")
             return()
         } else {
@@ -3322,13 +3335,30 @@ shinyServer(function(input, output, session) {
         removeDf <- df %>% select(where(~ all(. == -1)))
         meltedDf <- data.frame(melt(
             as.data.table(
-                df %>% select(-c(colnames(removeDf), Label, Freq, X, Y))
+                df %>% select(-c(colnames(removeDf), Label, Freq, X, Y, n))
             ),
             id.vars = "ncbiID", variable.name = "geneID"
         ))
         geneDf <- meltedDf %>% filter(value >= 0) %>%
             select(geneID, ncbiID, value)
-        colnames(geneDf)[colnames(geneDf) == "value"] <- input$var1ID
+        geneDf$value <- round(geneDf$value,2)
+        # rename "value" based on variable name(s)
+        longDf <- getMainInput()
+        if (ncol(longDf) >= 5) {
+            colnames(geneDf)[colnames(geneDf) == "value"] <- 
+                paste("Mean of", input$var1ID, "&", input$var2ID)
+        } else if (ncol(longDf) == 4) {
+            colnames(geneDf)[colnames(geneDf) == "value"] <- input$var1ID
+        } else if (ncol(longDf) == 3) {
+            geneDf <- geneDf %>% select(geneID, ncbiID)
+        }
+        # check gene IDs containing character "X" at the beginning
+        geneDf$geneID <- as.character(geneDf$geneID)
+        if (all(!(unique(geneDf$geneID) %in% longDf$geneID))) {
+            if (all(startsWith(unique(geneDf$geneID), "X"))){
+                geneDf$geneID <- sub("X","", geneDf$geneID, fixed = TRUE)
+            }
+        }
         return(geneDf)
     })
 

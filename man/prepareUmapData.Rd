@@ -5,7 +5,7 @@
 \title{Prepare data for UMAP}
 \usage{
 prepareUmapData(longDf = NULL, taxonRank = NULL, type = "taxa", 
-    taxDB = NULL, filterVar = "both", cutoff = 0)
+    taxDB = NULL, filterVar = "both", cutoff = 0, groupLabelsBy = "taxa")
 }
 \arguments{
 \item{longDf}{input phyloprofile file in long format}
@@ -20,6 +20,9 @@ prepareUmapData(longDf = NULL, taxonRank = NULL, type = "taxa",
 the data. Default: "both"}
 
 \item{cutoff}{cutoff to filter data values. Default: 0}
+
+\item{groupLabelsBy}{group labels by the number of "taxa" (default) or 
+"genes"}
 }
 \value{
 A dataframe in wide format

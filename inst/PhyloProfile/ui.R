@@ -906,10 +906,15 @@ shinyUI(
                             4,
                             column(
                                 6,
-                                numericInput(
-                                    "umapLabelNr",
-                                    "Max number of labels",
-                                    min = 3, value = 5, step = 1
+                                radioButtons(
+                                    "umapGroupLabelsBy",
+                                    "Group labels by the freq of",
+                                    choices = c("taxa", "genes"),
+                                    inline = TRUE
+                                ),
+                                sliderInput(
+                                    "umapLabelNr", "Freq cutoff", min = 3,
+                                    max = 99, step = 1, value = 5, width = 200
                                 ),
                                 shinyBS::bsPopover(
                                     "umapLabelNr", "",
@@ -974,7 +979,7 @@ shinyUI(
                         column(
                             6,
                             em(
-                                "Brush and double-click to zoom",
+                                "Brush and double-click to zoom in/out",
                                 style = "color:darkblue"
                             )
                         ),
@@ -985,13 +990,15 @@ shinyUI(
                             column(
                                 6,
                                 downloadButton(
-                                    "umapDownloadPlot","Download plot",class = "butDL"
+                                    "umapDownloadPlot", "Download plot",
+                                    class = "butDL"
                                 )
                             ),
                             column(
                                 6,
                                 downloadButton(
-                                    "umapDownloadData","Download UMAP data",class = "butDL"
+                                    "umapDownloadData", "Download UMAP data",
+                                    class = "butDL"
                                 ),
                                 shinyBS::bsPopover(
                                     "umapDownloadData", "",
