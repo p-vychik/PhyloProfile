@@ -488,15 +488,21 @@ shinyServer(function(input, output, session) {
 
     checkMainInputDir <- reactive({
         mainDir <- getMainInputDir()
-        rdsFiles <- list.files(pattern = "\\.rds$", ignore.case = TRUE)
-        return(length(rdsFiles))
+        rdsFiles <- list.files(
+            path = mainDir, pattern = "\\.rds$", ignore.case = TRUE
+        )
+        reqFiles <- c(
+            "fullData.rds", "longDf.rds", "preData.rds", "sortedtaxaList.rds"
+        )
+        availFile <- intersect(reqFiles, rdsFiles)
+        return(paste0(mainDir, "/", availFile))
     })
 
     output$mainInputDirInfo <- renderText({
         req(getMainInputDir())
-        if (checkMainInputDir() == 0) {
+        if (length(checkMainInputDir()) < 4) {
             paste(
-                "Required RDS files not found!",
+                "Required RDS file(s) not found!",
                 "Please upload a single input file!"
             )
         } else getMainInputDir()
@@ -711,14 +717,17 @@ shinyServer(function(input, output, session) {
 
     # * render upload input for sorted gene list -------------------------------
     output$inputSortedGenes.ui <- renderUI({
-        filein <- input$mainInput
-        if (!(is.null(filein) & input$demoData == "none")) {
+        req(input$mainInputType)
+        if (
+            !(((input$mainInputType == "file" & is.null(input$mainInput)) |
+                (input$mainInputType == "folder" & is.null(getMainInputDir()))
+            ) & input$demoData == "none")
+        ) {
             fileInput("inputSortedGenes", "")
         }
     })
 
     checkInputSortedGenes <- reactive({
-        req(input$mainInput)
         filein <- input$inputSortedGenes
         if (!(is.null(filein))) {
             sortedGeneInputDf <- read.table(
@@ -755,7 +764,6 @@ shinyServer(function(input, output, session) {
     })
 
     output$checkSortedGenes.ui <- renderUI({
-        req(input$mainInput)
         checkStatus <- checkInputSortedGenes()
         if (length(checkStatus) == 0) return(strong(em("Please upload file!")))
         if (names(checkStatus[1]) == "missing") {
@@ -951,21 +959,37 @@ shinyServer(function(input, output, session) {
                 selected = selectedRank
             )
         } else {
-            longDataframe <- getMainInput()
-            req(longDataframe)
-            lowestRank <- getLowestRank(longDataframe, getTaxDBpath())
-            if (lowestRank %in% getTaxonomyRanks()) {
-                selectInput(
-                    "rankSelect", label = "",
-                    choices = getTaxonomyRanks(),
-                    selected = lowestRank
-                )
+            req(input$mainInputType)
+            if (input$mainInputType == "folder") {
+                if (length(checkMainInputDir()) == 4) {
+                    tmpDf <- readRDS(
+                        paste0(getMainInputDir(),"/sortedtaxaList.rds")
+                    )
+                    selectedRank <- unique(tmpDf$rank)
+                    if (length(selectedRank) > 1) selectedRank <- "strain"
+                    selectInput(
+                        "rankSelect", label = "",
+                        choices = selectedRank, #getTaxonomyRanks(),
+                        selected = selectedRank
+                    )
+                }
             } else {
-                selectInput(
-                    "rankSelect", label = "",
-                    choices = getTaxonomyRanks(),
-                    selected = "species"
-                )
+                longDataframe <- getMainInput()
+                req(longDataframe)
+                lowestRank <- getLowestRank(longDataframe, getTaxDBpath())
+                if (lowestRank %in% getTaxonomyRanks()) {
+                    selectInput(
+                        "rankSelect", label = "",
+                        choices = getTaxonomyRanks(),
+                        selected = lowestRank
+                    )
+                } else {
+                    selectInput(
+                        "rankSelect", label = "",
+                        choices = getTaxonomyRanks(),
+                        selected = "species"
+                    )
+                }
             }
         }
     })
@@ -1051,12 +1075,29 @@ shinyServer(function(input, output, session) {
                 selected = refspec
             )
         } else {
-            if (length(choice$fullName) > 0) {
+            if (input$mainInputType == "folder") {
+                req(getMainInputDir())
+                sortedTaxa <- readRDS(
+                    paste0(getMainInputDir(),"/sortedtaxaList.rds")
+                )
+                refSpec <- sortedTaxa %>%
+                    filter(supertaxon == levels(sortedTaxa$supertaxon)[1]) %>%
+                    select(supertaxonID)
                 updateSelectizeInput(
                     session, "inSelect", "", server = TRUE,
                     choices = as.list(levels(choice$fullName)),
-                    selected = levels(choice$fullName)[1]
+                    selected = unique(
+                        choice$fullName[choice$ncbiID == unique(refSpec$supertaxonID)]
+                    )
                 )
+            } else {
+                if (length(choice$fullName) > 0) {
+                    updateSelectizeInput(
+                        session, "inSelect", "", server = TRUE,
+                        choices = as.list(levels(choice$fullName)),
+                        selected = levels(choice$fullName)[1]
+                    )
+                }
             }
         }
     })
@@ -1082,11 +1123,29 @@ shinyServer(function(input, output, session) {
     # * disable main input, genelist input and demo data checkbox --------------
     observe({
         if (input$do > 0) {
-            shinyjs::toggleState("mainInput")
-            shinyjs::toggleState("geneListSelected")
-            shinyjs::toggleState("demoData")
-            shinyjs::toggleState("rankSelect")
-            shinyjs::toggleState("taxDbLoc")
+            shinyjs::disable("mainInputType")
+            shinyjs::disable("mainInput")
+            shinyjs::disable("mainInputDir")
+            shinyjs::disable("geneListSelected")
+            shinyjs::disable("demoData")
+            shinyjs::disable("rankSelect")
+            shinyjs::disable("taxDbLoc")
+        }
+    })
+
+    observe({
+        req(input$mainInputType)
+        if (input$mainInputType == "folder") {
+            shinyjs::disable("inSelect")
+            shinyjs::disable("orderGenes")
+            shinyjs::disable("orderTaxa")
+            shinyjs::disable("geneListSelected")
+        } else {
+            shinyjs::enable("inSelect")
+            shinyjs::enable("rankSelect")
+            shinyjs::enable("orderGenes")
+            shinyjs::enable("orderTaxa")
+            shinyjs::enable("geneListSelected")
         }
     })
 
@@ -1542,6 +1601,11 @@ shinyServer(function(input, output, session) {
     # * create rankList, idList, taxonNamesReduced, taxonomyMatrix -------------
     # * and preCalcTree files
     invalidID <- reactive({
+        req(input$mainInputType)
+        if (input$mainInputType == "folder") {
+            return()
+        }
+
         filein <- input$mainInput
         req(filein)
         inputType <- checkInputValidity(filein$datapath)
@@ -1799,7 +1863,10 @@ shinyServer(function(input, output, session) {
         # 1+ will be coerced to TRUE
         v$doPlot <- input$do
         filein <- input$mainInput
-        if (is.null(filein) & input$demoData == "none") {
+        if (
+            input$mainInputType == "file" & is.null(filein) &
+            input$demoData == "none"
+        ) {
             v$doPlot <- FALSE
             shinyBS::updateButton(session, "do", disabled = TRUE)
         }
@@ -1808,7 +1875,10 @@ shinyServer(function(input, output, session) {
     observeEvent(input$plotCustom, {
         w$doCusPlot <- input$plotCustom
         filein <- input$mainInput
-        if (is.null(filein) & input$demoData == "none") {
+        if (
+            input$mainInputType == "file" & is.null(filein) &
+            input$demoData == "none"
+        ) {
             w$doCusPlot <- FALSE
             shinyBS::updateButton(session, "plotCustom", disabled = TRUE)
         }
@@ -1865,50 +1935,62 @@ shinyServer(function(input, output, session) {
 
     # * convert main input file in any format into long format dataframe -------
     getMainInput <- reactive({
+        req(input$mainInputType)
         withProgress(message = 'Reading main input...', value = 0.5, {
-            if (input$demoData == "arthropoda") {
-                longDataframe <- myData[["EH2547"]]
-            } else if (input$demoData == "ampk-tor") {
-                longDataframe <- myData[["EH2544"]]
-            } else if (input$demoData == "preCalcDt") {
-                longDataframe <- createLongMatrix(i_mainInput)
-            } else {
-                filein <- input$mainInput
-                if (is.null(filein)) return()
-                inputType <- checkInputValidity(filein$datapath)
-                if (inputType == "oma") {
-                    if (input$getDataOma[1] == 0) return()
-                    longDataframe <- createProfileFromOma(finalOmaDf())
-                    longDataframe <- as.data.frame(unclass(longDataframe))
-                } else longDataframe <- createLongMatrix(filein$datapath)
-            }
-
-            # convert geneID, ncbiID and orthoID into factor and
-            # var1, var2 into numeric
-            for (i in seq_len(3)) {
-                longDataframe[, i] <- as.factor(longDataframe[, i])
-            }
-            if (ncol(longDataframe) > 3 & ncol(longDataframe) < 6) {
-                for (j in seq(4, ncol(longDataframe))){
-                    longDataframe[,j] <- suppressWarnings(
-                        as.numeric(as.character(longDataframe[,j]))
+            if (input$mainInputType == "folder") {
+                req(getMainInputDir())
+                if (length(checkMainInputDir()) == 4) {
+                    longDataframe <- readRDS(
+                        paste0(getMainInputDir(),"/longDf.rds")
                     )
+                } else return()
+            } else {
+                if (input$demoData == "arthropoda") {
+                    longDataframe <- myData[["EH2547"]]
+                } else if (input$demoData == "ampk-tor") {
+                    longDataframe <- myData[["EH2544"]]
+                } else if (input$demoData == "preCalcDt") {
+                    longDataframe <- createLongMatrix(i_mainInput)
+                } else {
+                    filein <- input$mainInput
+                    if (is.null(filein)) return()
+                    inputType <- checkInputValidity(filein$datapath)
+                    if (inputType == "oma") {
+                        if (input$getDataOma[1] == 0) return()
+                        longDataframe <- createProfileFromOma(finalOmaDf())
+                        longDataframe <- as.data.frame(unclass(longDataframe))
+                    } else longDataframe <- createLongMatrix(filein$datapath)
+                }
+
+                # convert geneID, ncbiID and orthoID into factor and
+                # var1, var2 into numeric
+                for (i in seq_len(3)) {
+                    longDataframe[, i] <- as.factor(longDataframe[, i])
+                }
+                if (ncol(longDataframe) > 3 & ncol(longDataframe) < 6) {
+                    for (j in seq(4, ncol(longDataframe))){
+                        longDataframe[,j] <- suppressWarnings(
+                            as.numeric(as.character(longDataframe[,j]))
+                        )
+                    }
+                }
+                if (ncol(longDataframe) == 6)
+                    longDataframe[, 6] <- as.factor(longDataframe[, 6])
+                # remove duplicated lines
+                longDataframe <- longDataframe[!duplicated(longDataframe),]
+                # remove fdogMA orthologs
+                if (input$showAllTaxa == FALSE) {
+                    longDataframe <- longDataframe[
+                        longDataframe$orthoID != "fdogMA",
+                    ]
                 }
             }
-            if (ncol(longDataframe) == 6)
-                longDataframe[, 6] <- as.factor(longDataframe[, 6])
-            # remove duplicated lines
-            longDataframe <- longDataframe[!duplicated(longDataframe),]
             # update number of genes to plot based on input
             if (nlevels(as.factor(longDataframe$geneID)) <= 1500) {
                 updateNumericInput(
-                    session,
-                    "endIndex", value = nlevels(as.factor(longDataframe$geneID))
+                    session, "endIndex",
+                    value = nlevels(as.factor(longDataframe$geneID))
                 )
-            }
-            # remove fdogMA orthologs
-            if (input$showAllTaxa == FALSE) {
-                longDataframe<-longDataframe[longDataframe$orthoID != "fdogMA",]
             }
             # return
             return(longDataframe)
@@ -2022,7 +2104,7 @@ shinyServer(function(input, output, session) {
     # * get NAME list of all (super)taxa ---------------------------------------
     inputTaxonName <- reactive({
         req(input$rankSelect)
-        if (is.null(input$mainInput) & input$demoData == "none") return()
+        if (is.null(getMainInput()) & input$demoData == "none") return()
         if (length(unkTaxa()) > 0) return()
         if (input$rankSelect == "") return()
         withProgress(message = 'Getting input taxon names...', value = 0.5, {
@@ -2039,41 +2121,49 @@ shinyServer(function(input, output, session) {
         req(input$rankSelect)
         req(input$inSelect)
         withProgress(message = 'Sorting input taxa...', value = 0.5, {
-            # get input taxonomy tree
-            inputTaxaTree <- NULL
-            if (input$demoData == "preCalcDt") {
-                if (!is.null(i_treeInput)) {
-                    inputTaxaTree <- read.tree(file = i_treeInput)
-                }
+            if (input$mainInputType == "folder") {
+                req(getMainInputDir())
+                if (length(checkMainInputDir()) == 4) {
+                    sortedOut <- readRDS(
+                        paste0(getMainInputDir(),"/sortedtaxaList.rds")
+                    )
+                } else return()
             } else {
-                treeIn <- input$inputTree
-                if (!is.null(treeIn)) {
-                    inputTaxaTree <- read.tree(file = treeIn$datapath)
+                # get input taxonomy tree
+                inputTaxaTree <- NULL
+                if (input$demoData == "preCalcDt") {
+                    if (!is.null(i_treeInput)) {
+                        inputTaxaTree <- read.tree(file = i_treeInput)
+                    }
+                } else {
+                    treeIn <- input$inputTree
+                    if (!is.null(treeIn)) {
+                        inputTaxaTree <- read.tree(file = treeIn$datapath)
+                    }
                 }
-            }
+                # get list of sorted taxa
+                sortedTaxaFile <- input$inputSortedTaxa
+                if (!is.null(sortedTaxaFile)) {
+                    sortedTaxonInputDf <- read.table(
+                        file = sortedTaxaFile$datapath,
+                        header = FALSE,
+                        check.names = FALSE,
+                        comment.char = "",
+                        fill = FALSE
+                    )
+                    sortedTaxonList <- sortedTaxonInputDf$V1
+                } else sortedTaxonList <- NULL
 
-            # get list of sorted taxa
-            sortedTaxaFile <- input$inputSortedTaxa
-            if (!is.null(sortedTaxaFile)) {
-                sortedTaxonInputDf <- read.table(
-                    file = sortedTaxaFile$datapath,
-                    header = FALSE,
-                    check.names = FALSE,
-                    comment.char = "",
-                    fill = FALSE
+                # sort taxonomy matrix based on selected refTaxon
+                sortedOut <- sortInputTaxa(
+                    taxonIDs = inputTaxonID(),
+                    rankName = input$rankSelect,
+                    refTaxon = input$inSelect,
+                    taxaTree = inputTaxaTree,
+                    sortedTaxonList = sortedTaxonList,
+                    taxDB = getTaxDBpath()
                 )
-                sortedTaxonList <- sortedTaxonInputDf$V1
-            } else sortedTaxonList <- NULL
-
-            # sort taxonomy matrix based on selected refTaxon
-            sortedOut <- sortInputTaxa(
-                taxonIDs = inputTaxonID(),
-                rankName = input$rankSelect,
-                refTaxon = input$inSelect,
-                taxaTree = inputTaxaTree,
-                sortedTaxonList = sortedTaxonList,
-                taxDB = getTaxDBpath()
-            )
+            }
             # return
             return(sortedOut)
         })
@@ -2088,110 +2178,132 @@ shinyServer(function(input, output, session) {
     # * get subset data for plotting (default 30 genes if > 50 genes) ----------
     preData <- reactive({
         req(isTruthy(v$doPlot)|isTruthy(w$doCusPlot))
-        longDataframe <- getMainInput()
-        req(longDataframe)
-        # isolate start and end gene index
-        input$updateBtn
-        if (input$autoUpdate == TRUE) {
-            startIndex <- input$stIndex
-            endIndex <- input$endIndex
-        } else {
-            startIndex <- isolate(input$stIndex)
-            endIndex <- isolate(input$endIndex)
-        }
-
-        if (is.na(endIndex)) endIndex <- 1000
-        withProgress(message = 'Subseting data...', value = 0.5, {
-            longDataframe <- sortGeneIDs(
-                longDataframe, input$orderGenes, checkInputSortedGenes()
-            )
-            # filter preData based on UMAP selection
-            data <- longDataframe
-            if (!(v$doPlot)) {
-                if (isTruthy(input$addSpecUmap)|isTruthy(input$addGeneUmap)) {
-                    selectedTaxa <- longDataframe$ncbiID
-                    if (input$addSpecUmap) {
-                        umapTaxa <- umapSelectedTaxa()
-                        selectedTaxa <- unique(head(umapTaxa$ncbiID))
-                    }
-                    umapGenes <- umapSelectedGenes()
-                    selectedGenes <- unique(umapGenes$geneID)
-                    if (length(selectedGenes) > 0) {
-                        data <- longDataframe %>% filter(
-                            geneID %in% selectedGenes & ncbiID %in% selectedTaxa
-                        )
-                        data$geneID <- droplevels(data$geneID)
-                        data$ncbiID <- droplevels(data$ncbiID)
-                    } else {
-                        return()
-                    }
-                }
-            } else {
-                listIn <- input$geneList
-                if (!is.null(listIn)) {
-                    list <- read.table(file = listIn$datapath, header = FALSE)
-                    listGeneOri <- unique(list$V1)
-                    # update number of endIndex
-                    if (length(listGeneOri) <= 1500) {
-                        updateNumericInput(
-                            session,
-                            "endIndex", value = length(listGeneOri)
-                        )
-                    }
-                    if (startIndex <= length(listGeneOri)) {
-                        listGene <- listGeneOri[startIndex:endIndex]
-                    } else listGene <- listGeneOri
-                    listGene <- listGene[!is.na(listGene)]
-                    data <- longDataframe[longDataframe$geneID %in% listGene, ]
-                } else {
-                    subsetID <-
-                        levels(longDataframe$geneID)[startIndex:endIndex]
-                    data <- longDataframe[longDataframe$geneID %in% subsetID, ]
-                }
-            }
-
-            if (ncol(data) < 5) {
-                for (i in seq_len(5 - ncol(data))) {
-                    data[paste0("newVar", i)] <- 1
-                }
-            }
-
-            # return preData
-            if (nrow(data) == 0) return()
-            if (ncol(data) < 6) {
-                colnames(data) <- c("geneID","ncbiID","orthoID","var1","var2")
-            } else {
-                colnames(data) <- c(
-                    "geneID", "ncbiID", "orthoID", "var1", "var2", "geneName"
+        req(input$mainInputType)
+        if (input$mainInputType == "folder") {
+            req(getMainInputDir())
+            if (length(checkMainInputDir()) == 4) {
+                data <- readRDS(
+                    paste0(getMainInputDir(),"/preData.rds")
                 )
+                return(data)
+            } else return()
+        } else {
+            longDataframe <- getMainInput()
+            req(longDataframe)
+            # isolate start and end gene index
+            input$updateBtn
+            if (input$autoUpdate == TRUE) {
+                startIndex <- input$stIndex
+                endIndex <- input$endIndex
+            } else {
+                startIndex <- isolate(input$stIndex)
+                endIndex <- isolate(input$endIndex)
             }
-            return(data)
-        })
+
+            if (is.na(endIndex)) endIndex <- 1000
+            withProgress(message = 'Subseting data...', value = 0.5, {
+                longDataframe <- sortGeneIDs(
+                    longDataframe, input$orderGenes, checkInputSortedGenes()
+                )
+                # filter preData based on UMAP selection
+                data <- longDataframe
+                if (!(v$doPlot)) {
+                    if (isTruthy(input$addSpecUmap)|isTruthy(input$addGeneUmap)) {
+                        selectedTaxa <- longDataframe$ncbiID
+                        if (input$addSpecUmap) {
+                            umapTaxa <- umapSelectedTaxa()
+                            selectedTaxa <- unique(head(umapTaxa$ncbiID))
+                        }
+                        umapGenes <- umapSelectedGenes()
+                        selectedGenes <- unique(umapGenes$geneID)
+                        if (length(selectedGenes) > 0) {
+                            data <- longDataframe %>% filter(
+                                geneID %in% selectedGenes & ncbiID %in% selectedTaxa
+                            )
+                            data$geneID <- droplevels(data$geneID)
+                            data$ncbiID <- droplevels(data$ncbiID)
+                        } else {
+                            return()
+                        }
+                    }
+                } else {
+                    listIn <- input$geneList
+                    if (!is.null(listIn)) {
+                        list <- read.table(file = listIn$datapath, header = FALSE)
+                        listGeneOri <- unique(list$V1)
+                        # update number of endIndex
+                        if (length(listGeneOri) <= 1500) {
+                            updateNumericInput(
+                                session,
+                                "endIndex", value = length(listGeneOri)
+                            )
+                        }
+                        if (startIndex <= length(listGeneOri)) {
+                            listGene <- listGeneOri[startIndex:endIndex]
+                        } else listGene <- listGeneOri
+                        listGene <- listGene[!is.na(listGene)]
+                        data <- longDataframe[longDataframe$geneID %in% listGene, ]
+                    } else {
+                        subsetID <-
+                            levels(longDataframe$geneID)[startIndex:endIndex]
+                        data <- longDataframe[longDataframe$geneID %in% subsetID, ]
+                    }
+                }
+
+                if (ncol(data) < 5) {
+                    for (i in seq_len(5 - ncol(data))) {
+                        data[paste0("newVar", i)] <- 1
+                    }
+                }
+
+                # return preData
+                if (nrow(data) == 0) return()
+                if (ncol(data) < 6) {
+                    colnames(data) <- c("geneID","ncbiID","orthoID","var1","var2")
+                } else {
+                    colnames(data) <- c(
+                        "geneID", "ncbiID", "orthoID", "var1", "var2", "geneName"
+                    )
+                }
+                return(data)
+            })
+        }
     })
 
     # * creating main dataframe for subset taxa (in species/strain level) ------
     getFullData <- reactive({
         req(isTruthy(v$doPlot)|isTruthy(w$doCusPlot))
-        req(preData())
-        req(getCountTaxa())
-        req(sortedtaxaList())
-        {
-            input$updateBtn
-        }
-        withProgress(message = 'Parsing profile data...', value = 0.5, {
-            if (input$autoUpdate == TRUE) {
-                coorthologCutoffMax <- input$coortholog
-            } else {
-                coorthologCutoffMax <- isolate(input$coortholog)
+        req(input$mainInputType)
+        if (input$mainInputType == "folder") {
+            req(getMainInputDir())
+            if (length(checkMainInputDir()) == 4) {
+                fullMdData <- readRDS(
+                    paste0(getMainInputDir(),"/fullData.rds")
+                )
+                return(fullMdData)
+            } else return()
+        } else {
+            req(preData())
+            req(getCountTaxa())
+            req(sortedtaxaList())
+            {
+                input$updateBtn
             }
-            fullMdData <- parseInfoProfile(
-                inputDf = preData(),
-                sortedInputTaxa = sortedtaxaList(),
-                taxaCount = getCountTaxa(),
-                coorthoCOMax = coorthologCutoffMax
-            )
-            return(fullMdData)
-        })
+            withProgress(message = 'Parsing profile data...', value = 0.5, {
+                if (input$autoUpdate == TRUE) {
+                    coorthologCutoffMax <- input$coortholog
+                } else {
+                    coorthologCutoffMax <- isolate(input$coortholog)
+                }
+                fullMdData <- parseInfoProfile(
+                    inputDf = preData(),
+                    sortedInputTaxa = sortedtaxaList(),
+                    taxaCount = getCountTaxa(),
+                    coorthoCOMax = coorthologCutoffMax
+                )
+                return(fullMdData)
+            })
+        }
     })
 
     # * filter full data -------------------------------------------------------
@@ -2201,16 +2313,17 @@ shinyServer(function(input, output, session) {
             input$plotCustom
             input$updateBtn
         }
-        # check input file
-        filein <- input$mainInput
-        if (
-            input$demoData == "arthropoda" | input$demoData == "ampk-tor" |
-            input$demoData == "preCalcDt"
-        ) {
-            filein <- 1
-        }
-        req(filein)
         withProgress(message = 'Creating data for plotting...', value = 0.5, {
+            # check input file
+            req(input$mainInputType)
+            if (input$mainInputType == "folder" | input$demoData == "arthropoda" |
+                input$demoData == "ampk-tor" | input$demoData == "preCalcDt") {
+                filein <- 1
+            } else {
+                filein <- input$mainInput
+            }
+            req(filein)
+
             # get all cutoffs
             if (input$autoUpdate == TRUE) {
                 percentCutoff <- input$percent
@@ -2656,15 +2769,13 @@ shinyServer(function(input, output, session) {
 
     # * get list of all sequence IDs for customized profile -----
     output$cusGene.ui <- renderUI({
-        filein <- input$mainInput
         fileCustom <- input$customFile
-
         if (
             input$demoData == "arthropoda" | input$demoData == "ampk-tor" |
-            input$demoData == "preCalcDt"
+            input$demoData == "preCalcDt" | input$mainInputType == "folder"
         ) {
             filein <- 1
-        }
+        } else filein <- input$mainInput
 
         if (is.null(filein) & is.null(fileCustom)) {
             return(selectizeInput("inSeq", "", "all"))
@@ -2732,13 +2843,13 @@ shinyServer(function(input, output, session) {
 
     # * get list of all taxa for customized profile ----------------------------
     output$cusTaxa.ui <- renderUI({
-        filein <- input$mainInput
+
         if (
             input$demoData == "arthropoda" | input$demoData == "ampk-tor" |
-            input$demoData == "preCalcDt"
+            input$demoData == "preCalcDt"  | input$mainInputType == "folder"
         ) {
             filein <- 1
-        }
+        } else filein <- input$mainInput
 
         if (is.null(filein)) return(selectInput("inTaxa", "", "all"))
         if (v$doPlot == FALSE) {
@@ -2952,6 +3063,18 @@ shinyServer(function(input, output, session) {
 
     # ========================= UMAP CLUSTERING PLOT ===========================
     shinyjs::disable("addSpecUmap")
+    u <- reactiveValues(doCusPlot = FALSE)
+    observeEvent(input$plotUmap, {
+        u$doUmapPlot <- input$plotUmap
+        filein <- input$mainInput
+        if (
+            input$mainInputType == "file" & is.null(filein) &
+            input$demoData == "none"
+        ) {
+            u$doUmapPlot <- FALSE
+            shinyBS::updateButton(session, "plotUmap", disabled = TRUE)
+        }
+    })
 
     # * update variables for data filtering ------------------------------------
     observe({
@@ -2979,6 +3102,7 @@ shinyServer(function(input, output, session) {
     # * data for UMAP clustering -----------------------------------------------
     umapData <- reactive({
         req(getMainInput())
+        req(u$doUmapPlot)
         if(is.null(getMainInput())) stop("Input data is NULL!")
         withProgress(
             message = "Preparing data for clustering...", value = 0.5, {
@@ -3601,7 +3725,10 @@ shinyServer(function(input, output, session) {
                 else
                     shinyBS::updateButton(session, "doDomainPlotMain", disabled = TRUE)
             } else {
-                if (checkInputValidity(input$mainInput$datapath) == "oma") {
+                if (
+                    input$mainInputType == "file" &
+                    checkInputValidity(input$mainInput$datapath) == "oma"
+                ) {
                     shinyBS::updateButton(session, "doDomainPlot", disabled = FALSE)
                     if (lowestRank == input$rankSelect || infoTmp[[8]][1] == 1)
                         shinyBS::updateButton(session, "doDomainPlotMain", disabled = FALSE)
@@ -3894,15 +4021,15 @@ shinyServer(function(input, output, session) {
                 file.exists(paste0(outFolder, "/longDf.rds")) |
                 file.exists(paste0(outFolder, "/sortedtaxaList.rds")) |
                 file.exists(paste0(outFolder, "/preData.rds")) |
-                file.exists(paste0(outFolder, "/fullMdData.rds"))
+                file.exists(paste0(outFolder, "/fullData.rds"))
             ) {
                 message("Other RDS files found! Please select a new output folder!")
                 return()
             }
         } else dir.create(file.path(outFolder), showWarnings = TRUE)
-        
+
         if (nrow(getFullData()) > 0) {
-            saveRDS(getMainInput(), file = paste0(outFolder, "/longDf.rds")) 
+            saveRDS(getMainInput(), file = paste0(outFolder, "/longDf.rds"))
             saveRDS(sortedtaxaList(), file = paste0(outFolder, "/sortedtaxaList.rds"))
             saveRDS(preData(), file = paste0(outFolder, "/preData.rds"))
             saveRDS(getFullData(), file = paste0(outFolder, "/fullData.rds"))
@@ -4411,13 +4538,12 @@ shinyServer(function(input, output, session) {
 
     # ** render list of available taxa -----------------------------------------
     output$taxaListCore.ui <- renderUI({
-        filein <- input$mainInput
         if (
             input$demoData == "arthropoda" | input$demoData == "ampk-tor" |
-            input$demoData == "preCalcDt"
+            input$demoData == "preCalcDt" | input$mainInputType == "folder"
         ) {
             filein <- 1
-        }
+        } else filein <- input$mainInput
         if (is.null(filein)) {
             return(selectInput("inTaxa", "Select taxa of interest:", "none"))
         }
@@ -4609,15 +4735,13 @@ shinyServer(function(input, output, session) {
 
     # ** render list of all sequence IDs (same as customized profile) ----------
     output$listGenesGC <- renderUI({
-        filein <- input$mainInput
         fileGC <- input$gcFile
-
         if (
             input$demoData == "arthropoda" | input$demoData == "ampk-tor" |
-            input$demoData == "preCalcDt"
+            input$demoData == "preCalcDt" | input$mainInputType == "folder"
         ) {
             filein <- 1
-        }
+        } else filein <- input$mainInput
 
         if (v$doPlot == FALSE) {
             return(selectInput(
@@ -4698,13 +4822,12 @@ shinyServer(function(input, output, session) {
 
     # ** render list of taxa (and default in-group taxa are selected) ----------
     output$taxaListGC <- renderUI({
-        filein <- input$mainInput
         if (
             input$demoData == "arthropoda" | input$demoData == "ampk-tor" |
-            input$demoData == "preCalcDt"
+            input$demoData == "preCalcDt" | input$mainInputType == "folder"
         ) {
             filein <- 1
-        }
+        } else filein <- input$mainInput
         if (is.null(filein)) {
             return(selectInput("selectedInGroupGC", "In-group taxa:", "none"))
         }

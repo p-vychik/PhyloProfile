@@ -17,7 +17,7 @@
 #' checkInputValidity(filein)
 
 checkInputValidity <- function(filein) {
-    if (missing(filein)) return("No input file given!")
+    if (missing(filein) | is.null(filein)) return("No input file given!")
     inputDt <- utils::read.table(
         file = filein, sep = "\t", header = FALSE, check.names = FALSE,
         comment.char = "", fill = TRUE, stringsAsFactors = FALSE)
@@ -276,7 +276,7 @@ createLongMatrix <- function(inputFile = NULL){
             )
         }
     }
-    if (ncol(longDataframe) == 6) 
+    if (ncol(longDataframe) == 6)
         longDataframe[, 6] <- as.factor(longDataframe[, 6])
 
     # remove duplicated lines

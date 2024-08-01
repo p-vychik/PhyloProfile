@@ -134,7 +134,9 @@ umapClustering <- function(
         subsetDt[subsetDt >= 0] <- 1
         subsetDt[subsetDt < 0] <- 0
     }
-    df.umap <- umap(subsetDt, random_state = randomSeed, preserve.seed = TRUE)
+    df.umap <- umap::umap(
+        subsetDt, random_state = randomSeed, preserve.seed = TRUE
+    )
     return(df.umap)
 }
 

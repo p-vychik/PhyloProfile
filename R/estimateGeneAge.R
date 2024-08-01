@@ -47,6 +47,7 @@ estimateGeneAge <- function(
     processedProfileData, taxaCount, rankName, refTaxon,
     var1CO = c(0, 1), var2CO = c(0, 1), percentCO = c(0, 1), taxDB = NULL
 ){
+    if (rankName == "strain") stop("Please select a higher rank than STRAIN!")
     rankList <- c(
         "genus", "family", "class", "phylum", "kingdom", "norank_33154",
         "superkingdom", "root"
@@ -316,7 +317,8 @@ createGeneAgePlot <- function (geneAgePlotDf, textFactor = 1, font = "Arial"){
     name <- count <- percentage <- x <- y <- NULL
     arrowDf <- data.frame(time = c(0, 0), y = c(0, nrow(geneAgePlotDf) + 1))
     n <- nlevels(as.factor(geneAgePlotDf$name))
-    mycolors <- grDevices::colorRampPalette(brewer.pal(11, "Spectral"))(n)
+    mycolors <- grDevices::colorRampPalette(
+        RColorBrewer::brewer.pal(11, "Spectral"))(n)
     p <- ggplot(data = geneAgePlotDf, aes(x = name, y = count, fill = name)) +
         geom_bar(stat = "identity", width = 0.5) +
         geom_text(

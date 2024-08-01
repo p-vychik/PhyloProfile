@@ -962,7 +962,12 @@ shinyUI(
                             "bottom"
                         ),
                         checkboxInput("addGeneUmap", em("Selected genes")),
-                        uiOutput("addUmapCustomProfileCheck.ui")
+                        uiOutput("addUmapCustomProfileCheck.ui"),
+                        hr(),
+                        shinyBS::bsButton(
+                            "plotUmap", "PLOT", type = "action", 
+                            style = "danger", size = "large", disabled = FALSE
+                        )
                     ),
                     # * Main panel for plot and tables -------------------------
                     mainPanel(

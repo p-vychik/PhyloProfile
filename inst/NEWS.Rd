@@ -9,6 +9,7 @@
     \item option to change font
     \item option to show gene names
     \item option to sort genes by defined list
+    \item option to upload preprocessed data from an input folder
   }
 }
 
