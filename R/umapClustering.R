@@ -21,13 +21,14 @@
 #' prepareUmapData(longDf, "phylum")
 
 prepareUmapData <- function(
-        longDf = NULL, taxonRank = NULL, type = "taxa", taxDB = NULL, 
-        filterVar = "both", cutoff = 0, groupLabelsBy = "taxa"
+    longDf = NULL, taxonRank = NULL, type = "taxa", taxDB = NULL, 
+    filterVar = "both", cutoff = 0, groupLabelsBy = "taxa"
 ) {
     if (is.null(longDf)) stop("Input data cannot be NULL")
     if (is.null(taxonRank)) stop("Taxon rank must be specified!")
     FAS_F <- FAS_B <- geneID <- ncbiID <- abbrName <- fullName <- NULL
     var1 <- var2 <- Freq <- Label <- NULL
+    if (type == "genes") groupLabelsBy <- "genes"
     # filter and subset input df
     filterFlag <- 1
     if (ncol(longDf) == 6) {
@@ -95,7 +96,7 @@ prepareUmapData <- function(
         # add count (how many taxa has orthologs for each seed gene)
         seedWithTax <- longDfSub %>% select(geneID, ncbiID)
         seedWithTax <- seedWithTax[!duplicated(seedWithTax),]
-        countDf <- data.frame(table(longDfSub$geneID))
+        countDf <- data.frame(table(seedWithTax$geneID))
         colnames(countDf) <- c("geneID", "Freq")
         wideDf <- dplyr::left_join(
             data.frame(wideDf), countDf, by = c("geneID")
@@ -111,6 +112,7 @@ prepareUmapData <- function(
     }
     wideDf <- left_join(wideDf, countFreqDf, by = "Label")
     wideDf$n <- as.numeric(wideDf$n)
+    wideDf$Label <- as.character(wideDf$Label)
     return(wideDf)
 }
 
@@ -135,23 +137,46 @@ prepareUmapData <- function(
 #' umapClustering(data4umap)
 
 umapClustering <- function(
-        data4umap = NULL, by = "taxa", type = "binary", randomSeed = 123
+    data4umap = NULL, by = "taxa", type = "binary", randomSeed = 123
 ) {
     if (is.null(data4umap)) stop("Input data cannot be NULL!")
     ncbiID <- Label <- Freq <- geneID <- NULL
+    if ("geneID" %in% colnames(data4umap)) by <- "genes"
     if (by == "taxa") {
-        subsetDt <- subset(data4umap, select = -c(ncbiID, Label, Freq))
-        
+        subsetDt <- subset(data4umap, select = -c(ncbiID, Label, Freq, n))
     } else {
-        subsetDt <- subset(data4umap, select = -c(geneID, Label, Freq))
+        subsetDt <- subset(data4umap, select = -c(geneID, Label, Freq, n))
     }
     if (type == "binary") {
         subsetDt[subsetDt >= 0] <- 1
         subsetDt[subsetDt < 0] <- 0
     }
-    df.umap <- umap::umap(
-        subsetDt, random_state = randomSeed, preserve.seed = TRUE
+    checkDt4Umap <- tryCatch(
+        {
+            suppressWarnings(umap::umap(
+                subsetDt, random_state = randomSeed, preserve.seed = TRUE
+            ))
+        },
+        error = function(cond) {
+            message(conditionMessage(cond))
+            NA
+        },
+        warning = function(cond) {
+            message(conditionMessage(cond))
+            NA
+        }
     )
+    if (!(is.na(checkDt4Umap[1]))) {
+        df.umap <- umap::umap(
+            subsetDt, random_state = randomSeed, preserve.seed = TRUE
+        )
+    } else {
+        warning("WARNING: Too few samples for UMAP!!!")
+        df.umap <- umap::umap(
+            subsetDt, random_state = randomSeed, preserve.seed = TRUE,
+            n_neighbors = max(1, nrow(subsetDt) - 1)
+        )
+    }
     return(df.umap)
 }
 
@@ -172,7 +197,7 @@ umapClustering <- function(
 #' data4umap <- prepareUmapData(longDf, "phylum")
 #' groupLabelUmapData(data4umap, freqCutoff = 3)
 
-groupLabelUmapData <- function( data4umap = NULL, freqCutoff = 0) {
+groupLabelUmapData <- function(data4umap = NULL, freqCutoff = 0) {
     if (is.null(data4umap)) stop("Input data cannot be NULL!")
     if (length(data4umap) == 0) stop("Input data cannot be EMPTY!")
     
@@ -216,7 +241,8 @@ createUmapPlotData <- function(
     data4umap$X <- umapData$layout[,1]
     data4umap$Y <- umapData$layout[,2]
     # join less freq items into "other"
-    data4umap <- groupLabelUmapData(data4umap, freqCutoff)
+    # data4umap <- groupLabelUmapData(data4umap, freqCutoff)
+    data4umap$Label[data4umap$n < freqCutoff] <- "[Other]"
     # exclude taxa
     if (length(excludeTaxa) > 0) {
         data4umap$X[data4umap$Label %in% excludeTaxa] <- NA
@@ -229,12 +255,14 @@ createUmapPlotData <- function(
 #' Create UMAP cluster plot
 #' @export
 #' @usage plotUmap(plotDf = NULL, legendPos = "right", colorPalette = "Set2", 
-#'     transparent = 0, textSize = 12)
+#'     transparent = 0, textSize = 12, font = "Arial", highlightTaxa = NULL)
 #' @param plotDf data for UMAP plot 
 #' @param legendPos position of legend. Default: "right"
 #' @param colorPalette color palette. Default: "Set2"
 #' @param transparent transparent level (from 0 to 1). Default: 0
 #' @param textSize size of axis and legend text. Default: 12
+#' @param font font of text. Default = Arial"
+#' @param highlightTaxa list of taxa to be highlighted
 #' @return A plot as ggplot object
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{prepareUmapData}}, \code{\link{umapClustering}},
@@ -247,32 +275,97 @@ createUmapPlotData <- function(
 #' umapData <- prepareUmapData(longDf, "phylum")
 #' data.umap <- umapClustering(umapData)
 #' plotDf <- createUmapPlotData(data.umap, umapData)
-#' plotUmap(plotDf)
+#' plotUmap(plotDf, font = "sans")
 
 plotUmap <- function(
-        plotDf = NULL, legendPos = "right", colorPalette = "Set2", 
-        transparent = 0, textSize = 12
+    plotDf = NULL, legendPos = "right", colorPalette = "Set2", 
+    transparent = 0, textSize = 12, font = "Arial", highlightTaxa = NULL
 ) {
     if (is.null(plotDf)) stop("Input data cannot be NULL!")
     X <- Y <- Label <- Freq <- NULL
+    # add colors
+    plotDf <- addUmapTaxaColors(plotDf, colorPalette, highlightTaxa)
+    if ("color" %in% colnames(plotDf)) {
+        colorScheme <- structure(
+            plotDf$color, .Names = plotDf$Label
+        )
+    } else {
+        colorScheme <- structure(
+            head(
+                suppressWarnings(
+                    RColorBrewer::brewer.pal(
+                        nlevels(as.factor(plotDf$Label)), colorPalette
+                    )
+                ), levels(as.factor(plotDf$Label))
+            ), .Names = levels(as.factor(plotDf$Label))
+        )
+    }
     # generate plot
     plot <- ggplot(plotDf, aes(x = X, y = Y, color = Label)) +
         geom_point(aes(size = Freq), alpha = 1 - transparent) +
         geom_rug(alpha = 1) +
         theme_minimal() +
-        labs(x = "", y = "") +
-        guides(
+        labs(x = "", y = "")
+    # change legend title
+    if ("ncbiID" %in% colnames(plotDf)) {
+        plot <- plot + guides(
             color = guide_legend(override.aes = list(alpha = 1)),
             size = guide_legend(title = "Number of genes")
-        ) +
-        theme(
+        )
+    } else 
+        plot <- plot + guides(
+            color = guide_legend(override.aes = list(alpha = 1)),
+            size = guide_legend(title = "Number of taxa")
+        )
+    plot <- plot + theme(
             legend.position = legendPos,
             legend.text = element_text(size = textSize),
             legend.title = element_text(size = textSize),
             axis.text = element_text(size = textSize), 
             axis.title = element_text(size = textSize),
         )
-    if (checkColorPallete(levels(as.factor(plotDf$Label)), colorPalette))
-        plot <- plot + scale_color_brewer(palette = colorPalette)
+    plot <- plot + scale_color_manual(values = colorScheme)
+    plot <- plot + theme(text = element_text(family = font))
     return(plot)
+}
+
+#' Add colors for taxa in UMAP plot
+#' @usage addUmapTaxaColors(plotDf = NULL, colorPalette = "Set2", 
+#'     highlightTaxa = NULL)
+#' @param plotDf data for UMAP plot 
+#' @param colorPalette color palette. Default: "Set2"
+#' @param highlightTaxa list of taxa to be highlighted
+#' @return A dataframe for UMAP plot with an additional column for the assigned
+#' color to each taxon
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @seealso \code{\link{prepareUmapData}}, \code{\link{umapClustering}},
+#' \code{\link{createUmapPlotData}}
+#' @examples
+#' rawInput <- system.file(
+#'    "extdata", "test.main.long", package = "PhyloProfile", mustWork = TRUE
+#' )
+#' longDf <- createLongMatrix(rawInput)
+#' umapData <- prepareUmapData(longDf, "phylum")
+#' data.umap <- umapClustering(umapData)
+#' plotDf <- createUmapPlotData(data.umap, umapData)
+#' PhyloProfile:::addUmapTaxaColors(plotDf, colorPalette = "Set2")
+
+addUmapTaxaColors <- function(
+    plotDf = NULL, colorPalette = "Set2", highlightTaxa = NULL
+) {
+    if (is.null(plotDf)) stop("plotDf cannot be null!")
+    allTaxa <- levels(as.factor(plotDf$Label))
+    allColors <- getQualColForVector(allTaxa)
+    if (checkColorPalette(allTaxa, colorPalette)) {
+        allColors <-
+            suppressWarnings(head(
+                RColorBrewer::brewer.pal(length(allTaxa), colorPalette),
+                length(allTaxa)
+            ))
+    }
+    colorScheme <- data.frame(color = allColors, Label = allTaxa)
+    if (!(is.null(highlightTaxa)))
+        colorScheme$color[!(colorScheme$Label %in% highlightTaxa)] <- "#d4d6d9"
+    plotDf <- merge(plotDf, colorScheme, by = "Label", all.x = TRUE)
+    return(plotDf)
 }

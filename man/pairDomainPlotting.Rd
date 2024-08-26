@@ -6,7 +6,7 @@
 \usage{
 pairDomainPlotting(seed, ortho, seedDf, orthoDf, minStart, maxEnd,
     labelSize, titleSize, showScore, showWeight, namePosition, firstDist,
-    nameType, nameSize, segmentSize, nameColor, labelPos, colorPallete, font)
+    nameType, nameSize, segmentSize, nameColor, labelPos, colorPalette, font)
 }
 \arguments{
 \item{seed}{Seed ID}
@@ -49,7 +49,7 @@ protein vs ortholog) (optional)}
 \item{labelPos}{position of domain names (for Labels only). Choose from
 "Above" (default), "Below" or "Inside" the domain bar}
 
-\item{colorPallete}{color pallete. Default = Paired"}
+\item{colorPalette}{color pallete. Default = Paired"}
 
 \item{font}{font of text. Default = Arial"}
 }

@@ -94,9 +94,9 @@ getQualColForVector <- function(x = NULL) {
 #' @importFrom RColorBrewer brewer.pal.info
 #' @examples
 #' myItems <- rep("a",3)
-#' checkColorPallete(myItems, "Set1")
+#' checkColorPalette(myItems, "Set1")
 
-checkColorPallete <- function(items, pallete = "Paired") {
+checkColorPalette <- function(items, pallete = "Paired") {
     if (is.null(items)) stop("No item given!")
     colorDf <- data.frame(RColorBrewer::brewer.pal.info)
     if (!(pallete %in% row.names(colorDf)))

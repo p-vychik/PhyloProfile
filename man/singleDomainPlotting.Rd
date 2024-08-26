@@ -5,7 +5,7 @@
 \title{Create architecure plot for a single protein}
 \usage{
 singleDomainPlotting(df, geneID, sep, labelSize, titleSize, minStart,
-    maxEnd, colorPallete, showScore, showWeight, namePosition, firstDist,
+    maxEnd, colorPalette, showScore, showWeight, namePosition, firstDist,
     nameType, nameSize, segmentSize, nameColor, labelPos, font)
 }
 \arguments{
@@ -27,7 +27,7 @@ protein vs ortholog) (optional)}
 
 \item{maxEnd}{The highest stop position of all domains}
 
-\item{colorPallete}{Color pallete. Default = Paired"}
+\item{colorPalette}{Color pallete. Default = Paired"}
 
 \item{showScore}{Show/hide E-values and Bit-scores. Default = NULL (hide)}
 

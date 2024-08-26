@@ -8,7 +8,7 @@ addFeatureColors(
   seedDf = NULL,
   orthoDf = NULL,
   colorType = "all",
-  colorPallete = "Paired",
+  colorPalette = "Paired",
   ignoreInstanceNo = FALSE
 )
 }
@@ -20,7 +20,7 @@ addFeatureColors(
 \item{colorType}{Choose to color "all", "shared", "unique" features or color
 by "Feature type". Default: "all"}
 
-\item{colorPallete}{Choose between "Paired", "Set1", "Set2", "Set3",
+\item{colorPalette}{Choose between "Paired", "Set1", "Set2", "Set3",
 "Accent", "Dark2" for the color pallete}
 
 \item{ignoreInstanceNo}{Ignore number of feature instances while identifying
@@ -28,7 +28,7 @@ shared or unique features. Default: FALSE}
 }
 \value{
 2 dataframes (seedDf and orthoDf) with an additional column for the
-assigned colors to each feature instance
+assigned color to each feature instance
 }
 \description{
 Add colors to features/domains of 2 domain dataframes. Users can

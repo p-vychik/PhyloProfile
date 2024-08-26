@@ -2,7 +2,7 @@
 
 export(addRankDivisionPlot)
 export(calcPresSpec)
-export(checkColorPallete)
+export(checkColorPalette)
 export(checkInputValidity)
 export(checkNewick)
 export(checkOmaID)

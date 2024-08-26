@@ -869,16 +869,14 @@ shinyUI(
                         column(
                             2,
                             radioButtons(
+                                "umapClusteringType", "Cluster:",
+                                c("Taxa" = "taxa", "Genes" = "genes"),
+                                inline = TRUE
+                            ),
+                            radioButtons(
                                 "umapDataType", "Data type:",
                                 c("Binary" = "binary", "Non-binary" = "nonbinary"),
                                 inline = TRUE
-                            )
-                        ),
-                        column(
-                            2,
-                            sliderInput(
-                                "umapAlpha", "Transparent level", min = 0,
-                                max = 1, step = 0.05, value = 0.5, width=200
                             )
                         ),
                         column(
@@ -911,7 +909,10 @@ shinyUI(
                                     "Group labels by the freq of",
                                     choices = c("taxa", "genes"),
                                     inline = TRUE
-                                ),
+                                )
+                            ),
+                            column(
+                                6,
                                 sliderInput(
                                     "umapLabelNr", "Freq cutoff", min = 3,
                                     max = 99, step = 1, value = 5, width = 200
@@ -921,19 +922,14 @@ shinyUI(
                                     paste("Only the most frequent labels",
                                           "will be shown"),
                                     "bottom"
-                                ),
-                            ),
-                            column(
-                                6,
-                                selectInput(
-                                    "colorPalleteUmap",
-                                    "Color pallete",
-                                    choices = c(
-                                        "Paired", "Set1", "Set2", "Set3",
-                                        "Accent", "Dark2"
-                                    ),
-                                    selected = "Dark2"
                                 )
+                            )
+                        ),
+                        column(
+                            2,
+                            sliderInput(
+                                "umapAlpha", "Transparent level", min = 0,
+                                max = 1, step = 0.05, value = 0.5, width=200
                             )
                         )
                     )
@@ -946,7 +942,19 @@ shinyUI(
                             choices = getTaxonomyRanks(),
                             selected = "phylum"
                         ),
+                        uiOutput("umapCustomLabel.ui"),
+                        hr(),
                         uiOutput("umapTaxa.ui"),
+                        selectInput(
+                            "colorPalleteUmap",
+                            "Color pallete",
+                            choices = c(
+                                "Paired", "Set1", "Set2", "Set3",
+                                "Accent", "Dark2"
+                            ),
+                            selected = "Dark2"
+                        ),
+                        hr(),
                         selectInput(
                             "umapFilterVar",
                             "Choose variable for data filtering",
@@ -958,6 +966,7 @@ shinyUI(
                             "umapCutoff", "Filter cutoff", min = 0, max = 1,
                             step = 0.05, value = 0, width = '100%'
                         ),
+                        hr(),
                         strong("Add following data to Customized profile"),
                         checkboxInput("addSpecUmap", em("Selected taxa")),
                         shinyBS::bsPopover(

@@ -2215,7 +2215,7 @@ shinyServer(function(input, output, session) {
                         selectedTaxa <- longDataframe$ncbiID
                         if (input$addSpecUmap) {
                             umapTaxa <- umapSelectedTaxa()
-                            selectedTaxa <- unique(head(umapTaxa$ncbiID))
+                            selectedTaxa <- unique(head(umapTaxa$`NCBI taxon ID`))
                         }
                         umapGenes <- umapSelectedGenes()
                         selectedGenes <- unique(umapGenes$geneID)
@@ -2846,7 +2846,6 @@ shinyServer(function(input, output, session) {
 
     # * get list of all taxa for customized profile ----------------------------
     output$cusTaxa.ui <- renderUI({
-
         if (
             input$demoData == "arthropoda" | input$demoData == "ampk-tor" |
             input$demoData == "preCalcDt"  | input$mainInputType == "folder"
@@ -2854,13 +2853,14 @@ shinyServer(function(input, output, session) {
             filein <- 1
         } else filein <- input$mainInput
 
-        if (is.null(filein)) return(selectInput("inTaxa", "", "all"))
+        if (is.null(filein) & input$addSpecUmap != TRUE) 
+            return(selectInput("inTaxa", "", "all"))
         if (v$doPlot == FALSE) {
             if (input$addSpecUmap == TRUE) {
                 umapTaxa <- umapSelectedTaxa()
                 if (is.null(umapTaxa))
                     return(selectInput("inTaxa", "", "all"))
-                if (nrow(umapTaxa) > 0) out <- unique(umapTaxa$fullName)
+                if (nrow(umapTaxa) > 0) out <- unique(umapTaxa$`Taxon name`)
                 selectizeInput("inTaxa","",out, selected = out, multiple = TRUE)
             } else return(selectInput("inTaxa", "", "all"))
         } else {
@@ -2873,7 +2873,7 @@ shinyServer(function(input, output, session) {
                 umapTaxa <- umapSelectedTaxa()
                 if (is.null(umapTaxa))
                     return(selectInput("inTaxa", "", "all"))
-                if (nrow(umapTaxa) > 0) out <- unique(umapTaxa$fullName)
+                if (nrow(umapTaxa) > 0) out <- unique(umapTaxa$`Taxon name`)
                 selectizeInput("inTaxa","",out, selected = out, multiple = TRUE)
             } else {
                 selectizeInput("inTaxa","",out,selected = out[1], multiple=TRUE)
@@ -3066,6 +3066,11 @@ shinyServer(function(input, output, session) {
 
     # ========================= UMAP CLUSTERING PLOT ===========================
     shinyjs::disable("addSpecUmap")
+    observe({
+        if (input$addSpecUmap) shinyjs::disable("addGeneUmap")
+        else shinyjs::enable("addGeneUmap")
+    })
+    
     u <- reactiveValues(doCusPlot = FALSE)
     observeEvent(input$plotUmap, {
         u$doUmapPlot <- input$plotUmap
@@ -3076,6 +3081,22 @@ shinyServer(function(input, output, session) {
         ) {
             u$doUmapPlot <- FALSE
             shinyBS::updateButton(session, "plotUmap", disabled = TRUE)
+        }
+    })
+    
+    # * toggle umapRank based on umapClusteringType genes or taax --------------
+    observe({
+        if (input$umapClusteringType == "genes") {
+            shinyjs::disable("umapRank")
+            updateRadioButtons(
+                session, "umapGroupLabelsBy", choices = c("taxa"), inline = TRUE
+            )
+        } else {
+            shinyjs::enable("umapRank")
+            updateRadioButtons(
+                session, "umapGroupLabelsBy", choices = c("taxa", "genes"),
+                inline = TRUE
+            )
         }
     })
 
@@ -3101,6 +3122,26 @@ shinyServer(function(input, output, session) {
             shinyjs::disable("umapDataType")
         }
     })
+    
+    # * read custom labels -----------------------------------------------------
+    output$umapCustomLabel.ui <- renderUI({
+        if (input$umapClusteringType == "taxa")
+            fileInput("umapCustomLabel", "Add customize labels")
+    })
+    
+    getCustomLabels <- reactive({
+        req(getMainInput())
+        filein <- input$umapCustomLabel
+        if (!is.null(filein)) {
+            customLabels <- read.table(
+                file = filein$datapath, header = FALSE, check.names = FALSE,
+                comment.char = "", fill = FALSE
+            )
+            colnames(customLabels) <- c("ncbiID", "Label")
+            mainInput <- getMainInput()
+            return(customLabels[customLabels$ncbiID %in% mainInput$ncbiID,])
+        } else return(data.frame(ncbiID = c(), label = c()))
+    })
 
     # * data for UMAP clustering -----------------------------------------------
     umapData <- reactive({
@@ -3110,10 +3151,18 @@ shinyServer(function(input, output, session) {
         withProgress(
             message = "Preparing data for clustering...", value = 0.5, {
                 umapData <- prepareUmapData(
-                    getMainInput(), input$umapRank, "taxa", getTaxDBpath(),
-                    input$umapFilterVar, input$umapCutoff, 
+                    getMainInput(), input$umapRank, input$umapClusteringType,
+                    getTaxDBpath(), input$umapFilterVar, input$umapCutoff,
                     input$umapGroupLabelsBy
                 )
+                if (input$umapClusteringType == "taxa") {
+                    customLabels <- getCustomLabels()
+                    if(nrow(customLabels) > 0) {
+                        umapData$Label[
+                            umapData$ncbiID %in% customLabels$ncbiID
+                        ] <- customLabels$Label
+                    }
+                }
                 return(umapData)
             }
         )
@@ -3125,7 +3174,7 @@ shinyServer(function(input, output, session) {
         withProgress(
             message = "Performing UMAP clustering...", value = 0.5, {
                 umapData.umap <- umapClustering(
-                    umapData(), "taxa", input$umapDataType
+                    umapData(), input$umapClusteringType, input$umapDataType
                 )
                 return(umapData.umap)
             }
@@ -3136,9 +3185,15 @@ shinyServer(function(input, output, session) {
     output$umapTaxa.ui <- renderUI({
         req(umapData())
         df <- groupLabelUmapData(umapData(), input$umapLabelNr)
-        selectInput(
-            "excludeUmapTaxa", "Choose taxa to hide", multiple = TRUE,
-            c(levels(as.factor(df$Label))), selected = NULL
+        list(
+            selectInput(
+                "excludeUmapTaxa", "Choose labels to hide", multiple = TRUE,
+                c(levels(as.factor(df$Label))), selected = NULL
+            ),
+            selectInput(
+                "highlightUmapTaxa", "Choose labels to highlight", multiple = TRUE,
+                c(levels(as.factor(df$Label))), selected = NULL
+            )
         )
     })
     
@@ -3177,7 +3232,8 @@ shinyServer(function(input, output, session) {
                 g <- plotUmap(
                     umapPlotData(), colorPalette = input$colorPalleteUmap,
                     transparent = input$umapAlpha,
-                    textSize = input$umapPlot.textsize
+                    textSize = input$umapPlot.textsize, font = input$font, 
+                    highlightTaxa = input$highlightUmapTaxa
                 )
                 g + coord_cartesian(
                     xlim = ranges$x, ylim = ranges$y, expand = TRUE
@@ -3229,13 +3285,14 @@ shinyServer(function(input, output, session) {
                 file,
                 plot = plotUmap(
                     umapPlotData(), colorPalette = input$colorPalleteUmap,
-                    transparent = input$umapAlpha,
-                    textSize = input$umapPlot.textsize
+                    transparent = input$umapAlpha, 
+                    textSize = input$umapPlot.textsize, font = input$font, 
+                    highlightTaxa = input$highlightUmapTaxa
                 ) + coord_cartesian(
                     xlim = ranges$x, ylim = ranges$y, expand = TRUE),
                 width = input$umapPlot.width * 0.056458333,
                 height = input$umapPlot.height * 0.056458333,
-                units = "cm", dpi = 300, device = "pdf", limitsize = FALSE
+                units = "cm", dpi = 300, device = "svg", limitsize = FALSE
             )
         }
     )
@@ -3270,14 +3327,22 @@ shinyServer(function(input, output, session) {
     })
 
     output$umapTable.ui <- renderUI({
-        list(
-            hr(),
-            h4("SELECTED TAXA"),
-            DT::dataTableOutput("umapSpec.table"),
-            hr(),
-            h4("SELECTED SEED GENES"),
-            DT::dataTableOutput("umapSeed.table")
-        )
+        if (input$umapClusteringType == "taxa") {
+            list(
+                hr(),
+                h4("SELECTED TAXA"),
+                DT::dataTableOutput("umapSpec.table"),
+                hr(),
+                h4("SELECTED SEED GENES"),
+                DT::dataTableOutput("umapSeed.table")
+            )
+        } else {
+            list(
+                hr(),
+                h4("SELECTED SEED GENES"),
+                DT::dataTableOutput("umapSeed.table")
+            )
+        }
     })
 
     umapSelectedTaxa <- reactive({
@@ -3296,18 +3361,23 @@ shinyServer(function(input, output, session) {
             } else shinyjs::disable("addSpecUmap")
         }
         df <- as.data.frame(brushedUmapData())
-        specDf <- df %>% select(ncbiID, Label, Freq, n)
-        specDf$id <- as.numeric(gsub("ncbi","",specDf$ncbiID))
-        taxonNameDf <- PhyloProfile::id2name(specDf$id, currentNCBIinfo)
-        specDf <- left_join(
-            specDf, taxonNameDf %>% select(ncbiID, fullName),
-            by = c("id" = "ncbiID")
-        )
-        specDf <- specDf %>% select(ncbiID, fullName, Label, Freq, n)
-        colnames(specDf) <- c(
-            "NCBI taxon ID", "Taxon name", "Label", "Number of genes", "Freq"
-        )
-        return(specDf)
+        if (nrow(df) > 0) {
+            specDf <- df %>% select(ncbiID, Label, Freq, n)
+            specDf$id <- as.numeric(gsub("ncbi","",specDf$ncbiID))
+            taxonNameDf <- PhyloProfile::id2name(specDf$id, currentNCBIinfo)
+            specDf <- left_join(
+                specDf, taxonNameDf %>% select(ncbiID, fullName),
+                by = c("id" = "ncbiID")
+            )
+            specDf <- specDf %>% select(ncbiID, fullName, Label, Freq, n)
+            colnames(specDf) <- c(
+                "NCBI taxon ID", "Taxon name", "Label", "Number of genes", "Freq"
+            )
+            return(specDf)
+        } else {
+            shinyjs::disable("addSpecUmap")
+            return()
+        }
     })
 
     output$umapSpec.table <- DT::renderDataTable(
@@ -3331,35 +3401,47 @@ shinyServer(function(input, output, session) {
             }
         }
         df <- as.data.frame(brushedUmapData())
-        specDf <- df %>% select(ncbiID, Label, Freq)
-        removeDf <- df %>% select(where(~ all(. == -1)))
-        meltedDf <- data.frame(melt(
-            as.data.table(
-                df %>% select(-c(colnames(removeDf), Label, Freq, X, Y, n))
-            ),
-            id.vars = "ncbiID", variable.name = "geneID"
-        ))
-        geneDf <- meltedDf %>% filter(value >= 0) %>%
-            select(geneID, ncbiID, value)
-        geneDf$value <- round(geneDf$value,2)
-        # rename "value" based on variable name(s)
-        longDf <- getMainInput()
-        if (ncol(longDf) >= 5) {
-            colnames(geneDf)[colnames(geneDf) == "value"] <- 
-                paste("Mean of", input$var1ID, "&", input$var2ID)
-        } else if (ncol(longDf) == 4) {
-            colnames(geneDf)[colnames(geneDf) == "value"] <- input$var1ID
-        } else if (ncol(longDf) == 3) {
-            geneDf <- geneDf %>% select(geneID, ncbiID)
-        }
-        # check gene IDs containing character "X" at the beginning
-        geneDf$geneID <- as.character(geneDf$geneID)
-        if (all(!(unique(geneDf$geneID) %in% longDf$geneID))) {
-            if (all(startsWith(unique(geneDf$geneID), "X"))){
-                geneDf$geneID <- sub("X","", geneDf$geneID, fixed = TRUE)
+        if (nrow(df) > 0) {
+            removeDf <- df %>% select(where(~ all(. == -1)))
+            if ("ncbiID" %in% colnames(df)) {
+                meltedDf <- data.frame(melt(
+                    as.data.table(
+                        df %>% select(-c(colnames(removeDf), Label, Freq, X, Y, n))
+                    ),
+                    id.vars = "ncbiID", variable.name = "geneID"
+                ))
+            } else 
+                meltedDf <- data.frame(melt(
+                    as.data.table(
+                        df %>% select(-c(colnames(removeDf), Label, Freq, X, Y, n))
+                    ),
+                    id.vars = "geneID", variable.name = "ncbiID"
+                ))
+            geneDf <- meltedDf %>% filter(value >= 0) %>%
+                select(geneID, ncbiID, value)
+            geneDf$value <- round(geneDf$value,2)
+            # rename "value" based on variable name(s)
+            longDf <- getMainInput()
+            if (ncol(longDf) >= 5) {
+                colnames(geneDf)[colnames(geneDf) == "value"] <- 
+                    paste("Mean of", input$var1ID, "&", input$var2ID)
+            } else if (ncol(longDf) == 4) {
+                colnames(geneDf)[colnames(geneDf) == "value"] <- input$var1ID
+            } else if (ncol(longDf) == 3) {
+                geneDf <- geneDf %>% select(geneID, ncbiID)
             }
+            # check gene IDs containing character "X" at the beginning
+            geneDf$geneID <- as.character(geneDf$geneID)
+            if (all(!(unique(geneDf$geneID) %in% longDf$geneID))) {
+                if (all(startsWith(unique(geneDf$geneID), "X"))){
+                    geneDf$geneID <- sub("X","", geneDf$geneID, fixed = TRUE)
+                }
+            }
+            return(geneDf)
+        } else {
+            shinyjs::disable("addGeneUmap")
+            return()
         }
-        return(geneDf)
     })
 
     output$umapSeed.table <- DT::renderDataTable(

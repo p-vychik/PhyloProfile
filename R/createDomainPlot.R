@@ -7,7 +7,7 @@
 #' @usage createArchiPlot(info, domainDf, labelArchiSize, titleArchiSize,
 #'     showScore, showWeight, namePosition, firstDist, nameType, nameSize,
 #'     segmentSize, nameColor, labelPos, colorType, ignoreInstanceNo,
-#'     currentNCBIinfo, featureClassSort, featureClassOrder, colorPallete,
+#'     currentNCBIinfo, featureClassSort, featureClassOrder, colorPalette,
 #'     resolveOverlap, font)
 #' @param info A list contains seed and ortholog's IDs
 #' @param domainDf Dataframe contains domain info for the seed and ortholog.
@@ -35,7 +35,7 @@
 #' data. Default = NULL (will be automatically retrieved from PhyloProfile app)
 #' @param featureClassSort Choose to sort features. Default = "Yes"
 #' @param featureClassOrder vector of ordered feature classes
-#' @param colorPallete Choose between "Paired", "Set1", "Set2", "Set3",
+#' @param colorPalette Choose between "Paired", "Set1", "Set2", "Set3",
 #' "Accent", "Dark2" for the color pallete
 #' @param resolveOverlap Choose to merge non-overlapped features of a feature
 #' type into one line. Default = "Yes"
@@ -70,7 +70,7 @@ createArchiPlot <- function(
         nameColor = "#000000", labelPos = "Above", colorType = "Unique",
         ignoreInstanceNo = FALSE, currentNCBIinfo = NULL,
         featureClassSort = "Yes", featureClassOrder = NULL,
-        colorPallete = "Paired", resolveOverlap = "Yes", font = "Arial"
+        colorPalette = "Paired", resolveOverlap = "Yes", font = "Arial"
 ){
     if (is.null(info) | is.null(domainDf)) return(ggplot() + theme_void())
     group <- as.character(info[1])
@@ -101,7 +101,7 @@ createArchiPlot <- function(
         # simplify seed/ortho seq IDs if they are in bionf format
         if (!is.null(currentNCBIinfo)) {
             if (
-                stringr::str_count(seed, ":") >= 2 & 
+                stringr::str_count(seed, ":") >= 2 &
                 stringr::str_count(seed, "@") >= 2
             ) {
                 seedTmp <- strsplit(as.character(seed),':', fixed = TRUE)[[1]]
@@ -126,7 +126,7 @@ createArchiPlot <- function(
 
         # add feature colors
         featureColorDf <- addFeatureColors(
-            seedDf, orthoDf, colorType, colorPallete, ignoreInstanceNo
+            seedDf, orthoDf, colorType, colorPalette, ignoreInstanceNo
         )
         seedDf <- featureColorDf[[1]]
         orthoDf <- featureColorDf[[2]]
@@ -166,7 +166,7 @@ createArchiPlot <- function(
                 seed, ortho, orderedSeedDf, orderedOrthoDf, minStart, maxEnd,
                 labelArchiSize, titleArchiSize, showScore, showWeight,
                 namePosition, firstDist, nameType, nameSize, segmentSize,
-                nameColor, labelPos, colorPallete, font)
+                nameColor, labelPos, colorPalette, font)
         } else {
             orderedSeedDf <- sortDomainsByList(seedDf, featureClassOrder)
             # plotting
@@ -174,7 +174,7 @@ createArchiPlot <- function(
                 seed, seed, orderedSeedDf, orderedSeedDf, minStart, maxEnd,
                 labelArchiSize, titleArchiSize, showScore, showWeight,
                 namePosition, firstDist, nameType, nameSize, segmentSize,
-                nameColor, labelPos, colorPallete, font)
+                nameColor, labelPos, colorPalette, font)
         }
         return(g)
     }
@@ -183,7 +183,7 @@ createArchiPlot <- function(
 
 #' Create architecure plot for a single protein
 #' @usage singleDomainPlotting(df, geneID, sep, labelSize, titleSize, minStart,
-#'     maxEnd, colorPallete, showScore, showWeight, namePosition, firstDist,
+#'     maxEnd, colorPalette, showScore, showWeight, namePosition, firstDist,
 #'     nameType, nameSize, segmentSize, nameColor, labelPos, font)
 #' @param df Domain dataframe for ploting containing the seed ID, ortholog ID,
 #' ortholog sequence length, feature names, start and end positions,
@@ -196,7 +196,7 @@ createArchiPlot <- function(
 #' @param titleSize Title size. Default = 12
 #' @param minStart The smallest start position of all domains
 #' @param maxEnd The highest stop position of all domains
-#' @param colorPallete Color pallete. Default = Paired"
+#' @param colorPalette Color pallete. Default = Paired"
 #' @param showScore Show/hide E-values and Bit-scores. Default = NULL (hide)
 #' @param showWeight Show/hide feature weights. Default = NULL (hide)
 #' @param namePosition List of positions for domain names, choose from "plot",
@@ -247,7 +247,7 @@ createArchiPlot <- function(
 
 singleDomainPlotting <- function(
         df = NULL, geneID = "GeneID", sep = "|", labelSize = 12, titleSize = 12,
-        minStart = NULL, maxEnd = NULL, colorPallete = "Set2",
+        minStart = NULL, maxEnd = NULL, colorPalette = "Set2",
         showScore = NULL, showWeight = NULL, namePosition = "plot",
         firstDist = 0.5, nameType = "Labels", nameSize = 3, segmentSize = 5,
         nameColor = "#000000", labelPos = "Above", font = "Arial"
@@ -268,7 +268,7 @@ singleDomainPlotting <- function(
             head(
                 suppressWarnings(
                     RColorBrewer::brewer.pal(
-                        nlevels(as.factor(df$feature)), colorPallete
+                        nlevels(as.factor(df$feature)), colorPalette
                     )
                 ),
                 levels(as.factor(df$feature))
@@ -422,7 +422,7 @@ singleDomainPlotting <- function(
 #' Create architecure plot for a pair of seed and ortholog protein
 #' @usage pairDomainPlotting(seed, ortho, seedDf, orthoDf, minStart, maxEnd,
 #'     labelSize, titleSize, showScore, showWeight, namePosition, firstDist,
-#'     nameType, nameSize, segmentSize, nameColor, labelPos, colorPallete, font)
+#'     nameType, nameSize, segmentSize, nameColor, labelPos, colorPalette, font)
 #' @param seed Seed ID
 #' @param ortho Ortho ID
 #' @param seedDf domain dataframe for seed domains containing the seed ID,
@@ -446,7 +446,7 @@ singleDomainPlotting <- function(
 #' @param nameColor color of domain names (for Texts only). Default = "black"
 #' @param labelPos position of domain names (for Labels only). Choose from
 #' "Above" (default), "Below" or "Inside" the domain bar
-#' @param colorPallete color pallete. Default = Paired"
+#' @param colorPalette color pallete. Default = Paired"
 #' @param font font of text. Default = Arial"
 #' @return Domain plot of a pair proteins as a arrangeGrob object.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
@@ -488,7 +488,7 @@ pairDomainPlotting <- function(
         minStart = 0, maxEnd = 999, labelSize = 12, titleSize = 12,
         showScore = NULL, showWeight = NULL, namePosition = "plot",
         firstDist = 0.5, nameType = "Labels", nameSize = 3, segmentSize = 5,
-        nameColor = "#000000",  labelPos = "Above", colorPallete = "Paired",
+        nameColor = "#000000",  labelPos = "Above", colorPalette = "Paired",
         font = "Arial"
 ) {
     if(is.null(seed) | is.null(ortho) | is.null(seedDf) | is.null(orthoDf))
@@ -496,7 +496,7 @@ pairDomainPlotting <- function(
 
     sep <- "|"
     plotSeed <- singleDomainPlotting(
-        seedDf, seed, sep, labelSize, titleSize, minStart, maxEnd, colorPallete,
+        seedDf, seed, sep, labelSize, titleSize, minStart, maxEnd, colorPalette,
         showScore, showWeight, namePosition, firstDist, nameType, nameSize,
         segmentSize, nameColor, labelPos, font
     )
@@ -505,7 +505,7 @@ pairDomainPlotting <- function(
     } else {
         plotOrtho <- singleDomainPlotting(
             orthoDf, ortho, sep, labelSize, titleSize, minStart, maxEnd,
-            colorPallete, showScore, showWeight, namePosition, firstDist,
+            colorPalette, showScore, showWeight, namePosition, firstDist,
             nameType, nameSize, segmentSize, nameColor, labelPos, font
         )
         if ("legend" %in% namePosition) {
@@ -868,9 +868,9 @@ linearizeArchitecture <- function(
     } else if (value == "bitscore") {
         domainDf <- domainDf %>% dplyr::arrange(start, bitscore)
     } else stop("Incorrect value specified! Either 'evalue' or 'bitscore'")
-    
+
     # Get lines that need to be excluded
-    pfamRows <- rownames(domainDf[domainDf$orthoID == orthoID & 
+    pfamRows <- rownames(domainDf[domainDf$orthoID == orthoID &
                     domainDf$feature_type %in% c("pfam","smart"),])
     exclude_lines <- vapply(
         seq_len(length(pfamRows)-1),
@@ -879,7 +879,7 @@ linearizeArchitecture <- function(
                 # Exclude the row with the higher evalue / lower bitscore
                 if (value == "evalue") {
                     if (
-                        domainDf[pfamRows[i],]$evalue > 
+                        domainDf[pfamRows[i],]$evalue >
                         domainDf[pfamRows[i+1],]$evalue
                     ) {
                         return((pfamRows[i]))
@@ -888,7 +888,7 @@ linearizeArchitecture <- function(
                     }
                 } else {
                     if (
-                        domainDf[pfamRows[i],]$bitscore < 
+                        domainDf[pfamRows[i],]$bitscore <
                         domainDf[pfamRows[i+1],]$bitscore
                     ) {
                         return((pfamRows[i]))
@@ -896,7 +896,7 @@ linearizeArchitecture <- function(
                         return((pfamRows[i+1]))
                     }
                 }
-                
+
             } else {
                 return("0")
             }
@@ -917,12 +917,12 @@ linearizeArchitecture <- function(
 #' @param orthoDf Domain dataframe of orthologs protein (protein 2)
 #' @param colorType Choose to color "all", "shared", "unique" features or color
 #' by "Feature type". Default: "all"
-#' @param colorPallete Choose between "Paired", "Set1", "Set2", "Set3",
+#' @param colorPalette Choose between "Paired", "Set1", "Set2", "Set3",
 #' "Accent", "Dark2" for the color pallete
 #' @param ignoreInstanceNo Ignore number of feature instances while identifying
 #' shared or unique features. Default: FALSE
 #' @return 2 dataframes (seedDf and orthoDf) with an additional column for the
-#' assigned colors to each feature instance
+#' assigned color to each feature instance
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @importFrom RColorBrewer brewer.pal
 #' @importFrom utils head
@@ -946,7 +946,7 @@ linearizeArchitecture <- function(
 
 addFeatureColors <- function(
         seedDf = NULL, orthoDf = NULL, colorType = "all",
-        colorPallete = "Paired", ignoreInstanceNo = FALSE
+        colorPalette = "Paired", ignoreInstanceNo = FALSE
 ) {
     if (is.null(seedDf) | is.null(orthoDf)) stop("Domain Df cannot be null!")
     feature <- NULL
@@ -974,11 +974,11 @@ addFeatureColors <- function(
     if (colorType == "Unique") {
         sharedFeaturesColors <- rep("#C9C9C9", length(sharedFeatures))
         uniqueFeaturesColors <- getQualColForVector(uniqueFeatures)
-        if (checkColorPallete(uniqueFeatures, colorPallete) == TRUE) {
+        if (checkColorPalette(uniqueFeatures, colorPalette) == TRUE) {
             uniqueFeaturesColors <-
                 suppressWarnings(head(
                     RColorBrewer::brewer.pal(
-                        length(uniqueFeatures), colorPallete),
+                        length(uniqueFeatures), colorPalette),
                     length(uniqueFeatures)
                 ))
         }
@@ -987,11 +987,11 @@ addFeatureColors <- function(
     } else if (colorType == "Shared") {
         sharedFeaturesColors <- getQualColForVector(sharedFeatures)
         uniqueFeaturesColors <- rep("#C9C9C9", length(uniqueFeatures))
-        if (checkColorPallete(sharedFeatures, colorPallete) == TRUE) {
+        if (checkColorPalette(sharedFeatures, colorPalette) == TRUE) {
             sharedFeaturesColors <-
                 suppressWarnings(head(
                     RColorBrewer::brewer.pal(
-                        length(sharedFeatures), colorPallete),
+                        length(sharedFeatures), colorPalette),
                     length(sharedFeatures)
                 ))
         }
@@ -999,10 +999,10 @@ addFeatureColors <- function(
         colorScheme <- data.frame(color = allColors, feature = allFeatures)
     } else if (colorType == "All") {
         allColors <- getQualColForVector(allFeatures)
-        if (checkColorPallete(allFeatures, colorPallete) == TRUE) {
+        if (checkColorPalette(allFeatures, colorPalette) == TRUE) {
             allColors <-
                 suppressWarnings(head(
-                    RColorBrewer::brewer.pal(length(allFeatures), colorPallete),
+                    RColorBrewer::brewer.pal(length(allFeatures), colorPalette),
                     length(allFeatures)
                 ))
         }
@@ -1015,7 +1015,7 @@ addFeatureColors <- function(
         typeColorDf <- data.frame(
             colors = head(
                 suppressWarnings(RColorBrewer::brewer.pal(
-                    nlevels(as.factor(tmpDf$X1)), colorPallete)),
+                    nlevels(as.factor(tmpDf$X1)), colorPalette)),
                 nlevels(as.factor(tmpDf$X1))
             ),
             X1 = levels(as.factor(tmpDf$X1))

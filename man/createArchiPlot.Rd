@@ -7,7 +7,7 @@
 createArchiPlot(info, domainDf, labelArchiSize, titleArchiSize,
     showScore, showWeight, namePosition, firstDist, nameType, nameSize,
     segmentSize, nameColor, labelPos, colorType, ignoreInstanceNo,
-    currentNCBIinfo, featureClassSort, featureClassOrder, colorPallete,
+    currentNCBIinfo, featureClassSort, featureClassOrder, colorPalette,
     resolveOverlap, font)
 }
 \arguments{
@@ -55,7 +55,7 @@ data. Default = NULL (will be automatically retrieved from PhyloProfile app)}
 
 \item{featureClassOrder}{vector of ordered feature classes}
 
-\item{colorPallete}{Choose between "Paired", "Set1", "Set2", "Set3",
+\item{colorPalette}{Choose between "Paired", "Set1", "Set2", "Set3",
 "Accent", "Dark2" for the color pallete}
 
 \item{resolveOverlap}{Choose to merge non-overlapped features of a feature
