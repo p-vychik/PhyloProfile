@@ -123,6 +123,7 @@ getTaxonomyInfo <- function(inputTaxa = NULL, currentNCBIinfo = NULL) {
         refEntry <- currentNCBIinfo[currentNCBIinfo$ncbiID == refID, ]
         lastID <- refEntry$parentID
         inputTaxaInfo <- refEntry
+        if(length(lastID) == 0) stop(paste("ERROR with", refID))
         while (lastID != 1) {
             if (lastID %in% names(tmp)) {
                 inputTaxaInfo <- rbindlist(

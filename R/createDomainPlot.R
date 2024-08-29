@@ -709,7 +709,6 @@ joinPlotMergeLegends <- function(
             length(levels(as.factor(df2$feature)))
         )
     )
-
     # create a temp plot that contains all features
     mergedDf <- rbind(df1, df2)
     colorScheme <- structure(

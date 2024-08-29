@@ -182,9 +182,10 @@ umapClustering <- function(
 
 #' Reduce the number of labels for UMAP plot based on the gene/taxon frequency
 #' @export
-#' @usage groupLabelUmapData(data4umap = NULL, freqCutoff = 0)
+#' @usage groupLabelUmapData(data4umap = NULL, freqCutoff = c(0,200))
 #' @param data4umap data for UMAP clustering (output from prepareUmapData)
-#' @param freqCutoff gene/taxon frequency cutoff
+#' @param freqCutoff gene/taxon frequency cutoff range. Any labels that are 
+#' outside of this range will be assigned as [Other]
 #' @return A dataframe similar to input data4umap, but with modified Label 
 #' column, where less frequent labels are grouped together as "Other"
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
@@ -195,26 +196,26 @@ umapClustering <- function(
 #' )
 #' longDf <- createLongMatrix(rawInput)
 #' data4umap <- prepareUmapData(longDf, "phylum")
-#' groupLabelUmapData(data4umap, freqCutoff = 3)
+#' groupLabelUmapData(data4umap, freqCutoff = c(3,5))
 
-groupLabelUmapData <- function(data4umap = NULL, freqCutoff = 0) {
+groupLabelUmapData <- function(data4umap = NULL, freqCutoff = c(0,200)) {
     if (is.null(data4umap)) stop("Input data cannot be NULL!")
     if (length(data4umap) == 0) stop("Input data cannot be EMPTY!")
     
-    # minFreq <- tail(sort(unique(data4umap$n)), labelNr)[1]
-    # keepLabel <- unique(data4umap$Label[data4umap$n >= minFreq])
-    # data4umap$Label[!(data4umap$Label %in% keepLabel)] <- "[Other]"
-    data4umap$Label[data4umap$n < freqCutoff] <- "[Other]"
+    data4umap$Label[
+        data4umap$n < freqCutoff[1] | data4umap$n > freqCutoff[2]
+    ] <- "[Other]"
     return(data4umap)
 }
 
 #' Create UMAP cluster plot
 #' @export
-#' @usage createUmapPlotData(umapData = NULL, data4umap = NULL, freqCutoff = 0, 
-#'     excludeTaxa = "None")
+#' @usage createUmapPlotData(umapData = NULL, data4umap = NULL, 
+#'     freqCutoff = c(0,200), excludeTaxa = "None")
 #' @param umapData data contains UMAP cluster (output from umapClustering())
 #' @param data4umap data for UMAP clustering (output from prepareUmapData())
-#' @param freqCutoff gene/taxon frequency cutoff
+#' @param freqCutoff gene/taxon frequency cutoff range. Any labels that are 
+#' outside of this range will be assigned as [Other]
 #' @param excludeTaxa hide taxa from plot. Default: "None"
 #' @importFrom utils tail
 #' @return A plot as ggplot object
@@ -230,7 +231,8 @@ groupLabelUmapData <- function(data4umap = NULL, freqCutoff = 0) {
 #' createUmapPlotData(umapData, data4umap)
 
 createUmapPlotData <- function(
-    umapData = NULL, data4umap = NULL, freqCutoff = 0, excludeTaxa = "None"
+    umapData = NULL, data4umap = NULL, freqCutoff = c(0, 200), 
+    excludeTaxa = "None"
 ) {
     if (is.null(umapData) | is.null(data4umap)) 
         stop("Input data cannot be NULL!")
@@ -241,8 +243,7 @@ createUmapPlotData <- function(
     data4umap$X <- umapData$layout[,1]
     data4umap$Y <- umapData$layout[,2]
     # join less freq items into "other"
-    # data4umap <- groupLabelUmapData(data4umap, freqCutoff)
-    data4umap$Label[data4umap$n < freqCutoff] <- "[Other]"
+    data4umap <- groupLabelUmapData(data4umap, freqCutoff)
     # exclude taxa
     if (length(excludeTaxa) > 0) {
         data4umap$X[data4umap$Label %in% excludeTaxa] <- NA
@@ -254,7 +255,7 @@ createUmapPlotData <- function(
 
 #' Create UMAP cluster plot
 #' @export
-#' @usage plotUmap(plotDf = NULL, legendPos = "right", colorPalette = "Set2", 
+#' @usage plotUmap(plotDf = NULL, legendPos = "bottom", colorPalette = "Set2", 
 #'     transparent = 0, textSize = 12, font = "Arial", highlightTaxa = NULL)
 #' @param plotDf data for UMAP plot 
 #' @param legendPos position of legend. Default: "right"
@@ -278,7 +279,7 @@ createUmapPlotData <- function(
 #' plotUmap(plotDf, font = "sans")
 
 plotUmap <- function(
-    plotDf = NULL, legendPos = "right", colorPalette = "Set2", 
+    plotDf = NULL, legendPos = "bottom", colorPalette = "Set2", 
     transparent = 0, textSize = 12, font = "Arial", highlightTaxa = NULL
 ) {
     if (is.null(plotDf)) stop("Input data cannot be NULL!")
@@ -300,6 +301,8 @@ plotUmap <- function(
             ), .Names = levels(as.factor(plotDf$Label))
         )
     }
+    # adapt plot height based on number of labels
+    
     # generate plot
     plot <- ggplot(plotDf, aes(x = X, y = Y, color = Label)) +
         geom_point(aes(size = Freq), alpha = 1 - transparent) +
@@ -309,13 +312,13 @@ plotUmap <- function(
     # change legend title
     if ("ncbiID" %in% colnames(plotDf)) {
         plot <- plot + guides(
-            color = guide_legend(override.aes = list(alpha = 1)),
-            size = guide_legend(title = "Number of genes")
+            color = guide_legend(override.aes = list(alpha = 1), ncols = 5),
+            size = guide_legend(title = "Number of genes", ncols = 2)
         )
-    } else 
+    } else
         plot <- plot + guides(
-            color = guide_legend(override.aes = list(alpha = 1)),
-            size = guide_legend(title = "Number of taxa")
+            color = guide_legend(override.aes = list(alpha = 1), ncols = 5),
+            size = guide_legend(title = "Number of taxa", ncols = 1)
         )
     plot <- plot + theme(
             legend.position = legendPos,

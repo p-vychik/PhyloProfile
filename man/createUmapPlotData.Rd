@@ -4,15 +4,16 @@
 \alias{createUmapPlotData}
 \title{Create UMAP cluster plot}
 \usage{
-createUmapPlotData(umapData = NULL, data4umap = NULL, freqCutoff = 0, 
-    excludeTaxa = "None")
+createUmapPlotData(umapData = NULL, data4umap = NULL, 
+    freqCutoff = c(0,200), excludeTaxa = "None")
 }
 \arguments{
 \item{umapData}{data contains UMAP cluster (output from umapClustering())}
 
 \item{data4umap}{data for UMAP clustering (output from prepareUmapData())}
 
-\item{freqCutoff}{gene/taxon frequency cutoff}
+\item{freqCutoff}{gene/taxon frequency cutoff range. Any labels that are 
+outside of this range will be assigned as [Other]}
 
 \item{excludeTaxa}{hide taxa from plot. Default: "None"}
 }

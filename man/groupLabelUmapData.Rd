@@ -4,12 +4,13 @@
 \alias{groupLabelUmapData}
 \title{Reduce the number of labels for UMAP plot based on the gene/taxon frequency}
 \usage{
-groupLabelUmapData(data4umap = NULL, freqCutoff = 0)
+groupLabelUmapData(data4umap = NULL, freqCutoff = c(0,200))
 }
 \arguments{
 \item{data4umap}{data for UMAP clustering (output from prepareUmapData)}
 
-\item{freqCutoff}{gene/taxon frequency cutoff}
+\item{freqCutoff}{gene/taxon frequency cutoff range. Any labels that are 
+outside of this range will be assigned as [Other]}
 }
 \value{
 A dataframe similar to input data4umap, but with modified Label 
@@ -24,7 +25,7 @@ rawInput <- system.file(
 )
 longDf <- createLongMatrix(rawInput)
 data4umap <- prepareUmapData(longDf, "phylum")
-groupLabelUmapData(data4umap, freqCutoff = 3)
+groupLabelUmapData(data4umap, freqCutoff = c(3,5))
 }
 \seealso{
 \code{\link{prepareUmapData}}

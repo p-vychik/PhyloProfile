@@ -3122,26 +3122,6 @@ shinyServer(function(input, output, session) {
             shinyjs::disable("umapDataType")
         }
     })
-    
-    # * read custom labels -----------------------------------------------------
-    output$umapCustomLabel.ui <- renderUI({
-        if (input$umapClusteringType == "taxa")
-            fileInput("umapCustomLabel", "Add customize labels")
-    })
-    
-    getCustomLabels <- reactive({
-        req(getMainInput())
-        filein <- input$umapCustomLabel
-        if (!is.null(filein)) {
-            customLabels <- read.table(
-                file = filein$datapath, header = FALSE, check.names = FALSE,
-                comment.char = "", fill = FALSE
-            )
-            colnames(customLabels) <- c("ncbiID", "Label")
-            mainInput <- getMainInput()
-            return(customLabels[customLabels$ncbiID %in% mainInput$ncbiID,])
-        } else return(data.frame(ncbiID = c(), label = c()))
-    })
 
     # * data for UMAP clustering -----------------------------------------------
     umapData <- reactive({
@@ -3155,26 +3135,119 @@ shinyServer(function(input, output, session) {
                     getTaxDBpath(), input$umapFilterVar, input$umapCutoff,
                     input$umapGroupLabelsBy
                 )
-                if (input$umapClusteringType == "taxa") {
-                    customLabels <- getCustomLabels()
-                    if(nrow(customLabels) > 0) {
-                        umapData$Label[
-                            umapData$ncbiID %in% customLabels$ncbiID
-                        ] <- customLabels$Label
-                    }
-                }
                 return(umapData)
             }
         )
     })
+    
+    # * read custom labels -----------------------------------------------------
+    values <- reactiveValues(
+        uploadLabelState = NULL
+    )
+    
+    output$umapCustomLabel.ui <- renderUI({
+        if (input$umapClusteringType == "taxa")
+            fileInput("umapCustomLabel", "Add customized labels")
+    })
+    
+    observeEvent(input$input$umapCustomLabel, {
+        values$uploadLabelState <- 'uploaded'
+    })
+    
+    observeEvent(input$umapResetLables, {
+        values$uploadLabelState <- NULL
+        updateTextInput(session, "umapGroupHigherRank", value = "")
+    })
+    
+    getCustomLabels <- reactive({
+        req(getMainInput())
+        if (is.null(values$uploadLabelState)) 
+            return(data.frame(ncbiID = c(), label = c()))
+        filein <- input$umapCustomLabel
+        if (!is.null(filein)) {
+            customLabels <- read.table(
+                file = filein$datapath, header = FALSE, check.names = FALSE,
+                comment.char = "", fill = FALSE
+            )
+            colnames(customLabels) <- c("ncbiID", "Label")
+            mainInput <- getMainInput()
+            return(customLabels[customLabels$ncbiID %in% mainInput$ncbiID,])
+        } else return(data.frame(ncbiID = c(), label = c()))
+    })
+    
+    # * apply user-defined labels ----------------------------------------------
+    renameLabelsUmap <- reactive({
+        req(umapData())
+        input$umapApplyChangeLables
+        umapData <- umapData()
+        isolate({
+            if (input$umapClusteringType == "taxa") {
+                # group labels into higher rank
+                higherRankTaxa <- unlist(strsplit(input$umapGroupHigherRank, ";"))
+                higherRankTaxa <- trimws(higherRankTaxa)
+                if (length(higherRankTaxa) > 0) {
+                    taxMatrix <- getTaxonomyMatrix(getTaxDBpath())
+                    nameList <- getNameList(getTaxDBpath())
+                    selDf <- data.frame(
+                        selRank = nameList$rank[nameList$fullName %in% higherRankTaxa],
+                        selID = nameList$ncbiID[nameList$fullName %in% higherRankTaxa],
+                        Label = nameList$fullName[nameList$fullName %in% higherRankTaxa]
+                    )
+                    selDf <- selDf[complete.cases(selDf),]
+                    if (nrow(selDf) > 0) {
+                        selTaxList <- lapply(
+                            seq(nrow(selDf)), function (x) {
+                                selRank <- selDf$selRank[x]
+                                selID <- selDf$selID[x]
+                                if (!(selRank %in% mainTaxonomyRank()))
+                                    selRank <- paste0("norank_", selID)
+                                selRank <- quo(!! sym(selRank))
+                                selTaxDf <- taxMatrix %>% 
+                                    filter((!!selRank) %in% selID) %>%
+                                    select(abbrName, !!selRank)
+                                colnames(selTaxDf) <- c("ncbiID", "supertaxonID")
+                                selTaxDf$sel_label <- selDf$Label[selDf$selID == selID]
+                                return(selTaxDf)
+                            }
+                        )
+                        joinedSelTaxDf <- do.call(rbind, selTaxList) 
+                        joinedSelTaxDf <- joinedSelTaxDf %>% group_by(ncbiID) %>% 
+                            filter(supertaxonID == min(supertaxonID))
+                        umapData <- left_join(umapData, joinedSelTaxDf, by = "ncbiID") %>% 
+                            mutate(Label = ifelse(!is.na(sel_label), sel_label, Label)) %>%
+                            select(-c(supertaxonID, sel_label))
+                    }
+                }
+                # apply custom labels (if provided)
+                customLabels <- getCustomLabels()
+                if(nrow(customLabels) > 0) {
+                    umapData$Label[
+                        umapData$ncbiID %in% customLabels$ncbiID
+                    ] <- customLabels$Label
+                }
+            }
+        })
+        return(umapData)
+    })
+    
+    output$umapGroupHigherRank.warning <- renderUI({
+        req(input$umapGroupHigherRank)
+        if (length(input$umapGroupHigherRank) > 0) {
+            list(
+                em(paste("Click `Change labels` to apply. If you don't see your",
+                         "specified labels, please check for typos!")),
+                br(),br()
+            )
+        }
+    })
 
     # * UMAP clustered data ----------------------------------------------------
     umapCluster <- reactive({
-        req(umapData())
+        req(renameLabelsUmap())
         withProgress(
             message = "Performing UMAP clustering...", value = 0.5, {
                 umapData.umap <- umapClustering(
-                    umapData(), input$umapClusteringType, input$umapDataType
+                    renameLabelsUmap(), input$umapClusteringType, input$umapDataType
                 )
                 return(umapData.umap)
             }
@@ -3183,8 +3256,8 @@ shinyServer(function(input, output, session) {
 
     # * generate list of UMAP labels -------------------------------------------
     output$umapTaxa.ui <- renderUI({
-        req(umapData())
-        df <- groupLabelUmapData(umapData(), input$umapLabelNr)
+        req(renameLabelsUmap())
+        df <- groupLabelUmapData(renameLabelsUmap(), input$umapLabelNr)
         list(
             selectInput(
                 "excludeUmapTaxa", "Choose labels to hide", multiple = TRUE,
@@ -3205,7 +3278,8 @@ shinyServer(function(input, output, session) {
         selectFreq <- tail(freqList, 5)[1]
         updateSliderInput(
             session, "umapLabelNr", "Freq cutoff", min = freqList[1],
-            max = tail(freqList, 1), step = 1, value = selectFreq
+            max = tail(freqList, 1), step = 1, 
+            value = c(selectFreq, tail(freqList, 1))
         )
     })
 
@@ -3216,9 +3290,9 @@ shinyServer(function(input, output, session) {
         req(getMainInput())
         if(is.null(getMainInput())) stop("Input data is NULL!")
         req(umapCluster())
-        req(umapData())
+        req(renameLabelsUmap())
         plotDf <- createUmapPlotData(
-            umapCluster(), umapData(), freqCutoff = input$umapLabelNr, 
+            umapCluster(), renameLabelsUmap(), freqCutoff = input$umapLabelNr, 
             excludeTaxa = input$excludeUmapTaxa
         )
         return(plotDf)
@@ -3260,7 +3334,7 @@ shinyServer(function(input, output, session) {
             )
         )
     })
-
+    
     # When a double-click happens, check if there's a brush on the plot
     # If so, zoom to the brush bounds; if not, reset the zoom.
     observeEvent(input$umapdblClick, {
@@ -3302,7 +3376,7 @@ shinyServer(function(input, output, session) {
             c("umapData.RData")
         },
         content = function(fileName) {
-            data4umap <- umapData()
+            data4umap <- renameLabelsUmap()
             umapClusteredData <- umapCluster()
             umapPlotData <- umapPlotData()
             save(data4umap, umapClusteredData, umapPlotData, file = fileName)

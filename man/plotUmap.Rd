@@ -4,7 +4,7 @@
 \alias{plotUmap}
 \title{Create UMAP cluster plot}
 \usage{
-plotUmap(plotDf = NULL, legendPos = "right", colorPalette = "Set2", 
+plotUmap(plotDf = NULL, legendPos = "bottom", colorPalette = "Set2", 
     transparent = 0, textSize = 12, font = "Arial", highlightTaxa = NULL)
 }
 \arguments{

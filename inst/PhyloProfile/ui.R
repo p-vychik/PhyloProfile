@@ -862,20 +862,23 @@ shinyUI(
 
             # UMAP CLUSTERING TAB ==============================================
             tabPanel(
-                "UMAP clustering",
+                "UMAP",
                 # * Top panel for plot configuration ---------------------------
                 wellPanel(
                     fluidRow(
                         column(
                             2,
                             radioButtons(
-                                "umapClusteringType", "Cluster:",
+                                "umapClusteringType", "UMAP",
                                 c("Taxa" = "taxa", "Genes" = "genes"),
                                 inline = TRUE
                             ),
                             radioButtons(
-                                "umapDataType", "Data type:",
-                                c("Binary" = "binary", "Non-binary" = "nonbinary"),
+                                "umapDataType", "using",
+                                c(
+                                    "Presence/Absence" = "binary", 
+                                    "Numeric score" = "nonbinary"
+                                ),
                                 inline = TRUE
                             )
                         ),
@@ -884,7 +887,7 @@ shinyUI(
                             column(
                                 4,
                                 createPlotSize(
-                                    "umapPlot.width", "Plot width", 700
+                                    "umapPlot.width", "Plot width", 900
                                 )
                             ),
                             column(
@@ -906,22 +909,20 @@ shinyUI(
                                 6,
                                 radioButtons(
                                     "umapGroupLabelsBy",
-                                    "Group labels by the freq of",
+                                    "Summarize as [Other] by",
                                     choices = c("taxa", "genes"),
                                     inline = TRUE
-                                )
+                                ),
+                                em(paste("If frequency smaller or higher than",
+                                         "Freq cutoff, labels will be grouped",
+                                         "as [Other]"))
                             ),
                             column(
                                 6,
                                 sliderInput(
-                                    "umapLabelNr", "Freq cutoff", min = 3,
-                                    max = 99, step = 1, value = 5, width = 200
-                                ),
-                                shinyBS::bsPopover(
-                                    "umapLabelNr", "",
-                                    paste("Only the most frequent labels",
-                                          "will be shown"),
-                                    "bottom"
+                                    "umapLabelNr", "Freq cutoff", min = 0,
+                                    max = 99, step = 1, value = c(5,99), 
+                                    width = 200
                                 )
                             )
                         ),
@@ -942,7 +943,31 @@ shinyUI(
                             choices = getTaxonomyRanks(),
                             selected = "phylum"
                         ),
+                        hr(),
+                        textInput(
+                            "umapGroupHigherRank", 
+                            "Group labels into higher rank",
+                            value = "", 
+                            placeholder = paste(
+                                "Type taxon names in higher rank, separated by",
+                                "semicolon (e.g.: Fungi;Metazoa)"
+                            )
+                        ),
+                        uiOutput("umapGroupHigherRank.warning"),
                         uiOutput("umapCustomLabel.ui"),
+                        shinyBS::bsButton(
+                            "umapApplyChangeLables", "Change labels", 
+                            style = "success", icon = icon("play")
+                        ),
+                        shinyBS::bsButton(
+                            "umapResetLables", "Reset labels", 
+                            style = "default", icon = icon("rotate-left")
+                        ),
+                        shinyBS::bsPopover(
+                            "umapResetLables", "",
+                            paste("Click `Change labels` after reset!"),
+                            "bottom"
+                        ),
                         hr(),
                         uiOutput("umapTaxa.ui"),
                         selectInput(
@@ -976,35 +1001,37 @@ shinyUI(
                             "bottom"
                         ),
                         checkboxInput("addGeneUmap", em("Selected genes")),
-                        uiOutput("addUmapCustomProfileCheck.ui"),
-                        hr(),
-                        shinyBS::bsButton(
-                            "plotUmap", "PLOT", type = "action", 
-                            style = "danger", size = "large", disabled = FALSE
-                        )
+                        uiOutput("addUmapCustomProfileCheck.ui")
                     ),
                     # * Main panel for plot and tables -------------------------
                     mainPanel(
                         column(
                             6,
                             em(
-                                "Brush and double-click to zoom in/out",
+                                "Brush to select and double-click to zoom in/out",
                                 style = "color:darkblue"
                             )
                         ),
                         uiOutput("umapPlot.ui"),
                         br(),
                         column(
-                            5,
+                            7,
                             column(
-                                6,
+                                4,
+                                shinyBS::bsButton(
+                                    "plotUmap", "PLOT UMAP", type = "action", 
+                                    style = "danger", disabled = FALSE
+                                )
+                            ),
+                            column(
+                                4,
                                 downloadButton(
                                     "umapDownloadPlot", "Download plot",
                                     class = "butDL"
                                 )
                             ),
                             column(
-                                6,
+                                4,
                                 downloadButton(
                                     "umapDownloadData", "Download UMAP data",
                                     class = "butDL"
