@@ -159,7 +159,7 @@ shinyServer(function(input, output, session) {
     i_cluster <- FALSE
     i_profileType <- i_distMethod <- i_clusterMethod <- NULL
     i_xAxis <- NULL
-    i_colorByGroup <- i_orderGenes <- i_geneCategory <- NULL
+    i_colorByGroup <- i_orderGenes <- i_geneCategory <- i_geneName <- NULL
     if (!is.null(configFile)) {
         if (file.exists(configFile)) {
             configs <- yaml::read_yaml(configFile)
@@ -178,6 +178,7 @@ shinyServer(function(input, output, session) {
             i_colorByGroup <- configs$colorByGroup
             i_orderGenes <- configs$orderGenes
             i_geneCategory <- configs$geneCategory
+            i_geneName <- configs$geneName
         } else configFile <- NULL
 
         if (!file.exists(i_mainInput))
@@ -256,9 +257,13 @@ shinyServer(function(input, output, session) {
             )
         }
     })
-    # * prepare gene categories-------------------------------------------------
+    # * prepare gene categories ------------------------------------------------
     if (!is.null(i_geneCategory) && !file.exists(i_geneCategory)){
         stop(paste("Gene categories file ", i_geneCategory ,"not found!"))
+    }
+    # * prepare gene names -----------------------------------------------------
+    if (!is.null(i_geneName) && !file.exists(i_geneName)){
+        stop(paste("Gene names file ", i_geneName ,"not found!"))
     }
     # * apply clustering profiles ----------------------------------------------
     if (is.null(i_profileType) ||
@@ -450,12 +455,18 @@ shinyServer(function(input, output, session) {
             } else {
                 if (input$annoLocation == "from file") {
                     fileInput("fileDomainInput", "")
-                } else textInput("domainPath", "", "")
+                } else textInput(
+                    "domainPath", "", "", 
+                    placeholder = "Give full path to domain directory"
+                )
             }
         } else {
             if (input$annoLocation == "from file") {
                 fileInput("fileDomainInput", "")
-            } else textInput("domainPath", "", "")
+            } else textInput(
+                "domainPath", "", "", 
+                placeholder = "Give full path to domain directory"
+            )
         }
     })
 
@@ -2177,6 +2188,33 @@ shinyServer(function(input, output, session) {
         taxaCount <- sortedtaxaList() %>% dplyr::count(supertaxon)
         return(taxaCount)
     })
+    
+    # * get gene names (if provided) -------------------------------------------
+    getGeneNames <- reactive({
+        geneNameFile <- input$geneName
+        if (!is.null(geneNameFile)) {
+            inputNameDt <- read.table(
+                file = geneNameFile$datapath,
+                sep = "\t",
+                header = FALSE,
+                check.names = FALSE,
+                comment.char = "",
+                fill = TRUE
+            )
+            colnames(inputNameDt) <- c("geneID","geneName")
+        } else if (!is.null(i_geneName)){
+            inputNameDt <- read.table(
+                file = i_geneName,
+                sep = "\t",
+                header = FALSE,
+                check.names = FALSE,
+                comment.char = "",
+                fill = TRUE
+            )
+            colnames(inputNameDt) <- c("geneID","geneName")
+        } else inputNameDt <- NULL
+        return(inputNameDt)
+    })
 
     # * get subset data for plotting (default 30 genes if > 50 genes) ----------
     preData <- reactive({
@@ -2304,6 +2342,13 @@ shinyServer(function(input, output, session) {
                     taxaCount = getCountTaxa(),
                     coorthoCOMax = coorthologCutoffMax
                 )
+                # add gene names if specified by uploaded file
+                if (!(is.null(getGeneNames()))) {
+                    fullMdData <- fullMdData %>% select(-geneName) %>%
+                        left_join(getGeneNames(), by = "geneID")
+                    fullMdData$geneName[is.na(fullMdData$geneName)] <- 
+                        fullMdData$geneID[is.na(fullMdData$geneName)]
+                }
                 return(fullMdData)
             })
         }
@@ -2470,16 +2515,10 @@ shinyServer(function(input, output, session) {
 
     # =========================== MAIN PROFILE TAB =============================
 
-    # * update choices for geneIdType ------------------------------------------
+    # # * update choices for geneIdType ------------------------------------------
     observe({
-        df <- dataHeat()
-        if (all(as.character(df$geneID) == as.character(df$geneName))) {
-            updateRadioButtons(
-                session, inputId = "geneIdType",
-                choices = list("Gene IDs" = "geneID"),
-                selected = "geneID"
-            )
-        }
+        if (!(is.null(getGeneNames())))
+            updateRadioButtons(session, "geneIdType", selected = "geneName")
     })
 
     # * render popup for selecting rank and return list of subset taxa ---------

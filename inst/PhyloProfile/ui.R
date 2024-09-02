@@ -30,8 +30,10 @@ shinyUI(
                         radioButtons(
                             inputId = "geneIdType",
                             label = "Display genes using:",
-                            choices = list("Gene IDs" = "geneID","Gene names" = "geneName"),
-                            selected = "geneName",
+                            choices = list(
+                                "Gene IDs" = "geneID","Gene names" = "geneName"
+                            ),
+                            selected = "geneID",
                             inline = TRUE
                         ),
                         checkboxInput(
@@ -447,6 +449,9 @@ shinyUI(
                         h5(""),
 
                         shinyBS::bsButton("uploadGeneCategory", "Gene categories"),
+                        h5(""),
+                        
+                        shinyBS::bsButton("uploadGeneName", "Gene names"),
                         hr(),
 
                         strong(h4("General configuration:")),
@@ -1859,7 +1864,21 @@ shinyUI(
             size = "small",
             fileInput("geneCategory", "")
         ),
-
+        
+        # * popup for upload gene names ----------------------------------------
+        shinyBS::bsModal(
+            "uploadGeneNameBs",
+            "Upload gene names",
+            "uploadGeneName",
+            size = "medium",
+            em(paste(
+                "Upload gene names in tab-delimited format! Please check",
+                "https://github.com/BIONF/PhyloProfile/wiki/Input-Data#gene-names",
+                "for more info."
+            )),
+            br(),
+            fileInput("geneName", "")
+        ),
 
         # * popup for setting ortholog ID format -------------------------------
         shinyBS::bsModal(

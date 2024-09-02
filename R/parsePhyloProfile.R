@@ -480,6 +480,7 @@ parseInfoProfile <- function(
     fullMdData$fullName <- as.vector(fullMdData$fullName)
     names(fullMdData)[names(fullMdData) == "orthoID.x"] <- "orthoID"
     fullMdData <- fullMdData[!duplicated(fullMdData), ]
+    # add geneName column if not yet exist
     if (!("geneName" %in% colnames(fullMdData)))
         fullMdData$geneName <- fullMdData$geneID
     # sort geneName based on the order of geneID
