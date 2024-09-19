@@ -123,7 +123,10 @@ getTaxonomyInfo <- function(inputTaxa = NULL, currentNCBIinfo = NULL) {
         refEntry <- currentNCBIinfo[currentNCBIinfo$ncbiID == refID, ]
         lastID <- refEntry$parentID
         inputTaxaInfo <- refEntry
-        if(length(lastID) == 0) stop(paste("ERROR with", refID))
+        if(length(lastID) == 0) {
+            msg <- paste("PROBLEM with", refID)
+            stop(msg)
+        }
         while (lastID != 1) {
             if (lastID %in% names(tmp)) {
                 inputTaxaInfo <- rbindlist(
@@ -244,12 +247,19 @@ getIDsRank <- function(inputTaxa = NULL, currentNCBIinfo = NULL){
 
 rankIndexing <- function (rankListFile = NULL) {
     if (is.null(rankListFile)) stop("Rank list file is NULL!")
+    . <- NULL
     rankList <- utils::read.table(
         rankListFile, sep = '\t', header = FALSE,fill = TRUE,
         stringsAsFactors = TRUE, na.strings = c("", "NA")
     )
-    uList <- unlist(rankList[seq(3, length(rankList))])
-    allInputRank <- as.character(unique(uList))
+    ### remove duplicated and "normal" taxa
+    rankList <- rankList[,-(seq_len(2))]
+    rankList <- rankList[!duplicated(rankList), ]
+    mainRank <- mainTaxonomyRank()
+    filterRanks <- c(mainRank, "norank_1", NA)
+    rankList <- rankList %>% filter_all(any_vars(!(. %in% filterRanks)))
+    ### get list of all inpu ranks
+    allInputRank <- as.character(unique(unlist(rankList)))
     allInputRank <- allInputRank[!is.na(allInputRank)]
     ### initial index for main ranks
     mainRank <- mainTaxonomyRank()
@@ -259,12 +269,7 @@ rankIndexing <- function (rankListFile = NULL) {
     for (i in seq_len(length(mainRank))) rank2index[[mainRank[i]]] <- i
     ### the magic happens here
     for (k in seq_len(nrow(rankList))) {
-        ## get rank list for current taxon containing only ranks in allInputRank
         subList <- rankList[k,][!is.na(rankList[k,])]
-        filter <- vapply(
-            subList, function(x) x %in% allInputRank, FUN.VALUE = logical(1))
-        subList <- subList[filter]
-
         ## indexing
         tmpEnv <- new.env(hash = TRUE)
         flag <- 0

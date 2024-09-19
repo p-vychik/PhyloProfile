@@ -12,6 +12,7 @@
 #' ortholog) (optional).
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @importFrom stringr str_split_fixed
+#' @importFrom data.table fread
 #' @seealso \code{\link{getDomainFolder}}
 #' @examples
 #' seed <- "101621at6656"
@@ -40,9 +41,7 @@ parseDomainInput <- function(seed = NULL, inputFile = NULL, type = "file") {
     if (file != FALSE) {
         exeptions <- c("noFileInput", "noSelectHit", "noFileInFolder")
         if (!(file %in% exeptions)) {
-            domains <- utils::read.table(
-                file, sep = "\t", header = FALSE, comment.char = ""
-            )
+            domains <- data.frame(fread(file, sep = "\t", header = FALSE))
         }
     }
     if (ncol(domains) == 5) {

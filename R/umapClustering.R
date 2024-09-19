@@ -171,7 +171,7 @@ umapClustering <- function(
             subsetDt, random_state = randomSeed, preserve.seed = TRUE
         )
     } else {
-        warning("WARNING: Too few samples for UMAP!!!")
+        warning("PROBLEM: Too few samples for UMAP!!!")
         df.umap <- umap::umap(
             subsetDt, random_state = randomSeed, preserve.seed = TRUE,
             n_neighbors = max(1, nrow(subsetDt) - 1)

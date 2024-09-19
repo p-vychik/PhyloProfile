@@ -8,6 +8,7 @@
 #' @export
 #' @param filein input file
 #' @return The format of the input file format, or type of error
+#' @importFrom data.table fread
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{checkOmaID}}
 #' @examples
@@ -18,9 +19,9 @@
 
 checkInputValidity <- function(filein) {
     if (missing(filein) | is.null(filein)) return("No input file given!")
-    inputDt <- utils::read.table(
+    inputDt <- data.frame(fread(
         file = filein, sep = "\t", header = FALSE, check.names = FALSE,
-        comment.char = "", fill = TRUE, stringsAsFactors = FALSE)
+        fill = TRUE, stringsAsFactors = FALSE))
 
     if (is.na(inputDt[1, ncol(inputDt)])) {
         return("moreCol")
@@ -195,6 +196,7 @@ fastaParser <- function(inputFile = NULL){
 #' or orthologous group IDs), their orthologous proteins together with the
 #' corresponding taxonomy IDs and values of (up to) two additional variables.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom data.table fread
 #' @examples
 #' inputFile <- system.file(
 #'     "extdata", "test.main.wide", package = "PhyloProfile", mustWork = TRUE
@@ -203,14 +205,10 @@ fastaParser <- function(inputFile = NULL){
 
 wideToLong <- function(inputFile = NULL){
     if (is.null(inputFile)) stop("Input file is NULL!")
-    wideDataframe <- utils::read.table(
-        file = inputFile,
-        sep = "\t",
-        header = TRUE,
-        check.names = FALSE,
-        comment.char = "",
+    wideDataframe <- data.frame(fread(
+        file = inputFile, sep = "\t", header = TRUE, check.names = FALSE,
         stringsAsFactors = FALSE
-    )
+    ))
     ncbiIDs <- colnames(wideDataframe[, c(-1)])
     orthoInfo <- data.frame(
         do.call(
@@ -238,6 +236,7 @@ wideToLong <- function(inputFile = NULL){
 #' or orthologous group IDs), their orthologous proteins together with the
 #' corresponding taxonomy IDs and values of (up to) two additional variables.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom data.table fread
 #' @seealso \code{\link{xmlParser}}, \code{\link{fastaParser}},
 #' \code{\link{wideToLong}}
 #' @examples
@@ -256,10 +255,10 @@ createLongMatrix <- function(inputFile = NULL){
     else if (inputType == "fasta") longDataframe <- fastaParser(inputFile)
     # LONG
     else if (inputType == "long") {
-        longDataframe <- utils::read.table(
-            file = inputFile, sep = "\t", header = TRUE,
-            check.names = FALSE, comment.char = "", stringsAsFactors = FALSE
-        )
+        longDataframe <- data.frame(fread(
+            file = inputFile, sep = "\t", header = TRUE, check.names = FALSE, 
+            stringsAsFactors = FALSE
+        ))
     }
     # WIDE
     else if (inputType == "wide") longDataframe <- wideToLong(inputFile)
