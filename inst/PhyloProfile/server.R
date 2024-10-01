@@ -1166,8 +1166,10 @@ shinyServer(function(input, output, session) {
     # * enable/disable update plot button --------------------------------------
     observe({
         if (input$autoUpdate == TRUE) {
+            shinyBS::updateButton(session, "applyFilter", disabled = TRUE)
             shinyBS::updateButton(session, "updateBtn", disabled = TRUE)
         } else {
+            shinyBS::updateButton(session, "applyFilter", disabled = FALSE)
             shinyBS::updateButton(session, "updateBtn", disabled = FALSE)
         }
     })
@@ -1897,6 +1899,17 @@ shinyServer(function(input, output, session) {
             shinyBS::updateButton(session, "plotCustom", disabled = TRUE)
         }
     })
+    observeEvent(input$applyFilterCustom, {
+        w$doCusPlot <- input$applyFilterCustom
+        filein <- input$mainInput
+        if (
+            input$mainInputType == "file" & is.null(filein) &
+            input$demoData == "none"
+        ) {
+            w$doCusPlot <- FALSE
+            shinyBS::updateButton(session, "applyFilterCustom", disabled = TRUE)
+        }
+    })
 
     # * check if genes ordered by distances has been selected ------------------
     output$applyClusterCheck.ui <- renderUI({
@@ -1945,6 +1958,33 @@ shinyServer(function(input, output, session) {
             )
             return(getOmaBrowser(omaIDs$V1, input$selectedOmaType))
         } else return()
+    })
+    
+    # * get gene names (if provided) -------------------------------------------
+    getGeneNames <- reactive({
+        geneNameFile <- input$geneName
+        if (!is.null(geneNameFile)) {
+            inputNameDt <- read.table(
+                file = geneNameFile$datapath,
+                sep = "\t",
+                header = FALSE,
+                check.names = FALSE,
+                comment.char = "",
+                fill = TRUE
+            )
+            colnames(inputNameDt) <- c("geneID","geneName")
+        } else if (!is.null(i_geneName)){
+            inputNameDt <- read.table(
+                file = i_geneName,
+                sep = "\t",
+                header = FALSE,
+                check.names = FALSE,
+                comment.char = "",
+                fill = TRUE
+            )
+            colnames(inputNameDt) <- c("geneID","geneName")
+        } else inputNameDt <- NULL
+        return(inputNameDt)
     })
 
     # * convert main input file in any format into long format dataframe -------
@@ -2006,6 +2046,18 @@ shinyServer(function(input, output, session) {
                     value = nlevels(as.factor(longDataframe$geneID))
                 )
             }
+            # add geneName column if not yet exist
+            if (!("geneName" %in% colnames(longDataframe))) {
+                if (!(is.null(getGeneNames()))) {
+                    # add gene names if specified by uploaded file
+                    longDataframe <- longDataframe %>%
+                        left_join(getGeneNames(), by = "geneID")
+                    longDataframe$geneName[is.na(longDataframe$geneName)] <- 
+                        longDataframe$geneID[is.na(longDataframe$geneName)]
+                } else {
+                    longDataframe$geneName <- longDataframe$geneID
+                }
+            }   
             # return
             return(longDataframe)
         })
@@ -2188,33 +2240,6 @@ shinyServer(function(input, output, session) {
         taxaCount <- sortedtaxaList() %>% dplyr::count(supertaxon)
         return(taxaCount)
     })
-    
-    # * get gene names (if provided) -------------------------------------------
-    getGeneNames <- reactive({
-        geneNameFile <- input$geneName
-        if (!is.null(geneNameFile)) {
-            inputNameDt <- read.table(
-                file = geneNameFile$datapath,
-                sep = "\t",
-                header = FALSE,
-                check.names = FALSE,
-                comment.char = "",
-                fill = TRUE
-            )
-            colnames(inputNameDt) <- c("geneID","geneName")
-        } else if (!is.null(i_geneName)){
-            inputNameDt <- read.table(
-                file = i_geneName,
-                sep = "\t",
-                header = FALSE,
-                check.names = FALSE,
-                comment.char = "",
-                fill = TRUE
-            )
-            colnames(inputNameDt) <- c("geneID","geneName")
-        } else inputNameDt <- NULL
-        return(inputNameDt)
-    })
 
     # * get subset data for plotting (default 30 genes if > 50 genes) ----------
     preData <- reactive({
@@ -2230,9 +2255,8 @@ shinyServer(function(input, output, session) {
             } else return()
         } else {
             longDataframe <- getMainInput()
-            req(longDataframe)
             # isolate start and end gene index
-            input$updateBtn
+            input$applyFilter
             if (input$autoUpdate == TRUE) {
                 startIndex <- input$stIndex
                 endIndex <- input$endIndex
@@ -2328,7 +2352,7 @@ shinyServer(function(input, output, session) {
             req(getCountTaxa())
             req(sortedtaxaList())
             {
-                input$updateBtn
+                input$applyFilter
             }
             withProgress(message = 'Parsing profile data...', value = 0.5, {
                 if (input$autoUpdate == TRUE) {
@@ -2342,13 +2366,6 @@ shinyServer(function(input, output, session) {
                     taxaCount = getCountTaxa(),
                     coorthoCOMax = coorthologCutoffMax
                 )
-                # add gene names if specified by uploaded file
-                if (!(is.null(getGeneNames()))) {
-                    fullMdData <- fullMdData %>% select(-geneName) %>%
-                        left_join(getGeneNames(), by = "geneID")
-                    fullMdData$geneName[is.na(fullMdData$geneName)] <- 
-                        fullMdData$geneID[is.na(fullMdData$geneName)]
-                }
                 return(fullMdData)
             })
         }
@@ -2358,8 +2375,8 @@ shinyServer(function(input, output, session) {
     filteredDataHeat <- reactive({
         req(isTruthy(v$doPlot)|isTruthy(w$doCusPlot))
         {
-            input$plotCustom
-            input$updateBtn
+            input$applyFilterCustom
+            input$applyFilter
         }
         withProgress(message = 'Creating data for plotting...', value = 0.5, {
             # check input file
@@ -2496,8 +2513,8 @@ shinyServer(function(input, output, session) {
     allInputTaxa <- reactive({
         req(isTruthy(v$doPlot)|isTruthy(w$doCusPlot))
         {
-            input$plotCustom
-            input$updateBtn
+            input$applyFilterCustom
+            input$applyFilter
         }
         allTaxa <- sortedtaxaList()
         allTaxa <- allTaxa[,c("supertaxonID", "supertaxon")]
@@ -2557,10 +2574,15 @@ shinyServer(function(input, output, session) {
     })
 
     # * get list of genes for highlighting -------------------------------------
-   observe({
-        df <- dataHeat()
+    getAllGenes <- function() {
+        df <- getMainInput()
         idNameDf <- unique(df[,c("geneID","geneName")])
-        out <- setNames(idNameDf$geneID, idNameDf$geneName)
+        idNameList <- setNames(idNameDf$geneID, idNameDf$geneName)
+        return(idNameList)
+    }
+    
+    observe({
+        out <- getAllGenes()
         if (!(is.null(input$geneHighlightFile))) {
             fileHighlight <- input$geneHighlightFile
             highlightList <- read.table(
@@ -2806,37 +2828,28 @@ shinyServer(function(input, output, session) {
     observe({
         if ("all" %in% input$inSeq & "all" %in% input$inTaxa) {
             shinyjs::disable("plotCustom")
-        } else shinyjs::enable("plotCustom")
+            shinyjs::disable("applyFilterCustom")
+        } else {
+            shinyjs::enable("plotCustom")
+            shinyjs::enable("applyFilterCustom")
+        }
     })
 
-    # * get list of all sequence IDs for customized profile -----
-    output$cusGene.ui <- renderUI({
+    # * get list of all sequence IDs for customized profile --------------------
+    observe({
         fileCustom <- input$customFile
-        if (
-            input$demoData == "arthropoda" | input$demoData == "ampk-tor" |
-            input$demoData == "preCalcDt" | input$mainInputType == "folder"
-        ) {
-            filein <- 1
-        } else filein <- input$mainInput
-
-        if (is.null(filein) & is.null(fileCustom)) {
-            return(selectizeInput("inSeq", "", "all"))
-        }
         if (v$doPlot == FALSE) {
             if (input$addGeneUmap == TRUE) {
                 umapGenes <- umapSelectedGenes()
-                if (is.null(umapGenes))
-                    return(selectizeInput("inSeq", "", "all"))
                 if (nrow(umapGenes) > 0)
-                    return(selectizeInput(
-                        "inSeq", "", unique(umapGenes$geneID),
-                        selected = unique(umapGenes$geneID), multiple = TRUE
+                    return(updateSelectizeInput(
+                        session, "inSeq", server = TRUE, "", 
+                        unique(umapGenes$geneID), 
+                        selected = unique(umapGenes$geneID)
                     ))
-            } else return(selectizeInput("inSeq", "", "all"))
+            }
         } else {
-            data <- getFullData()
-            idNameDf <- unique(data[,c("geneID","geneName")])
-            idNameList <- setNames(idNameDf$geneID, idNameDf$geneName)
+            idNameList <- getAllGenes()
             outAll <- c(as.factor("all"), idNameList)
             if (input$addGeneAgeCustomProfile == TRUE) {
                 outAll <- as.list(selectedgeneAge())
@@ -2849,8 +2862,6 @@ shinyServer(function(input, output, session) {
                 outAll <- as.list(candidateGenes())
             } else if (input$addGeneUmap == TRUE) {
                 umapGenes <- umapSelectedGenes()
-                if (is.null(umapGenes))
-                    return(selectizeInput("inSeq", "", "all"))
                 if (nrow(umapGenes) > 0) outAll <- unique(umapGenes$geneID)
             } else {
                 if (!is.null(fileCustom)) {
@@ -2859,16 +2870,20 @@ shinyServer(function(input, output, session) {
                     )
                     customList$V1 <- as.factor(customList$V1)
                     outAll <- as.list(levels(customList$V1))
+                } else {
+                    return(updateSelectizeInput(
+                        session, "inSeq", server = TRUE, "", outAll
+                    ))
                 }
             }
             if (length(outAll) == 0) outAll <- c("all")
             if (outAll[1] == "all") {
-                selectizeInput(
-                    "inSeq", "", outAll, selected = "all", multiple = TRUE
+                updateSelectizeInput(
+                    session, "inSeq", server = TRUE,"", outAll, selected = "all"
                 )
             } else {
-                selectizeInput(
-                    "inSeq", "", outAll, selected = outAll, multiple = TRUE
+                updateSelectizeInput(
+                    session, "inSeq", server = TRUE, "", outAll, selected=outAll
                 )
             }
         }

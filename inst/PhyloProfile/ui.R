@@ -772,7 +772,11 @@ shinyUI(
                             width = NULL
                         ),
                         shinyBS::bsButton(
-                            "updateBtn", "Update plot", style = "warning",
+                            "applyFilter", "Apply filter", style = "warning",
+                            icon("check"), disabled = FALSE
+                        ),
+                        shinyBS::bsButton(
+                            "updateBtn", "Update apperance", style = "warning",
                             icon("sync"), disabled = FALSE
                         )
                     ),
@@ -805,7 +809,10 @@ shinyUI(
                                 column(
                                     8,
                                     style = "padding:0px;",
-                                    uiOutput("cusGene.ui")
+                                    selectizeInput(
+                                        "inSeq","", NULL, multiple=TRUE,
+                                        options = list(placeholder = 'all')
+                                    )
                                 ),
                                 column(
                                     4,
@@ -840,9 +847,11 @@ shinyUI(
 
                         h5(""),
                         shinyBS::bsButton(
-                            "plotCustom",
-                            "Update plot",
-                            style = "warning",
+                            "applyFilterCustom", "Apply filter",style="warning",
+                            icon("check")
+                        ),
+                        shinyBS::bsButton(
+                            "plotCustom", "Update apperance", style = "warning",
                             icon("sync")
                         )
                     ),

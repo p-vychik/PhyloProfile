@@ -463,7 +463,7 @@ parseInfoProfile <- function(
         if (ncol(inputDf) < 5) {colnames(inputDf)[4] <- "var1"}
         else if (ncol(inputDf) < 6) {
             colnames(inputDf)[c(4,5)] <- c("var1", "var2")
-        } else colnames(inputDf)[c(4,5,6)] <- c("var1", "var2", "geneName")
+        }
     }
     if (coorthoCOMax < 1) coorthoCOMax <- 1
     # count number of inparalogs & calculate frequency of all supertaxa
