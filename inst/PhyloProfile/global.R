@@ -6,7 +6,7 @@ source("R/functions.R")
 
 # List of dependent packages --------------------------------------------------
 packages <- c("BiocStyle","data.table", "dplyr", "ggplot2", "shiny", "shinyBS",
-    "shinyFiles", "shinyjs"
+    "shinyFiles", "shinyjs", "scattermore"
 )
 
 # Load packages

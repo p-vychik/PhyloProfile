@@ -51,7 +51,7 @@ shinyUI(
                     ),
                     column(
                         1,
-                        createPlotSize("width", "Width (px)", 600),
+                        createPlotSize("width", "Width (px)", 900),
                         checkboxInput(
                             "autoSizing",
                             strong(em("Auto sizing")),
@@ -60,7 +60,7 @@ shinyUI(
                         )
                     ),
                     column(
-                        1, createPlotSize("height", "Height (px)", 600),
+                        1, createPlotSize("height", "Height (px)", 900),
                         actionButton("mainPlotConfig", "Appearance")
                     ),
                     column(
@@ -70,7 +70,11 @@ shinyUI(
                         2, uiOutput("var2Cutoff.ui")
                     ),
                     column(
-                        2, uiOutput("percentCutoff.ui")
+                        2, uiOutput("percentCutoff.ui"),
+                        shinyBS::bsButton(
+                            "applyFilter", "Apply filter", style = "warning",
+                            icon("check"), disabled = FALSE
+                        )
                     ),
                     column(
                         2,
@@ -111,7 +115,7 @@ shinyUI(
                     ),
                     column(
                         1,
-                        createPlotSize("selectedWidth", "Width (px)", 600),
+                        createPlotSize("selectedWidth", "Width (px)", 900),
                         checkboxInput(
                             "selectedAutoSizing",
                             strong(em("Auto sizing")),
@@ -120,7 +124,7 @@ shinyUI(
                         )
                     ),
                     column(
-                        1, createPlotSize("selectedHeight", "Height (px)", 600),
+                        1, createPlotSize("selectedHeight", "Height (px)", 900),
                         actionButton("selectedPlotConfig", "Appearance")
                     ),
                     column(
@@ -130,7 +134,11 @@ shinyUI(
                         2, uiOutput("var2Filter.ui")
                     ),
                     column(
-                        2, uiOutput("percentFilter.ui")
+                        2, uiOutput("percentFilter.ui"),
+                        shinyBS::bsButton(
+                            "applyFilterCustom", "Apply filter", style="warning",
+                            icon("check"), disabled = FALSE
+                        )
                     ),
                     column(
                         2,
@@ -690,6 +698,33 @@ shinyUI(
                         column(
                             12,
                             style = "padding:0px;",
+                            column(
+                                4,
+                                style = "padding:0px;",
+                                radioButtons(
+                                    inputId = "plotMode",
+                                    label = "Plot mode:",
+                                    choices = list(
+                                        "Normal" = "normal", "Fast" = "fast"
+                                    ),
+                                    selected = "normal",
+                                    inline = TRUE
+                                ),
+                                shinyBS::bsPopover(
+                                    "plotMode",
+                                    "",
+                                    "Fast mode is only recommended for large data",
+                                    "top"
+                                )
+                            ), 
+                            column(
+                                8,
+                                uiOutput("colorVar.ui")
+                            )
+                        ),
+                        column(
+                            12,
+                            style = "padding:0px;",
                             strong("Select gene to highlight:")
                         ),
                         column(
@@ -731,8 +766,6 @@ shinyUI(
                                 "taxonHighlight","", NULL, multiple=TRUE,
                                 options = list(placeholder = 'none')
                             )
-                            # ,
-                            # uiOutput("taxonHighlight.ui")
                         ),
                         column(
                             4,
@@ -771,10 +804,10 @@ shinyUI(
                             value = FALSE,
                             width = NULL
                         ),
-                        shinyBS::bsButton(
-                            "applyFilter", "Apply filter", style = "warning",
-                            icon("check"), disabled = FALSE
-                        ),
+                        # shinyBS::bsButton(
+                        #     "applyFilter", "Apply filter", style = "warning",
+                        #     icon("check"), disabled = FALSE
+                        # ),
                         shinyBS::bsButton(
                             "updateBtn", "Update apperance", style = "warning",
                             icon("sync"), disabled = FALSE
@@ -846,10 +879,10 @@ shinyUI(
                         uiOutput("cusSuperRankSelect.ui"),
 
                         h5(""),
-                        shinyBS::bsButton(
-                            "applyFilterCustom", "Apply filter",style="warning",
-                            icon("check")
-                        ),
+                        # shinyBS::bsButton(
+                        #     "applyFilterCustom", "Apply filter",style="warning",
+                        #     icon("check")
+                        # ),
                         shinyBS::bsButton(
                             "plotCustom", "Update apperance", style = "warning",
                             icon("sync")

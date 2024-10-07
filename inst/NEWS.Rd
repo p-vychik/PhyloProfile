@@ -6,6 +6,7 @@
   \itemize{
     \item added UMAP clustering
     \item improved domain plot #110
+    \item fast mode for large profile plot
     \item option to change font
     \item option to show gene names
     \item option to sort genes by defined list

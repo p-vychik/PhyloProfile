@@ -22,7 +22,8 @@ shinyServer(function(input, output, session) {
     currentNCBIinfo <- NULL
     if (file.exists(nameFullFile))
         currentNCBIinfo <- as.data.frame(data.table::fread(nameFullFile))
-
+    
+    fastModeCutoff <- 600
     # =========================== INITIAL CHECKING  ============================
     # * check for internet connection ------------------------------------------
     observe({
@@ -618,7 +619,17 @@ shinyServer(function(input, output, session) {
             )
         }
     })
-
+    
+    # * update colorVar for heatmapPlottingFast --------------------------------
+    output$colorVar.ui <- renderUI({
+        choices <- setNames( c("var1","var2"), c(input$var1ID, input$var2ID))
+        if (input$plotMode == "fast")
+            radioButtons( #selectInput(
+                "colorVar", "Color dots by:", choices = choices, 
+                selected = "var1", inline = TRUE
+            )
+    })
+    
     # * get total number of genes ----------------------------------------------
     output$totalGeneNumber.ui <- renderUI({
         geneList <- getMainInput()
@@ -1899,17 +1910,17 @@ shinyServer(function(input, output, session) {
             shinyBS::updateButton(session, "plotCustom", disabled = TRUE)
         }
     })
-    observeEvent(input$applyFilterCustom, {
-        w$doCusPlot <- input$applyFilterCustom
-        filein <- input$mainInput
-        if (
-            input$mainInputType == "file" & is.null(filein) &
-            input$demoData == "none"
-        ) {
-            w$doCusPlot <- FALSE
-            shinyBS::updateButton(session, "applyFilterCustom", disabled = TRUE)
-        }
-    })
+    # observeEvent(input$applyFilterCustom, {
+    #     w$doCusPlot <- input$applyFilterCustom
+    #     filein <- input$mainInput
+    #     if (
+    #         input$mainInputType == "file" & is.null(filein) &
+    #         input$demoData == "none"
+    #     ) {
+    #         w$doCusPlot <- FALSE
+    #         shinyBS::updateButton(session, "applyFilterCustom", disabled = TRUE)
+    #     }
+    # })
 
     # * check if genes ordered by distances has been selected ------------------
     output$applyClusterCheck.ui <- renderUI({
@@ -2234,6 +2245,27 @@ shinyServer(function(input, output, session) {
             return(sortedOut)
         })
     })
+    
+    # * get list of all input (super)taxa and their ncbi IDs -------------------
+    allInputTaxa <- reactive({
+        req(isTruthy(v$doPlot)|isTruthy(w$doCusPlot))
+        {
+            input$applyFilterCustom
+            input$applyFilter
+        }
+        allTaxa <- sortedtaxaList()
+        allTaxa <- allTaxa[,c("supertaxonID", "supertaxon")]
+        allTaxa$supertaxon <- factor(
+            substr(
+                as.character(allTaxa$supertaxon), 8 ,
+                nchar(as.character(allTaxa$supertaxon))),
+            levels = substr(
+                levels(as.factor(allTaxa$supertaxon)), 8,
+                nchar(levels(as.factor(allTaxa$supertaxon)))))
+        if (input$showAllTaxa) {
+            return(allTaxa[!duplicated(allTaxa),])
+        } else return()
+    })
 
     # * count taxa for each supertaxon -----------------------------------------
     getCountTaxa <- reactive({
@@ -2508,31 +2540,24 @@ shinyServer(function(input, output, session) {
             })
         } else return(dataHeat)
     })
-
-    # * get list of all input (super)taxa and their ncbi IDs -------------------
-    allInputTaxa <- reactive({
-        req(isTruthy(v$doPlot)|isTruthy(w$doCusPlot))
-        {
-            input$applyFilterCustom
-            input$applyFilter
-        }
-        allTaxa <- sortedtaxaList()
-        allTaxa <- allTaxa[,c("supertaxonID", "supertaxon")]
-        allTaxa$supertaxon <- factor(
-            substr(
-                as.character(allTaxa$supertaxon), 8 ,
-                nchar(as.character(allTaxa$supertaxon))),
-            levels = substr(
-                levels(as.factor(allTaxa$supertaxon)), 8,
-                nchar(levels(as.factor(allTaxa$supertaxon)))))
-        if (input$showAllTaxa) {
-            return(allTaxa[!duplicated(allTaxa),])
-        } else return()
+    
+    # * switch to fast mode for large data -------------------------------------
+    observe({
+        dt <- getMainInput()
+        if (
+            nlevels(as.factor(dt$geneID)) > fastModeCutoff |
+            nlevels(as.factor(dt$ncbiID)) > fastModeCutoff
+        ) 
+            updateRadioButtons(
+                session, "plotMode", 
+                choices = list("Normal" = "normal", "Fast" = "fast"), 
+                selected = "fast", inline = TRUE
+            )
     })
 
     # =========================== MAIN PROFILE TAB =============================
 
-    # # * update choices for geneIdType ------------------------------------------
+    # * update choices for geneIdType ------------------------------------------
     observe({
         if (!(is.null(getGeneNames())))
             updateRadioButtons(session, "geneIdType", selected = "geneName")
@@ -2627,67 +2652,93 @@ shinyServer(function(input, output, session) {
         longDataframe <- getMainInput()
         req(longDataframe)
         req(input$endIndex)
-        if (input$autoSizing) {
+        if (input$autoSizing & input$plotMode == "normal") {
             inputSuperTaxon <- inputTaxonName()
             nrTaxa <- nlevels(as.factor(inputSuperTaxon$fullName))
             nrGene <- input$endIndex
-
-            if (nrTaxa < 10000 && nrGene < 10000) {
-                # adapte to axis type
-                if (input$xAxis == "taxa") {
-                    h <- nrGene
-                    w <- nrTaxa
-                } else {
-                    w <- nrGene
-                    h <- nrTaxa
-                }
-                # adapt to dot zoom factor
-                if (input$dotZoom < -0.5){
-                    hv <- (200 + 12 * h) * (1 + input$dotZoom) + 500
-                    wv <- (200 + 12 * w) * (1 + input$dotZoom) + 500
-                }  else if ((input$dotZoom < 0)) {
-                    hv <- (200 + 12 * h) * (1 + input$dotZoom) + 200
-                    wv <- (200 + 12 * w) * (1 + input$dotZoom) + 200
-                } else {
-                    hv <- (200 + 12 * h) * (1 + input$dotZoom)
-                    wv <- (200 + 12 * w) * (1 + input$dotZoom)
-                }
-                # minimum size
-                if (hv < 300) hv <- 300
-                if (wv < 300) wv <- 300
-                # update plot size based on number of genes/taxa
-                hv <- hv + 300
-                wv <- wv + 300
-                if (h <= 20) {
-                    updateSelectInput(
-                        session, "mainLegend",
-                        label = "Legend position:",
-                        choices = list("Right" = "right",
-                                       "Left" = "left",
-                                       "Top" = "top",
-                                       "Bottom" = "bottom",
-                                       "Hide" = "none"),
-                        selected = "top"
-                    )
-                    updateNumericInput(
-                        session,
-                        "width", value = wv  + 50
-                    )
-                } else if (h <= 30) {
-                    updateNumericInput(
-                        session,
-                        "width", value = wv + 50
-                    )
-                } else {
-                    updateNumericInput(
-                        session,
-                        "width", value = wv
-                    )
-                }
-                updateNumericInput(
-                    session,
-                    "height", value = hv
+            
+            adaptedSize <- adaptPlotSize(
+                nrTaxa, nrGene, input$xAxis, input$dotZoom
+            )
+            h <- adaptedSize[1]
+            hv <- adaptedSize[2]
+            wv <- adaptedSize[3]
+            
+            if (h <= 20) {
+                updateSelectInput(
+                    session, "mainLegend",
+                    label = "Legend position:",
+                    choices = list("Right" = "right",
+                                   "Left" = "left",
+                                   "Top" = "top",
+                                   "Bottom" = "bottom",
+                                   "Hide" = "none"),
+                    selected = "top"
                 )
+                updateNumericInput(session, "width", value = wv  + 50)
+            } else if (h <= 30) {
+                updateNumericInput(session, "width", value = wv + 50)
+            } else {
+                updateNumericInput(session, "width", value = wv)
+            }
+            updateNumericInput(session, "height", value = hv)
+            
+            
+            # if (nrTaxa < 10000 && nrGene < 10000) {
+            #     # adapte to axis type
+            #     if (input$xAxis == "taxa") {
+            #         h <- nrGene
+            #         w <- nrTaxa
+            #     } else {
+            #         w <- nrGene
+            #         h <- nrTaxa
+            #     }
+            #     # adapt to dot zoom factor
+            #     if (input$dotZoom < -0.5){
+            #         hv <- (200 + 12 * h) * (1 + input$dotZoom) + 500
+            #         wv <- (200 + 12 * w) * (1 + input$dotZoom) + 500
+            #     }  else if ((input$dotZoom < 0)) {
+            #         hv <- (200 + 12 * h) * (1 + input$dotZoom) + 200
+            #         wv <- (200 + 12 * w) * (1 + input$dotZoom) + 200
+            #     } else {
+            #         hv <- (200 + 12 * h) * (1 + input$dotZoom)
+            #         wv <- (200 + 12 * w) * (1 + input$dotZoom)
+            #     }
+            #     # minimum size
+            #     if (hv < 300) hv <- 300
+            #     if (wv < 300) wv <- 300
+            #     # update plot size based on number of genes/taxa
+            #     hv <- hv + 300
+            #     wv <- wv + 300
+            #     if (h <= 20) {
+            #         updateSelectInput(
+            #             session, "mainLegend",
+            #             label = "Legend position:",
+            #             choices = list("Right" = "right",
+            #                            "Left" = "left",
+            #                            "Top" = "top",
+            #                            "Bottom" = "bottom",
+            #                            "Hide" = "none"),
+            #             selected = "top"
+            #         )
+            #         updateNumericInput(session, "width", value = wv  + 50)
+            #     } else if (h <= 30) {
+            #         updateNumericInput(session, "width", value = wv + 50)
+            #     } else {
+            #         updateNumericInput(session, "width", value = wv)
+            #     }
+            #     updateNumericInput(session, "height", value = hv)
+            # }
+        }
+    })
+    
+    observe({
+        if(!(is.null(input$plotMode))) {
+            if (input$plotMode == "fast") {
+                updateNumericInput(session, "height", value = 900)
+                updateNumericInput(session, "width", value = 900)
+                updateNumericInput(session, "selectedHeight", value = 900)
+                updateNumericInput(session, "selectedWidth", value = 900)
             }
         }
     })
@@ -2751,7 +2802,8 @@ shinyServer(function(input, output, session) {
                 "colorByOrthoID" = input$colorByOrthoID,
                 "groupLabelSize" = input$groupLabelSize,
                 "groupLabelDist" = input$groupLabelDist,
-                "groupLabelAngle" = input$groupLabelAngle
+                "groupLabelAngle" = input$groupLabelAngle,
+                "colorVar" = input$colorVar
             )
         } else {
             inputPara <- isolate(
@@ -2784,7 +2836,8 @@ shinyServer(function(input, output, session) {
                     "colorByOrthoID" = input$colorByOrthoID,
                     "groupLabelSize" = input$groupLabelSize,
                     "groupLabelDist" = input$groupLabelDist,
-                    "groupLabelAngle" = input$groupLabelAngle
+                    "groupLabelAngle" = input$groupLabelAngle,
+                    "colorVar" = input$colorVar
                 )
             )
         }
@@ -2821,17 +2874,18 @@ shinyServer(function(input, output, session) {
         typeProfile = reactive("mainProfile"),
         taxDB = getTaxDBpath,
         superRank = reactive(input$superRankSelect),
-        allTaxa = allInputTaxa
+        allTaxa = allInputTaxa,
+        mode = reactive(input$plotMode)
     )
 
     # ======================== CUSTOMIZED PROFILE TAB ==========================
     observe({
         if ("all" %in% input$inSeq & "all" %in% input$inTaxa) {
             shinyjs::disable("plotCustom")
-            shinyjs::disable("applyFilterCustom")
+            # shinyjs::disable("applyFilterCustom")
         } else {
             shinyjs::enable("plotCustom")
-            shinyjs::enable("applyFilterCustom")
+            # shinyjs::enable("applyFilterCustom")
         }
     })
 
@@ -3115,7 +3169,8 @@ shinyServer(function(input, output, session) {
         typeProfile = reactive("customizedProfile"),
         taxDB = getTaxDBpath,
         superRank = reactive(input$cusSuperRankSelect),
-        allTaxa = allInputTaxa
+        allTaxa = allInputTaxa,
+        mode = reactive(input$plotMode)
     )
 
     # ========================= UMAP CLUSTERING PLOT ===========================

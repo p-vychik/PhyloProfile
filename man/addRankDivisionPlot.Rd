@@ -7,7 +7,7 @@
 addRankDivisionPlot(profilePlot = NULL, plotDf = NULL,
     taxDB = NULL, workingRank = NULL, superRank = NULL, xAxis = "taxa",
     font = "Arial", groupLabelSize = 14, groupLabelDist = 2,
-    groupLabelAngle = 90)
+    groupLabelAngle = 90, refLine = TRUE)
 }
 \arguments{
 \item{profilePlot}{initial (highlighted) profile plot}
@@ -29,6 +29,8 @@ addRankDivisionPlot(profilePlot = NULL, plotDf = NULL,
 \item{groupLabelDist}{size of the plot area for rank labels}
 
 \item{groupLabelAngle}{angle of rank labels}
+
+\item{refLine}{add vertical line to separate reference taxon}
 }
 \value{
 A profile heatmap plot with highlighted gene and/or taxon of interest

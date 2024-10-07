@@ -164,6 +164,45 @@ checkBionfFormat <- function(orthoID, seedID, ncbiID) {
     return(FALSE)
 }
 
+#' Adapt plot size based on number of genes and taxa
+#' @param nrTaxa number of taxa
+#' @param nrGene number of genes
+#' @param xAxis type of x-axis, either "taxa" or "genes"
+#' @param dotZoom zoom factor for dots
+#' @return a vector contains number of itemes in y-axis, plot height and width
+#' @author Vinh Tran {tran@bio.uni-frankfurt.de}
+
+adaptPlotSize <- function(nrTaxa = 0, nrGene = 0, xAxis = "taxa", dotZoom = 0) {
+    if (nrTaxa < 10000 && nrGene < 10000) {
+        # adapte to axis type
+        if (xAxis == "taxa") {
+            h <- nrGene
+            w <- nrTaxa
+        } else {
+            w <- nrGene
+            h <- nrTaxa
+        }
+        # adapt to dot zoom factor
+        if (dotZoom < -0.5){
+            hv <- (200 + 12 * h) * (1 + dotZoom) + 500
+            wv <- (200 + 12 * w) * (1 + dotZoom) + 500
+        }  else if ((dotZoom < 0)) {
+            hv <- (200 + 12 * h) * (1 + dotZoom) + 200
+            wv <- (200 + 12 * w) * (1 + dotZoom) + 200
+        } else {
+            hv <- (200 + 12 * h) * (1 + dotZoom)
+            wv <- (200 + 12 * w) * (1 + dotZoom)
+        }
+        # minimum size
+        if (hv < 300) hv <- 300
+        if (wv < 300) wv <- 300
+        # update plot size based on number of genes/taxa
+        hv <- hv + 300
+        wv <- wv + 300
+        return(c(h, hv, wv))
+    } else return(c())
+}
+
 # FUNCTIONS FOR RENDER UI ELEMENTS ============================================
 createSliderCutoff <- function(id, title, start, stop, varID){
     if (is.null(varID)) return()

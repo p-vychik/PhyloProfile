@@ -74,8 +74,8 @@ createDetailedPlot <- function(
             ggsave(
                 file,
                 plot = g,
-                width = 800 * 0.056458333,
-                height = detailedHeight() * 0.056458333,
+                width = 800 * 0.035,
+                height = detailedHeight() * 0.035,
                 units = "cm",
                 dpi = 300,
                 device = "svg",

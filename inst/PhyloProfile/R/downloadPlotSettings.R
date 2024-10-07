@@ -167,8 +167,8 @@ writePlottingScript <- function(settingsFile) {
             'colorByGroup' = settings$colorByGroup
         )",
         "p <- heatmapPlotting(plotDf, plotParameter)",
-        "ggsave(args[3], plot = p, width = settings$width * 0.056458333,
-            height = settings$height * 0.056458333,
+        "ggsave(args[3], plot = p, width = settings$width * 0.035,
+            height = settings$height * 0.035,
             units = 'cm', dpi = 300, device = 'svg', limitsize = FALSE)",
         "print('DONE! Your plot is saved in', args[3])"
     )

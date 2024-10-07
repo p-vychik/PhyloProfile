@@ -61,8 +61,8 @@ plotGeneAge <- function(input, output, session,
                 plot = createGeneAgePlot(
                     geneAgePlotDf(data()), geneAgeText(), font()
                 ),
-                width = 800 * geneAgeWidth() * 0.056458333,
-                height = 300 * geneAgeHeight() * 0.056458333,
+                width = 800 * geneAgeWidth() * 0.035,
+                height = 300 * geneAgeHeight() * 0.035,
                 units = "cm", dpi = 300, device = "svg"
             )
         }

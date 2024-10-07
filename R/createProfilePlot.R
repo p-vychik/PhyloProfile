@@ -274,12 +274,18 @@ heatmapPlotting <- function(data = NULL, parm = NULL){
     ### create heatmap plot
     if (!(is.null(parm$geneIdType))) {
         if (parm$geneIdType == "geneName") data$geneID <- data$geneName
-    }   
+    }
+    # create a canvas
+    if (parm$xAxis == "genes") {
+        p <- ggplot(data,aes(x=geneID, y=supertaxon)) +
+            labs(x = "Gene ID", y = "Taxon")
+    } else {
+        p <- ggplot(data, aes(y = geneID, x = supertaxon)) +
+            labs(y = "Gene ID", x = "Taxon")
+    }
     # create geom_tile & scale_fill_gradient for var2 OR gene category
-    if (parm$xAxis == "genes") p <- ggplot(data,aes(x=geneID, y=supertaxon))
-    else p <- ggplot(data, aes(y = geneID, x = supertaxon))
     if (parm$colorByGroup == TRUE) {
-        p <- p + geom_tile(aes(fill = factor(category)), alpha = 0.3)
+        p <- p + geom_raster(aes(fill = factor(category)), alpha = 0.3)
         if (!is.null(parm$catColors))
             p <- p + scale_fill_manual(values = parm$catColors)
     } else {
@@ -288,7 +294,7 @@ heatmapPlotting <- function(data = NULL, parm = NULL){
                 low = parm$lowColorVar2, high = parm$highColorVar2,
                 mid = parm$midColorVar2, midpoint = parm$midVar2,
                 na.value = "gray95", limits = c(0, 1)) +
-                geom_tile(aes(fill = var2))
+                geom_raster(aes(fill = var2))
     }
 
     # create geom_point for found ortho; coloring by var1 or
@@ -364,18 +370,6 @@ heatmapPlotting <- function(data = NULL, parm = NULL){
                         color = guide_colourbar(title = parm$var1ID))
     }
 
-    # guideline for separating ref species
-    if (parm$guideline == 1) {
-        if (parm$xAxis == "genes") {
-            p <- p + labs(y = "Taxon") +
-                geom_hline(yintercept = 0.5, colour = "dodgerblue4") +
-                geom_hline(yintercept = 1.5, colour = "dodgerblue4")
-        } else
-            p <- p + labs(x = "Taxon") +
-                geom_vline(xintercept = 0.5, colour = "dodgerblue4") +
-                geom_vline(xintercept = 1.5, colour = "dodgerblue4")
-    }
-
     # text size, legend position
     p <- p + theme_minimal(base_size = 9)
     vjustValue <- 1
@@ -391,6 +385,135 @@ heatmapPlotting <- function(data = NULL, parm = NULL){
         legend.title = element_text(size = parm$legendSize),
         legend.text = element_text(size = parm$legendSize),
         legend.position = parm$mainLegend)
+    return(p)
+}
+
+
+#' Create profile heatmap plot using scattermore
+#' @export
+#' @param data dataframe for plotting the heatmap phylogentic profile (either
+#' full or subset profiles)
+#' @param parm plot parameters, including (1) type of x-axis "taxa" or
+#' "genes" - default = "taxa"; (2) display gene IDs (default) or gene names;
+#' (3+4) names of 2 variables var1ID and var2ID - default = "var1" & "var2"; 
+#' (5+6) mid value and color for mid value of var1 -
+#' default is 0.5 and #FFFFFF; (7) color for lowest var1 - default = "#FF8C00";
+#' (8) color for highest var1 - default = "#4682B4"; (9+10) mid value and color
+#' for mid value of var2 - default is 1 and #FFFFFF;(11) color for lowest var2 -
+#' default = "#FFFFFF", (12) color for highest var2 - default = "#F0E68C", (13)
+#' color of co-orthologs - default = "#07D000"; (14+15+16) text sizes for x, y
+#' axis and legend - default = 9 for each; (17) legend position "top", "bottom",
+#' "right", "left" or "none" - default = "top"; (18) zoom ratio of the
+#' co-ortholog dots from -1 to 3 - default = 0; (19) color dots based on either 
+#' "var1" or "var2". NOTE: Leave blank or NULL to 
+#' use default values.
+#' @return A profile heatmap plot as a ggplot object.
+#' @import ggplot2
+#' @import scattermore
+#' @importFrom grDevices colorRampPalette
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @seealso \code{\link{dataMainPlot}}, \code{\link{dataCustomizedPlot}}
+#' @examples
+#' data("finalProcessedProfile", package="PhyloProfile")
+#' plotDf <- dataMainPlot(finalProcessedProfile)
+#' plotParameter <- list(
+#'     "xAxis" = "taxa",
+#'     "geneIdType" = "geneID",
+#'     "var1ID" = "FAS_FW",
+#'     "var2ID"  = "FAS_BW",
+#'     "midVar1" = 0.5,
+#'     "midColorVar1" =  "#FFFFFF",
+#'     "lowColorVar1" =  "#FF8C00",
+#'     "highColorVar1" = "#4682B4",
+#'     "midVar2" = 1,
+#'     "midColorVar2" =  "#FFFFFF",
+#'     "lowColorVar2" = "#CB4C4E",
+#'     "highColorVar2" = "#3E436F",
+#'     "paraColor" = "#07D000",
+#'     "xSize" = 8,
+#'     "ySize" = 8,
+#'     "legendSize" = 8,
+#'     "mainLegend" = "top",
+#'     "dotZoom" = 0,
+#'     "colorVar" = "var1"
+#' )
+#'
+#' heatmapPlottingFast(plotDf, plotParameter)
+
+heatmapPlottingFast <- function(data = NULL, parm = NULL) {
+    if (is.null(data)) stop("Input data cannot be NULL!")
+    if (is.null(parm))
+        parm <- list(
+            "xAxis" = "taxa", "geneIdType" = "geneName", 
+            "var1ID" = "var1", "var2ID"  = "var2",
+            "midVar1" = 0.5, "midColorVar1" =  "#FFFFFF",
+            "lowColorVar1" =  "#FF8C00", "highColorVar1" = "#4682B4",
+            "midVar2" = 1, "midColorVar2" =  "#FFFFFF",
+            "lowColorVar2" = "#CB4C4E", "highColorVar2" = "#3E436F",
+            "paraColor" = "#07D000", "xSize" = 8, "ySize" = 8, "legendSize" = 8,
+            "mainLegend" = "top", "dotZoom" = 0, "colorVar" = "var1")
+    geneID<-geneName<-supertaxon<-category<-var1<-var2<- presSpec<-paralog<-NULL
+    orthoFreq <- xmin <- xmax <- ymin <- ymax <- x <- NULL
+    if (is.null(parm$colorVar)) parm$colorVar <- "var1"
+    ### create heatmap plot
+    if (!(is.null(parm$geneIdType))) {
+        if (parm$geneIdType == "geneName") data$geneID <- data$geneName
+    }   
+    # create a canvas
+    if (parm$xAxis == "genes") {
+        p <- ggplot(data,aes(x=geneID, y=supertaxon)) +
+            labs(x = "Gene ID", y = "Taxon")
+    } else {
+        p <- ggplot(data, aes(y = geneID, x = supertaxon)) +
+            labs(y = "Gene ID", x = "Taxon")
+    }
+    # format theme
+    p <- p + theme_minimal(base_size = 9)
+    p <- p + theme(
+        axis.text = element_blank(),
+        axis.title.x = element_text(size = parm$xSize),
+        axis.title.y = element_text(size = parm$ySize),
+        legend.title = element_text(size = parm$legendSize),
+        legend.text = element_text(size = parm$legendSize),
+        legend.position = parm$mainLegend)
+    # Extract x, y, and color values
+    x_values <- as.numeric(data$supertaxon)
+    y_values <- as.numeric(data$geneID)
+    if (parm$colorVar == "var1") {
+        cl <- colorRampPalette(c(parm$lowColorVar1, parm$highColorVar1))(100)[
+            cut(data$var1, breaks = 100)
+        ]
+    } else
+        cl <- colorRampPalette(c(parm$lowColorVar2, parm$highColorVar2))(100)[
+            cut(data$var2, breaks = 100)
+        ]
+    # Add scatter plot
+    p <- p + 
+        geom_scattermost(
+            cbind(x_values, y_values), color = cl,
+            pointsize = 2 * (1 + parm$dotZoom), pixels = c(1000, 1000)
+        )
+    if (parm$colorVar == "var1") {
+        p <- p +
+            geom_point(data=data.frame(x = double(0)), aes(x, x, color = x)) +
+            scale_color_gradientn(
+                colors = colorRampPalette(
+                    c(parm$lowColorVar1, parm$highColorVar1)
+                )(100),
+                limits = c(0,1),
+                name = parm$var1ID
+            )
+    } else {
+        p <- p +
+            geom_point(data=data.frame(x = double(0)), aes(x, x, color = x)) +
+            scale_color_gradientn(
+                colors = colorRampPalette(
+                    c(parm$lowColorVar2, parm$highColorVar2)
+                )(100),
+                limits = c(0,1),
+                name = parm$var2ID
+            )
+    }   
     return(p)
 }
 
@@ -508,7 +631,7 @@ highlightProfilePlot <- function(
 #' @usage addRankDivisionPlot(profilePlot = NULL, plotDf = NULL,
 #'     taxDB = NULL, workingRank = NULL, superRank = NULL, xAxis = "taxa",
 #'     font = "Arial", groupLabelSize = 14, groupLabelDist = 2,
-#'     groupLabelAngle = 90)
+#'     groupLabelAngle = 90, refLine = TRUE)
 #' @param profilePlot initial (highlighted) profile plot
 #' @param plotDf dataframe for plotting the heatmap phylogentic profile
 #' @param taxDB path to taxonomy database (taxonomyMatrix.txt file required!)
@@ -519,6 +642,7 @@ highlightProfilePlot <- function(
 #' @param groupLabelSize size of rank labels
 #' @param groupLabelDist size of the plot area for rank labels
 #' @param groupLabelAngle angle of rank labels
+#' @param refLine add vertical line to separate reference taxon
 #' @return A profile heatmap plot with highlighted gene and/or taxon of interest
 #' as ggplot object.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
@@ -561,21 +685,24 @@ highlightProfilePlot <- function(
 addRankDivisionPlot <- function(
         profilePlot = NULL, plotDf = NULL, taxDB = NULL,
         workingRank = NULL, superRank = NULL, xAxis = "taxa", font = "Arial",
-        groupLabelSize = 14, groupLabelDist = 2, groupLabelAngle = 90
+        groupLabelSize = 14, groupLabelDist = 2, groupLabelAngle = 90,
+        refLine = TRUE
 ) {
     if (is.null(plotDf)) stop("Input data cannot be NULL!")
     if (is.null(profilePlot)) stop("Profile plot cannot be NULL!")
     profilePlot <- profilePlot + theme(text = element_text(family = font))
     if (is.null(workingRank) || is.null(superRank)) {
-        # guideline for separating ref species
-        if (xAxis == "genes") {
-            profilePlot <- profilePlot + labs(y = "Taxon") +
-                geom_hline(yintercept = 0.5, colour = "dodgerblue4") +
-                geom_hline(yintercept = 1.5, colour = "dodgerblue4")
-        } else
-            profilePlot <- profilePlot + labs(x = "Taxon") +
-                geom_vline(xintercept = 0.5, colour = "dodgerblue4") +
-                geom_vline(xintercept = 1.5, colour = "dodgerblue4")
+        if (refLine == TRUE) {
+            # guideline for separating ref species
+            if (xAxis == "genes") {
+                profilePlot <- profilePlot + labs(y = "Taxon") +
+                    geom_hline(yintercept = 0.5, colour = "dodgerblue4") +
+                    geom_hline(yintercept = 1.5, colour = "dodgerblue4")
+            } else
+                profilePlot <- profilePlot + labs(x = "Taxon") +
+                    geom_vline(xintercept = 0.5, colour = "dodgerblue4") +
+                    geom_vline(xintercept = 1.5, colour = "dodgerblue4")
+        }
         return(profilePlot)
     } else {
         # sort supertaxonID based on the sorted supertaxon

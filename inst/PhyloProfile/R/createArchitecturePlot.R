@@ -480,8 +480,8 @@ createArchitecturePlot <- function(
             # save plot to file
             suppressWarnings(ggsave(
                 file, plot = g,
-                width = input$archiWidth * 0.056458333,
-                height = input$archiHeight * 0.056458333,
+                width = input$archiWidth * 0.035,
+                height = input$archiHeight * 0.035,
                 units = "cm", dpi = 300, device = "svg", limitsize = FALSE
             ))
         }
