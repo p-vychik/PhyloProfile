@@ -324,7 +324,7 @@ generateSinglePlot <- function(plotDf, parameters, variable) {
         scale_x_discrete(labels = xNames) +
         # add mean/median point and color of that point
         stat_summary(
-            aes(colour = parameters$mValue), fun.y = parameters$mValue,
+            aes(colour = parameters$mValue), fun = parameters$mValue,
             geom = "point", size = 3, show.legend = TRUE, shape = 8
         ) +
         scale_color_manual("", values = c("red")) +
@@ -359,6 +359,7 @@ generateSinglePlot <- function(plotDf, parameters, variable) {
 #' @note adapted from https://rdrr.io/github/PhilBoileau/CLSAR/src/R/
 #' gridArrangeSharedLegend.R
 #' @examples
+#' \dontrun{
 #' data("mainLongRaw", package="PhyloProfile")
 #' data <- mainLongRaw
 #' inGroup <- c("ncbi9606", "ncbi10116")
@@ -383,6 +384,7 @@ generateSinglePlot <- function(plotDf, parameters, variable) {
 #'     title = plotParameters$title,
 #'     size = plotParameters$titleSize
 #' )
+#' }
 
 gridArrangeSharedLegend <- function(
     ...,  ncol = length(list(...)), nrow = 1, position = c("bottom", "right"),

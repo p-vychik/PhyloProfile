@@ -31,6 +31,7 @@ adapted from https://rdrr.io/github/PhilBoileau/CLSAR/src/R/
 gridArrangeSharedLegend.R
 }
 \examples{
+\dontrun{
 data("mainLongRaw", package="PhyloProfile")
 data <- mainLongRaw
 inGroup <- c("ncbi9606", "ncbi10116")
@@ -55,6 +56,7 @@ g <- gridArrangeSharedLegend(
     title = plotParameters$title,
     size = plotParameters$titleSize
 )
+}
 }
 \author{
 Phil Boileau, \email{philippe.boileau@rimuhc.ca}
