@@ -637,8 +637,8 @@ shinyServer(function(input, output, session) {
 
         listIn <- input$geneList
         if (!is.null(listIn)) {
-            list <- read.table(file = listIn$datapath, header = FALSE)
-            out <- as.list(unique(list$V1))
+            geneListDf <- read.table(file = listIn$datapath, header = FALSE)
+            out <- as.list(unique(geneListDf$V1))
         }
         if (length(out) > 0) {
             strong(paste0("Total number of genes:  ", length(out)))
@@ -1018,12 +1018,29 @@ shinyServer(function(input, output, session) {
             }
         }
     })
+    
+    # * predict reference species ----------------------------------------------
+    refSpec <- reactive({
+        longDataframe <- getMainInput()
+        longDataframe$joinedID <- paste(
+            longDataframe$geneID, longDataframe$ncbiID
+        )
+        tmpDf <- as.data.frame(
+            do.call(
+                rbind, strsplit(unique(longDataframe$joinedID), " ")
+            )
+        )
+        refspecID <- names(sort(table(tmpDf$V2),decreasing = TRUE)[1])
+        refsecpName <- getInputTaxaName(
+            input$rankSelect, refspecID, getTaxDBpath()
+        )
+        return(refsecpName)
+    })
 
     # * render list of (super)taxa ---------------------------------------------
     observe({
         choice <- inputTaxonName()
         choice$fullName <- as.factor(choice$fullName)
-
         if (input$demoData == "arthropoda") {
             hellemDf <- data.frame(
                 "name" = c(
@@ -1050,7 +1067,6 @@ shinyServer(function(input, output, session) {
                 )
             )
             rankName <- input$rankSelect
-
             updateSelectizeInput(
                 session, "inSelect", "", server = TRUE,
                 choices = as.list(levels(choice$fullName)),
@@ -1082,7 +1098,6 @@ shinyServer(function(input, output, session) {
                 )
             )
             rankName <- input$rankSelect
-
             updateSelectizeInput(
                 session, "inSelect", "", server = TRUE,
                 choices = as.list(levels(choice$fullName)),
@@ -1116,11 +1131,17 @@ shinyServer(function(input, output, session) {
                     )
                 )
             } else {
+                predRefspec <- refSpec()
+                selectedRefspec <- levels(choice$fullName)[1]
+                if (nrow(predRefspec) > 0) {
+                    if (predRefspec$fullName %in% levels(choice$fullName))
+                        selectedRefspec <- predRefspec$fullName
+                }   
                 if (length(choice$fullName) > 0) {
                     updateSelectizeInput(
                         session, "inSelect", "", server = TRUE,
                         choices = as.list(levels(choice$fullName)),
-                        selected = levels(choice$fullName)[1]
+                        selected = selectedRefspec
                     )
                 }
             }
@@ -1129,8 +1150,9 @@ shinyServer(function(input, output, session) {
 
     # * enable "PLOT" button ---------------------------------------------------
     observeEvent(input$rankSelect,  ({
-        if (input$rankSelect == "") shinyBS::updateButton(session, "do", disabled = TRUE)
-        else {
+        if (input$rankSelect == "") {
+            shinyBS::updateButton(session, "do", disabled = TRUE)
+        } else {
             unkTaxa <- unkTaxa()
             if (length(unkTaxa) == 0) {
                 shinyBS::updateButton(session, "do", disabled = FALSE)
@@ -2326,8 +2348,11 @@ shinyServer(function(input, output, session) {
                 } else {
                     listIn <- input$geneList
                     if (!is.null(listIn)) {
-                        list <- read.table(file = listIn$datapath, header = FALSE)
-                        listGeneOri <- unique(list$V1)
+                        geneListDf <- read.table(
+                            file = listIn$datapath, header = FALSE
+                        )
+                        listGeneOri <- unique(geneListDf$V1)
+
                         # update number of endIndex
                         if (length(listGeneOri) <= 1500) {
                             updateNumericInput(
@@ -2362,6 +2387,7 @@ shinyServer(function(input, output, session) {
                         "geneID", "ncbiID", "orthoID", "var1", "var2", "geneName"
                     )
                 }
+                data$geneID <- droplevels(data$geneID)
                 return(data)
             })
         }
@@ -2602,7 +2628,9 @@ shinyServer(function(input, output, session) {
     getAllGenes <- function() {
         df <- getMainInput()
         idNameDf <- unique(df[,c("geneID","geneName")])
-        idNameList <- setNames(idNameDf$geneID, idNameDf$geneName)
+        idNameList <- setNames(
+            as.character(idNameDf$geneID), as.character(idNameDf$geneName)
+        )
         return(idNameList)
     }
     
@@ -2652,6 +2680,7 @@ shinyServer(function(input, output, session) {
         longDataframe <- getMainInput()
         req(longDataframe)
         req(input$endIndex)
+        req(input$plotMode)
         if (input$autoSizing & input$plotMode == "normal") {
             inputSuperTaxon <- inputTaxonName()
             nrTaxa <- nlevels(as.factor(inputSuperTaxon$fullName))
@@ -2660,10 +2689,10 @@ shinyServer(function(input, output, session) {
             adaptedSize <- adaptPlotSize(
                 nrTaxa, nrGene, input$xAxis, input$dotZoom
             )
+            req(length(adaptedSize) > 0)
             h <- adaptedSize[1]
             hv <- adaptedSize[2]
             wv <- adaptedSize[3]
-            
             if (h <= 20) {
                 updateSelectInput(
                     session, "mainLegend",
@@ -2682,53 +2711,6 @@ shinyServer(function(input, output, session) {
                 updateNumericInput(session, "width", value = wv)
             }
             updateNumericInput(session, "height", value = hv)
-            
-            
-            # if (nrTaxa < 10000 && nrGene < 10000) {
-            #     # adapte to axis type
-            #     if (input$xAxis == "taxa") {
-            #         h <- nrGene
-            #         w <- nrTaxa
-            #     } else {
-            #         w <- nrGene
-            #         h <- nrTaxa
-            #     }
-            #     # adapt to dot zoom factor
-            #     if (input$dotZoom < -0.5){
-            #         hv <- (200 + 12 * h) * (1 + input$dotZoom) + 500
-            #         wv <- (200 + 12 * w) * (1 + input$dotZoom) + 500
-            #     }  else if ((input$dotZoom < 0)) {
-            #         hv <- (200 + 12 * h) * (1 + input$dotZoom) + 200
-            #         wv <- (200 + 12 * w) * (1 + input$dotZoom) + 200
-            #     } else {
-            #         hv <- (200 + 12 * h) * (1 + input$dotZoom)
-            #         wv <- (200 + 12 * w) * (1 + input$dotZoom)
-            #     }
-            #     # minimum size
-            #     if (hv < 300) hv <- 300
-            #     if (wv < 300) wv <- 300
-            #     # update plot size based on number of genes/taxa
-            #     hv <- hv + 300
-            #     wv <- wv + 300
-            #     if (h <= 20) {
-            #         updateSelectInput(
-            #             session, "mainLegend",
-            #             label = "Legend position:",
-            #             choices = list("Right" = "right",
-            #                            "Left" = "left",
-            #                            "Top" = "top",
-            #                            "Bottom" = "bottom",
-            #                            "Hide" = "none"),
-            #             selected = "top"
-            #         )
-            #         updateNumericInput(session, "width", value = wv  + 50)
-            #     } else if (h <= 30) {
-            #         updateNumericInput(session, "width", value = wv + 50)
-            #     } else {
-            #         updateNumericInput(session, "width", value = wv)
-            #     }
-            #     updateNumericInput(session, "height", value = hv)
-            # }
         }
     })
     
@@ -2904,7 +2886,7 @@ shinyServer(function(input, output, session) {
             }
         } else {
             idNameList <- getAllGenes()
-            outAll <- c(as.factor("all"), idNameList)
+            outAll <- c(setNames("all", "all"), idNameList)
             if (input$addGeneAgeCustomProfile == TRUE) {
                 outAll <- as.list(selectedgeneAge())
                 outAll <- outAll[[1]]
@@ -2926,7 +2908,8 @@ shinyServer(function(input, output, session) {
                     outAll <- as.list(levels(customList$V1))
                 } else {
                     return(updateSelectizeInput(
-                        session, "inSeq", server = TRUE, "", outAll
+                        session, "inSeq", server = TRUE, "", outAll, 
+                        selected = "all"
                     ))
                 }
             }
@@ -3197,11 +3180,17 @@ shinyServer(function(input, output, session) {
     observe({
         if (input$umapClusteringType == "genes") {
             shinyjs::disable("umapRank")
+            shinyjs::disable("umapGroupHigherRank")
+            shinyjs::disable("umapApplyChangeLables")
+            shinyjs::disable("umapResetLables")
             updateRadioButtons(
                 session, "umapGroupLabelsBy", choices = c("taxa"), inline = TRUE
             )
         } else {
             shinyjs::enable("umapRank")
+            shinyjs::enable("umapGroupHigherRank")
+            shinyjs::enable("umapApplyChangeLables")
+            shinyjs::enable("umapResetLables")
             updateRadioButtons(
                 session, "umapGroupLabelsBy", choices = c("taxa", "genes"),
                 inline = TRUE
@@ -3413,10 +3402,12 @@ shinyServer(function(input, output, session) {
         withProgress(
             message = "Plotting...", value = 0.5, {
                 g <- plotUmap(
-                    umapPlotData(), colorPalette = input$colorPalleteUmap,
+                    umapPlotData(), legendPos = input$umap.Legend,
+                    colorPalette = input$colorPalleteUmap,
                     transparent = input$umapAlpha,
                     textSize = input$umapPlot.textsize, font = input$font, 
-                    highlightTaxa = input$highlightUmapTaxa
+                    highlightTaxa = input$highlightUmapTaxa, 
+                    dotZoom = input$umapPlot.dotzoom
                 )
                 g + coord_cartesian(
                     xlim = ranges$x, ylim = ranges$y, expand = TRUE
@@ -3467,10 +3458,12 @@ shinyServer(function(input, output, session) {
             ggsave(
                 file,
                 plot = plotUmap(
-                    umapPlotData(), colorPalette = input$colorPalleteUmap,
+                    umapPlotData(), legendPos = input$umap.Legend,
+                    colorPalette = input$colorPalleteUmap,
                     transparent = input$umapAlpha, 
                     textSize = input$umapPlot.textsize, font = input$font, 
-                    highlightTaxa = input$highlightUmapTaxa
+                    highlightTaxa = input$highlightUmapTaxa,  
+                    dotZoom = input$umapPlot.dotzoom
                 ) + coord_cartesian(
                     xlim = ranges$x, ylim = ranges$y, expand = TRUE),
                 width = input$umapPlot.width * 0.056458333,
@@ -3515,19 +3508,32 @@ shinyServer(function(input, output, session) {
                 hr(),
                 h4("SELECTED TAXA"),
                 DT::dataTableOutput("umapSpec.table"),
+                downloadButton(
+                    "downloadUmapSpec.table", "Download table",
+                    class = "butDL"
+                ),
                 hr(),
                 h4("SELECTED SEED GENES"),
-                DT::dataTableOutput("umapSeed.table")
+                DT::dataTableOutput("umapSeed.table"),
+                downloadButton(
+                    "downloadUmapSeed.table", "Download table",
+                    class = "butDL"
+                )
             )
         } else {
             list(
                 hr(),
                 h4("SELECTED SEED GENES"),
-                DT::dataTableOutput("umapSeed.table")
+                DT::dataTableOutput("umapSeed.table"),
+                downloadButton(
+                    "downloadUmapSeed.table", "Download table",
+                    class = "butDL"
+                )
             )
         }
     })
 
+    # ** umap selected taxa table ----------------------------------------------
     umapSelectedTaxa <- reactive({
         if (is.null(input$umapBrush$ymin)) {
             shinyjs::disable("umapZoomIn")
@@ -3568,7 +3574,19 @@ shinyServer(function(input, output, session) {
     ),{
         umapSelectedTaxa()
     })
-
+    
+    output$downloadUmapSpec.table <- downloadHandler(
+        filename = function() {
+            c("umapSelectedTaxa.txt")
+        },
+        content = function(file) {
+            dataOut <- umapSelectedTaxa()
+            write.table(dataOut, file, sep = "\t", row.names = FALSE,
+                        quote = FALSE)
+        }
+    )
+    
+    # ** umap selected genes table ---------------------------------------------
     umapSelectedGenes <- reactive({
         if (is.null(input$umapBrush$ymin)){
             shinyjs::disable("addGeneUmap")
@@ -3620,7 +3638,15 @@ shinyServer(function(input, output, session) {
                     geneDf$geneID <- sub("X","", geneDf$geneID, fixed = TRUE)
                 }
             }
-            return(geneDf)
+            # count number of taxa for each genes
+            joinedIDs <- paste(geneDf$geneID, geneDf$ncbiID)
+            t <- as.data.frame(do.call(rbind, strsplit(unique(joinedIDs), " ")))
+            geneCountDf <- data.frame(table(t$V1))
+            geneCountDf <- geneCountDf[order(geneCountDf$Freq, decreasing=TRUE),]
+            colnames(geneCountDf) <- c("geneID", "Taxa count")
+            geneDf <- merge(geneDf, geneCountDf, by = "geneID", all.x = TRUE)
+            # return(geneDf)
+            return(geneCountDf)
         } else {
             shinyjs::disable("addGeneUmap")
             return()
@@ -3632,8 +3658,19 @@ shinyServer(function(input, output, session) {
     ),{
         umapSelectedGenes()
     })
+    
+    output$downloadUmapSeed.table <- downloadHandler(
+        filename = function() {
+            c("umapSelectedGenes.txt")
+        },
+        content = function(file) {
+            dataOut <- umapSelectedGenes()
+            write.table(dataOut, file, sep = "\t", row.names = FALSE,
+                        quote = FALSE)
+        }
+    )
 
-    # ** check if genes are added anywhere else to the customized profile ------
+    # * check if genes are added anywhere else to the customized profile -------
     observe({
         if (input$addClusterCustomProfile == TRUE
             | input$addGeneAgeCustomProfile == TRUE

@@ -133,7 +133,7 @@ createProfilePlot <- function(
             if (length(inSeq()) == 0 || length(inTaxa()) == 0) return()
             if ("all" %in% inSeq() & "all" %in% inTaxa()) return()
         }
-        if (mode() == "fast")
+        if (mode() == "fast" & typeProfile() != "customizedProfile")
             return(heatmapPlottingFast(dataHeat(), parameters()))
         return(heatmapPlotting(dataHeat(), parameters()))
     })
@@ -337,6 +337,9 @@ createProfilePlot <- function(
     
     # get info of clicked point on heatmap plot --------------------------------
     selectedpointInfo <- reactive({
+        req(dataHeat)
+        req(inSeq())
+        req(inTaxa())
         # get selected supertaxon name
         taxaList <- getNameList(taxDB())
         rankName <- rankSelect()
@@ -346,7 +349,7 @@ createProfilePlot <- function(
         if (mode() == "fast")
             dataHeat <- brushedData()
             
-        if (is.null(dataHeat)) {
+        if (is.null(dataHeat) | nrow(dataHeat) == 0) {
             message("WARNING: Data for heatmap is NULL!")
             return()
         }

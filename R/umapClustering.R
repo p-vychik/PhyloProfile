@@ -256,7 +256,8 @@ createUmapPlotData <- function(
 #' Create UMAP cluster plot
 #' @export
 #' @usage plotUmap(plotDf = NULL, legendPos = "bottom", colorPalette = "Set2", 
-#'     transparent = 0, textSize = 12, font = "Arial", highlightTaxa = NULL)
+#'     transparent = 0, textSize = 12, font = "Arial", highlightTaxa = NULL,
+#'     dotZoom = 0)
 #' @param plotDf data for UMAP plot 
 #' @param legendPos position of legend. Default: "right"
 #' @param colorPalette color palette. Default: "Set2"
@@ -264,6 +265,7 @@ createUmapPlotData <- function(
 #' @param textSize size of axis and legend text. Default: 12
 #' @param font font of text. Default = Arial"
 #' @param highlightTaxa list of taxa to be highlighted
+#' @param dotZoom dot size zooming factor. Default: 0
 #' @return A plot as ggplot object
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
 #' @seealso \code{\link{prepareUmapData}}, \code{\link{umapClustering}},
@@ -280,7 +282,8 @@ createUmapPlotData <- function(
 
 plotUmap <- function(
     plotDf = NULL, legendPos = "bottom", colorPalette = "Set2", 
-    transparent = 0, textSize = 12, font = "Arial", highlightTaxa = NULL
+    transparent = 0, textSize = 12, font = "Arial", highlightTaxa = NULL,
+    dotZoom = 0
 ) {
     if (is.null(plotDf)) stop("Input data cannot be NULL!")
     X <- Y <- Label <- Freq <- NULL
@@ -302,13 +305,14 @@ plotUmap <- function(
         )
     }
     # adapt plot height based on number of labels
-    
+
     # generate plot
     plot <- ggplot(plotDf, aes(x = X, y = Y, color = Label)) +
         geom_point(aes(size = Freq), alpha = 1 - transparent) +
         geom_rug(alpha = 1) +
         theme_minimal() +
-        labs(x = "", y = "")
+        labs(x = "", y = "")+
+        scale_radius(range = c(1 + dotZoom, 6 + dotZoom))
     # change legend title
     if ("ncbiID" %in% colnames(plotDf)) {
         plot <- plot + guides(

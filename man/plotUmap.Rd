@@ -5,7 +5,8 @@
 \title{Create UMAP cluster plot}
 \usage{
 plotUmap(plotDf = NULL, legendPos = "bottom", colorPalette = "Set2", 
-    transparent = 0, textSize = 12, font = "Arial", highlightTaxa = NULL)
+    transparent = 0, textSize = 12, font = "Arial", highlightTaxa = NULL,
+    dotZoom = 0)
 }
 \arguments{
 \item{plotDf}{data for UMAP plot}
@@ -21,6 +22,8 @@ plotUmap(plotDf = NULL, legendPos = "bottom", colorPalette = "Set2",
 \item{font}{font of text. Default = Arial"}
 
 \item{highlightTaxa}{list of taxa to be highlighted}
+
+\item{dotZoom}{dot size zooming factor. Default: 0}
 }
 \value{
 A plot as ggplot object

@@ -156,7 +156,7 @@ shinyUI(
 
         # MAIN NARVARPAGE TABS -------------------------------------------------
         navbarPage(
-            em(strong("PhyloProfile v1.20.0")),
+            em(strong("PhyloProfile v1.22.0")),
             id = "tabs",
             collapsible = TRUE,
             inverse = TRUE,
@@ -844,7 +844,7 @@ shinyUI(
                                     style = "padding:0px;",
                                     selectizeInput(
                                         "inSeq","", NULL, multiple=TRUE,
-                                        options = list(placeholder = 'all')
+                                        choices = c('all'), selected = "all"
                                     )
                                 ),
                                 column(
@@ -879,10 +879,6 @@ shinyUI(
                         uiOutput("cusSuperRankSelect.ui"),
 
                         h5(""),
-                        # shinyBS::bsButton(
-                        #     "applyFilterCustom", "Apply filter",style="warning",
-                        #     icon("check")
-                        # ),
                         shinyBS::bsButton(
                             "plotCustom", "Update apperance", style = "warning",
                             icon("sync")
@@ -920,25 +916,20 @@ shinyUI(
                                 c("Taxa" = "taxa", "Genes" = "genes"),
                                 inline = TRUE
                             ),
-                            radioButtons(
-                                "umapDataType", "using",
-                                c(
-                                    "Presence/Absence" = "binary", 
-                                    "Numeric score" = "nonbinary"
-                                ),
-                                inline = TRUE
+                            selectInput(
+                                "umapDataType", label = "using",
+                                choices = list("Presence/Absence" = "binary", 
+                                               "Numeric score" = "nonbinary"),
+                                selected = "binary"
                             )
                         ),
                         column(
                             4,
                             column(
-                                4,
+                                3,
                                 createPlotSize(
                                     "umapPlot.width", "Plot width", 900
-                                )
-                            ),
-                            column(
-                                4,
+                                ),
                                 createPlotSize(
                                     "umapPlot.height", "Plot height", 400
                                 )
@@ -947,6 +938,22 @@ shinyUI(
                                 4,
                                 createTextSize(
                                     "umapPlot.textsize", "Text size", 12
+                                ),
+                                selectInput(
+                                    "umap.Legend", label = "Legend position:",
+                                    choices = list("Right" = "right",
+                                                   "Left" = "left",
+                                                   "Top" = "top",
+                                                   "Bottom" = "bottom",
+                                                   "Hide" = "none"),
+                                    selected = "bottom"
+                                )
+                            ),
+                            column(
+                                5,
+                                sliderInput(
+                                    "umapPlot.dotzoom", "Dot size zooming", 
+                                    min = -3, max = 10, step = 1, value = 0
                                 )
                             )
                         ),
@@ -996,8 +1003,8 @@ shinyUI(
                             "Group labels into higher rank",
                             value = "", 
                             placeholder = paste(
-                                "Type taxon names in higher rank, separated by",
-                                "semicolon (e.g.: Fungi;Metazoa)"
+                                "Type taxon names in higher rank",
+                                "(e.g.: Fungi;Metazoa)"
                             )
                         ),
                         uiOutput("umapGroupHigherRank.warning"),

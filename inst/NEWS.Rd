@@ -2,6 +2,14 @@
 \title{PhyloProfile news}
 \encoding{UTF-8}
 
+\section{Version 1.20.1}{
+  \itemize{
+    \item auto identify refspec
+    \item fixed subsetting data using a list of gene IDs
+  }
+}
+
+
 \section{Version 1.20.0}{
   \itemize{
     \item added UMAP clustering
