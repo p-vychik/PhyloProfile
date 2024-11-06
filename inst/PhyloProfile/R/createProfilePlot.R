@@ -172,7 +172,7 @@ createProfilePlot <- function(
         }
 
         shinycssloaders::withSpinner(
-            if (mode() == "fast") {
+            if (mode() == "fast" & typeProfile() == "mainProfile") {
                 plotOutput(
                     ns("plot"),
                     width = parameters()$width,
@@ -223,7 +223,7 @@ createProfilePlot <- function(
     # create subplot -----------------------------------------------------------
     # ** show/hide subplot settings --------------------------------------------
     observe({
-        if (mode() == "fast") {
+        if (mode() == "fast" & typeProfile() == "mainProfile") {
             updateRadioButtons(
                 session, "showSettings", "Show subplot settings",
                 choices = c("show", "hide"), selected = "show", inline = TRUE
@@ -337,18 +337,20 @@ createProfilePlot <- function(
     
     # get info of clicked point on heatmap plot --------------------------------
     selectedpointInfo <- reactive({
-        req(dataHeat)
-        req(inSeq())
-        req(inTaxa())
+        req(dataHeat())
+        if (typeProfile() == "customizedProfile") {
+            req(inSeq())
+            req(inTaxa())
+        }
         # get selected supertaxon name
         taxaList <- getNameList(taxDB())
         rankName <- rankSelect()
         inSelect <- taxaList$ncbiID[taxaList$fullName == inSelect()]
         
         dataHeat <- dataHeat()
-        if (mode() == "fast")
+        if (mode() == "fast" & typeProfile() == "mainProfile")
             dataHeat <- brushedData()
-            
+        
         if (is.null(dataHeat) | nrow(dataHeat) == 0) {
             message("WARNING: Data for heatmap is NULL!")
             return()

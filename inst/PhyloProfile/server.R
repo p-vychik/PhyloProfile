@@ -2877,6 +2877,7 @@ shinyServer(function(input, output, session) {
         if (v$doPlot == FALSE) {
             if (input$addGeneUmap == TRUE) {
                 umapGenes <- umapSelectedGenes()
+                req(umapGenes)
                 if (nrow(umapGenes) > 0)
                     return(updateSelectizeInput(
                         session, "inSeq", server = TRUE, "", 
@@ -2897,6 +2898,7 @@ shinyServer(function(input, output, session) {
             } else if (input$addGCGenesCustomProfile == TRUE) {
                 outAll <- as.list(candidateGenes())
             } else if (input$addGeneUmap == TRUE) {
+                req(umapSelectedGenes())
                 umapGenes <- umapSelectedGenes()
                 if (nrow(umapGenes) > 0) outAll <- unique(umapGenes$geneID)
             } else {
@@ -3344,9 +3346,15 @@ shinyServer(function(input, output, session) {
         req(renameLabelsUmap())
         withProgress(
             message = "Performing UMAP clustering...", value = 0.5, {
-                umapData.umap <- umapClustering(
-                    renameLabelsUmap(), input$umapClusteringType, input$umapDataType
-                )
+                if (input$umapPlotType == "ggplot") {
+                    umapData.umap <- umapClustering(
+                        renameLabelsUmap(), input$umapClusteringType, input$umapDataType
+                    )
+                } else {
+                    umapData.umap <- umapClustering3D(
+                        renameLabelsUmap(), input$umapClusteringType, input$umapDataType
+                    )
+                }
                 return(umapData.umap)
             }
         )
@@ -3415,24 +3423,71 @@ shinyServer(function(input, output, session) {
             }
         )
     })
+    
+    output$umapPlotly <- renderPlotly({
+        req(getMainInput())
+        options(htmlwidgets.TOJSON_ARGS = NULL)
+        if(is.null(getMainInput())) stop("Input data is NULL!")
+        withProgress(
+            message = "Plotting...", value = 0.5, {
+                g <- plotUmap3D(
+                    umapPlotData(), legendPos = input$umap.Legend,
+                    colorPalette = input$colorPalleteUmap,
+                    transparent = input$umapAlpha,
+                    textSize = input$umapPlot.textsize, font = input$font, 
+                    highlightTaxa = input$highlightUmapTaxa, 
+                    dotZoom = input$umapPlot.dotzoom
+                ) 
+                return(g)
+            }
+        )
+    })
 
     output$umapPlot.ui <- renderUI({
-        shinycssloaders::withSpinner(
-            plotOutput(
-                "umapPlot",
-                height = input$umapPlot.height,
-                width = input$umapPlot.width,
-                click = "umapClick",
-                dblclick = "umapdblClick",
-                brush = brushOpts(
-                    id = "umapBrush",
-                    delay = input$brushDelay,
-                    delayType = input$brushPolicy,
-                    direction = input$brushDir,
-                    resetOnNew = TRUE
+        if (input$umapPlotType == "ggplot") {
+            shinycssloaders::withSpinner(
+                plotOutput(
+                    "umapPlot",
+                    height = input$umapPlot.height,
+                    width = input$umapPlot.width,
+                    click = "umapClick",
+                    dblclick = "umapdblClick",
+                    brush = brushOpts(
+                        id = "umapBrush",
+                        delay = input$brushDelay,
+                        delayType = input$brushPolicy,
+                        direction = input$brushDir,
+                        resetOnNew = TRUE
+                    ),
+                    hover = hoverOpts(
+                        id = "umapHover",
+                        nullOutside = FALSE
+                    )
                 )
             )
-        )
+        } else {
+            shinycssloaders::withSpinner(
+                plotlyOutput(
+                    "umapPlotly",
+                    height = input$umapPlot.height,
+                    width = input$umapPlot.width,
+                    # click = "umapClick",
+                    # dblclick = "umapdblClick",
+                    # brush = brushOpts(
+                    #     id = "umapBrush",
+                    #     delay = input$brushDelay,
+                    #     delayType = input$brushPolicy,
+                    #     direction = input$brushDir,
+                    #     resetOnNew = TRUE
+                    # ),
+                    # hover = hoverOpts(
+                    #     id = "umapHover",
+                    #     nullOutside = FALSE
+                    # )
+                )
+            )
+        }
+        
     })
     
     # When a double-click happens, check if there's a brush on the plot
@@ -3581,8 +3636,9 @@ shinyServer(function(input, output, session) {
         },
         content = function(file) {
             dataOut <- umapSelectedTaxa()
-            write.table(dataOut, file, sep = "\t", row.names = FALSE,
-                        quote = FALSE)
+            write.table(
+                dataOut, file, sep = "\t", row.names = FALSE, quote = FALSE
+            )
         }
     )
     
@@ -3669,6 +3725,48 @@ shinyServer(function(input, output, session) {
                         quote = FALSE)
         }
     )
+    
+    # * show UMAP hover info ---------------------------------------------------
+    umapHoverTaxa <- reactive({
+        req(input$umapHover)
+        x <- input$umapHover$x
+        y <- input$umapHover$y
+        hoveredDf <- nearPoints(
+            umapPlotData(), input$umapHover, xvar = "X", yvar = "Y"
+        ) %>% select(ncbiID, Label, Freq)
+        if (nrow(hoveredDf) > 0) {
+            hoveredDf$id <- as.numeric(gsub("ncbi","",hoveredDf$ncbiID))
+            taxonNameDf <- PhyloProfile::id2name(hoveredDf$id, currentNCBIinfo)
+            hoveredDf <- left_join(
+                hoveredDf, taxonNameDf %>% select(ncbiID, fullName),
+                by = c("id" = "ncbiID")
+            )
+            hoveredDf <- hoveredDf %>% select(fullName, Freq)
+            colnames(hoveredDf) <- c("Taxon", "# genes")
+            return(hoveredDf)
+        } else return()
+    })
+    
+    umapHoverGene <- reactive({
+        req(input$umapHover)
+        x <- input$umapHover$x
+        y <- input$umapHover$y
+        hoveredDf <- nearPoints(
+            umapPlotData(), input$umapHover, xvar = "X", yvar = "Y"
+        ) %>% select(geneID, Freq)
+        if (nrow(hoveredDf) > 0) {
+            colnames(hoveredDf) <- c("Gene", "# taxa")
+            return(hoveredDf)
+        } else return()
+    })
+
+    output$umapHoverInfo <- renderTable({
+        if(!is.null(input$umapHover)){
+            if (input$umapClusteringType == "taxa") {
+                umapHoverTaxa()
+            } else umapHoverGene()
+        }
+    })
 
     # * check if genes are added anywhere else to the customized profile -------
     observe({
@@ -3719,7 +3817,7 @@ shinyServer(function(input, output, session) {
         } else if (input$tabs == "Customized profile") {
             info <- selectedpointInfo()
         } else return()
-
+        
         req(info)
         orthoID <- info[[2]]
         if (length(info[[2]]) > 1) orthoID <- paste0(info[[2]][1], ",...")

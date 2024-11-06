@@ -116,7 +116,7 @@ prepareUmapData <- function(
     return(wideDf)
 }
 
-#' Perform UMAP clustering
+#' Perform UMAP clustering 2D
 #' @export
 #' @usage umapClustering(data4umap = NULL, by = "taxa", type = "binary", 
 #'     randomSeed = 123)
@@ -175,6 +175,72 @@ umapClustering <- function(
         df.umap <- umap::umap(
             subsetDt, random_state = randomSeed, preserve.seed = TRUE,
             n_neighbors = max(1, nrow(subsetDt) - 1)
+        )
+    }
+    return(df.umap)
+}
+
+#' Perform UMAP clustering 3D
+#' @export
+#' @usage umapClustering3D(data4umap = NULL, by = "taxa", type = "binary", 
+#'     randomSeed = 123)
+#' @param data4umap data for UMAP clustering (output from prepareUmapData)
+#' @param by cluster data by "taxa" (default) or "genes"
+#' @param type type of data, either "binary" (default) or "non-binary"
+#' @param randomSeed random seed. Default: 123
+#' @import umap
+#' @return A list contain UMAP cluster objects
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @seealso \code{\link{prepareUmapData}}
+#' @examples
+#' rawInput <- system.file(
+#'    "extdata", "test.main.long", package = "PhyloProfile", mustWork = TRUE
+#' )
+#' longDf <- createLongMatrix(rawInput)
+#' data4umap <- prepareUmapData(longDf, "phylum")
+#' umapClustering3D(data4umap)
+
+umapClustering3D <- function(
+        data4umap = NULL, by = "taxa", type = "binary", randomSeed = 123
+) {
+    if (is.null(data4umap)) stop("Input data cannot be NULL!")
+    ncbiID <- Label <- Freq <- geneID <- NULL
+    if ("geneID" %in% colnames(data4umap)) by <- "genes"
+    if (by == "taxa") {
+        subsetDt <- subset(data4umap, select = -c(ncbiID, Label, Freq, n))
+    } else {
+        subsetDt <- subset(data4umap, select = -c(geneID, Label, Freq, n))
+    }
+    if (type == "binary") {
+        subsetDt[subsetDt >= 0] <- 1
+        subsetDt[subsetDt < 0] <- 0
+    }
+    checkDt4Umap <- tryCatch(
+        {
+            suppressWarnings(umap::umap(
+                subsetDt, random_state = randomSeed, preserve.seed = TRUE,
+                n_components = 3
+            ))
+        },
+        error = function(cond) {
+            message(conditionMessage(cond))
+            NA
+        },
+        warning = function(cond) {
+            message(conditionMessage(cond))
+            NA
+        }
+    )
+    if (!(is.na(checkDt4Umap[1]))) {
+        df.umap <- umap::umap(
+            subsetDt, random_state = randomSeed, preserve.seed = TRUE,
+            n_components = 3
+        )
+    } else {
+        warning("PROBLEM: Too few samples for UMAP!!!")
+        df.umap <- umap::umap(
+            subsetDt, random_state = randomSeed, preserve.seed = TRUE,
+            n_neighbors = max(1, nrow(subsetDt) - 1), n_components = 3
         )
     }
     return(df.umap)
@@ -242,6 +308,7 @@ createUmapPlotData <- function(
     Label <- Freq <- NULL
     data4umap$X <- umapData$layout[,1]
     data4umap$Y <- umapData$layout[,2]
+    if (ncol(umapData$layout) == 3) data4umap$Z <- umapData$layout[,3]
     # join less freq items into "other"
     data4umap <- groupLabelUmapData(data4umap, freqCutoff)
     # exclude taxa
@@ -335,6 +402,69 @@ plotUmap <- function(
     plot <- plot + theme(text = element_text(family = font))
     return(plot)
 }
+
+
+#' Create UMAP cluster 3D plot
+#' @export
+#' @usage plotUmap3D(plotDf = NULL, legendPos = "bottom", 
+#'     colorPalette = "Set2", transparent = 0, textSize = 12, font = "Arial", 
+#'     highlightTaxa = NULL, dotZoom = 0)
+#' @param plotDf data for UMAP plot 
+#' @param legendPos position of legend. Default: "right"
+#' @param colorPalette color palette. Default: "Set2"
+#' @param transparent transparent level (from 0 to 1). Default: 0
+#' @param textSize size of axis and legend text. Default: 12
+#' @param font font of text. Default = Arial"
+#' @param highlightTaxa list of taxa to be highlighted
+#' @param dotZoom dot size zooming factor. Default: 0
+#' @return A plot as ggplot object
+#' @rawNamespace import(plotly, except = last_plot)
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @seealso \code{\link{prepareUmapData}}, \code{\link{umapClustering}},
+#' \code{\link{createUmapPlotData}}
+#' @examples
+#' rawInput <- system.file(
+#'    "extdata", "test.main.long", package = "PhyloProfile", mustWork = TRUE
+#' )
+#' longDf <- createLongMatrix(rawInput)
+#' umapData <- prepareUmapData(longDf, "phylum")
+#' data.umap <- umapClustering3D(umapData)
+#' plotDf <- createUmapPlotData(data.umap, umapData)
+#' plotUmap3D(plotDf, font = "sans")
+
+plotUmap3D <- function(
+    plotDf = NULL, legendPos = "bottom", colorPalette = "Set2", 
+    transparent = 0, textSize = 12, font = "Arial", highlightTaxa = NULL,
+    dotZoom = 0
+) {
+    if (is.null(plotDf)) stop("Input data cannot be NULL!")
+    X <- Y <- Z <- Label <- Freq <- NULL
+    if (!("Z" %in% colnames(plotDf))) stop("PlotDf seems to be 2D plot!")
+    # add colors
+    plotDf <- addUmapTaxaColors(plotDf, colorPalette, highlightTaxa)
+    if ("color" %in% colnames(plotDf)) {
+        colorScheme <- structure(
+            plotDf$color, .Names = plotDf$Label
+        )
+    } else {
+        colorScheme <- structure(
+            head(
+                suppressWarnings(
+                    RColorBrewer::brewer.pal(
+                        nlevels(as.factor(plotDf$Label)), colorPalette
+                    )
+                ), levels(as.factor(plotDf$Label))
+            ), .Names = levels(as.factor(plotDf$Label))
+        )
+    }
+    plot <- plot_ly(
+        plotDf, x = ~X, y = ~Y, z = ~Z, color = ~Label, #colors = ~color,
+        type = "scatter3d", mode = 'markers', size = ~Freq #,
+        #marker = list(sizemode = 'diameter') # * (1 + dotZoom))
+    )
+    return(plot)
+} 
+
 
 #' Add colors for taxa in UMAP plot
 #' @usage addUmapTaxaColors(plotDf = NULL, colorPalette = "Set2", 

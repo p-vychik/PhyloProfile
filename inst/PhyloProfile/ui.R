@@ -985,6 +985,11 @@ shinyUI(
                             sliderInput(
                                 "umapAlpha", "Transparent level", min = 0,
                                 max = 1, step = 0.05, value = 0.5, width=200
+                            ),
+                            radioButtons(
+                                "umapPlotType", "Plot dimensions", inline = TRUE,
+                                choices = list("2D" = "ggplot", "3D" = "plotly"),
+                                selected = "ggplot"
                             )
                         )
                     )
@@ -992,6 +997,8 @@ shinyUI(
                 sidebarLayout(
                     # * Sidebar panel for data filter --------------------------
                     sidebarPanel(
+                        tableOutput("umapHoverInfo"),
+                        hr(),
                         selectInput(
                             "umapRank", label = "Taxonomy rank for labels",
                             choices = getTaxonomyRanks(),
@@ -1057,7 +1064,7 @@ shinyUI(
                         checkboxInput("addGeneUmap", em("Selected genes")),
                         uiOutput("addUmapCustomProfileCheck.ui")
                     ),
-                    # * Main panel for plot and tables -------------------------
+                    # * Main panel for UMAP plot and tables --------------------
                     mainPanel(
                         column(
                             6,
@@ -2422,6 +2429,19 @@ shinyUI(
                 ),
                 style = "opacity: 0.80"
             )
-        )
+        ),
+        # HOVER INFO BOX =======================================================
+        # conditionalPanel(
+        #     condition =
+        #         "input.tabs=='UMAP'",
+        #     absolutePanel(
+        #         bottom = 5, left = 30,
+        #         fixed = TRUE,
+        #         draggable = TRUE,
+        #         h5("Hover info:"),
+        #         verbatimTextOutput("umapHoverInfo"),
+        #         style = "opacity: 0.80"
+        #     )
+        # )
     )
 )
