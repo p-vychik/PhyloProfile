@@ -277,12 +277,14 @@ groupLabelUmapData <- function(data4umap = NULL, freqCutoff = c(0,200)) {
 #' Create UMAP cluster plot
 #' @export
 #' @usage createUmapPlotData(umapData = NULL, data4umap = NULL, 
-#'     freqCutoff = c(0,200), excludeTaxa = "None")
+#'     freqCutoff = c(0,200), excludeTaxa = "None", currentNCBIinfo = NULL)
 #' @param umapData data contains UMAP cluster (output from umapClustering())
 #' @param data4umap data for UMAP clustering (output from prepareUmapData())
 #' @param freqCutoff gene/taxon frequency cutoff range. Any labels that are 
 #' outside of this range will be assigned as [Other]
 #' @param excludeTaxa hide taxa from plot. Default: "None"
+#' @param currentNCBIinfo table/dataframe of the pre-processed NCBI taxonomy
+#' data (/PhyloProfile/data/preProcessedTaxonomy.txt)
 #' @importFrom utils tail
 #' @return A plot as ggplot object
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
@@ -298,13 +300,12 @@ groupLabelUmapData <- function(data4umap = NULL, freqCutoff = c(0,200)) {
 
 createUmapPlotData <- function(
     umapData = NULL, data4umap = NULL, freqCutoff = c(0, 200), 
-    excludeTaxa = "None"
+    excludeTaxa = "None", currentNCBIinfo = NULL
 ) {
     if (is.null(umapData) | is.null(data4umap)) 
         stop("Input data cannot be NULL!")
     if (length(umapData) == 0 | length(data4umap) == 0) 
         stop("Input data cannot be EMPTY!")
-    
     Label <- Freq <- NULL
     data4umap$X <- umapData$layout[,1]
     data4umap$Y <- umapData$layout[,2]
@@ -315,6 +316,32 @@ createUmapPlotData <- function(
     if (length(excludeTaxa) > 0) {
         data4umap$X[data4umap$Label %in% excludeTaxa] <- NA
         data4umap$Y[data4umap$Label %in% excludeTaxa] <- NA
+    }
+    # convert tax IDs into names
+    if ("ncbiID" %in% colnames(data4umap)) {
+        if (is.null(currentNCBIinfo)) {
+            dataPath <- system.file(
+                "PhyloProfile", "data/",
+                package = "PhyloProfile", mustWork = TRUE
+            )
+            nameFullFile <- paste0(dataPath, "/preProcessedTaxonomy.txt")
+            if (file.exists(nameFullFile)) {
+                currentNCBIinfo <- as.data.frame(
+                    data.table::fread(nameFullFile)
+                )
+            }
+        }
+        if (!is.null(currentNCBIinfo)) {
+            id2nameDf <- PhyloProfile::id2name(
+                gsub("ncbi","",unique(data4umap$ncbiID)), currentNCBIinfo
+            )
+            id2nameDf$ncbiID <- paste0("ncbi", id2nameDf$ncbiID)
+            data4umap <- merge(
+                data4umap, id2nameDf, by = "ncbiID", all.x = TRUE
+            )
+        } else {
+            data4umap$fullName <- "NA"
+        }
     }
     return(data4umap)
 }
@@ -407,14 +434,12 @@ plotUmap <- function(
 #' Create UMAP cluster 3D plot
 #' @export
 #' @usage plotUmap3D(plotDf = NULL, legendPos = "bottom", 
-#'     colorPalette = "Set2", transparent = 0, textSize = 12, font = "Arial", 
-#'     highlightTaxa = NULL, dotZoom = 0)
+#'     colorPalette = "Set2", transparent = 0,highlightTaxa = NULL, 
+#'     dotZoom = 0)
 #' @param plotDf data for UMAP plot 
 #' @param legendPos position of legend. Default: "right"
 #' @param colorPalette color palette. Default: "Set2"
 #' @param transparent transparent level (from 0 to 1). Default: 0
-#' @param textSize size of axis and legend text. Default: 12
-#' @param font font of text. Default = Arial"
 #' @param highlightTaxa list of taxa to be highlighted
 #' @param dotZoom dot size zooming factor. Default: 0
 #' @return A plot as ggplot object
@@ -430,38 +455,51 @@ plotUmap <- function(
 #' umapData <- prepareUmapData(longDf, "phylum")
 #' data.umap <- umapClustering3D(umapData)
 #' plotDf <- createUmapPlotData(data.umap, umapData)
-#' plotUmap3D(plotDf, font = "sans")
+#' plotUmap3D(plotDf)
 
 plotUmap3D <- function(
     plotDf = NULL, legendPos = "bottom", colorPalette = "Set2", 
-    transparent = 0, textSize = 12, font = "Arial", highlightTaxa = NULL,
-    dotZoom = 0
+    transparent = 0, highlightTaxa = NULL, dotZoom = 0
 ) {
     if (is.null(plotDf)) stop("Input data cannot be NULL!")
-    X <- Y <- Z <- Label <- Freq <- NULL
+    X <- Y <- Z <- Label <- Freq <- color <- NULL
     if (!("Z" %in% colnames(plotDf))) stop("PlotDf seems to be 2D plot!")
     # add colors
     plotDf <- addUmapTaxaColors(plotDf, colorPalette, highlightTaxa)
-    if ("color" %in% colnames(plotDf)) {
-        colorScheme <- structure(
-            plotDf$color, .Names = plotDf$Label
+    colorDf <- unique(plotDf %>% select(Label, color))
+    # calculate min and max dot size
+    minSize <- dotZoom
+    maxSize <- (max(plotDf$Freq)*dotZoom/min(plotDf$Freq))
+    # generate 3D scatter plot
+    if ("ncbiID" %in% colnames(plotDf)) {
+        plot <- plot_ly(
+            plotDf, x = ~X, y = ~Y, z = ~Z,
+            hovertemplate = ~paste0(
+                "Taxon ID: ", gsub("ncbi","",ncbiID), "<br>Name: ", fullName,
+                "<br>Label: ", Label, "<br>Freq: ", Freq
+            )
         )
     } else {
-        colorScheme <- structure(
-            head(
-                suppressWarnings(
-                    RColorBrewer::brewer.pal(
-                        nlevels(as.factor(plotDf$Label)), colorPalette
-                    )
-                ), levels(as.factor(plotDf$Label))
-            ), .Names = levels(as.factor(plotDf$Label))
+        plot <- plot_ly(
+            plotDf, x = ~X, y = ~Y, z = ~Z,
+            hovertemplate = ~paste0(
+                "Gene ID: ", geneID, "<br>Freq: ", Freq
+            )
         )
     }
-    plot <- plot_ly(
-        plotDf, x = ~X, y = ~Y, z = ~Z, color = ~Label, #colors = ~color,
-        type = "scatter3d", mode = 'markers', size = ~Freq #,
-        #marker = list(sizemode = 'diameter') # * (1 + dotZoom))
-    )
+    
+    if (dotZoom == 0) {
+        plot <- plot %>% add_markers(
+            color = ~Label, colors = colorDf$color, size = ~Freq, 
+            alpha = 1 - transparent, span = I(0)
+        )
+    } else {
+        plot <- plot %>% add_markers(
+            color = ~Label, colors = colorDf$color, size = ~Freq, 
+            sizes = c(minSize, maxSize), alpha = 1 - transparent, span = I(0)
+        )
+    }
+    if (legendPos == "none") plot <- plot %>% hide_legend()
     return(plot)
 } 
 

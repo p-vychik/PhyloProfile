@@ -128,6 +128,7 @@ shinyServer(function(input, output, session) {
                             quote = FALSE,
                             sep = "\t"
                         )
+                        currentNCBIinfo <- preProcessedTaxonomy
                     } else {
                         system(
                             "cp data/newTaxa.txt data/preProcessedTaxonomy.txt"
@@ -3390,6 +3391,27 @@ shinyServer(function(input, output, session) {
     })
 
     # * create UMAP plot -------------------------------------------------------
+    observe({
+        if (input$umapPlotType == "plotly") {
+            updateSliderInput(
+                session, "umapPlot.dotzoom", "Dot size zooming", 
+                min = 0, max = 100, step = 5, value = 0
+            )
+            updateSliderInput(
+                session, "umapAlpha", "Transparent level", min = 0,
+                max = 1, step = 0.05, value = 0
+            )
+        } else {
+            updateSliderInput(
+                session, "umapPlot.dotzoom", "Dot size zooming", 
+                min = -3, max = 10, step = 1, value = 0
+            )
+            updateSliderInput(
+                session, "umapAlpha", "Transparent level", min = 0,
+                max = 1, step = 0.05, value = 0.5
+            )
+        }
+    })
     ranges <- reactiveValues(x = NULL, y = NULL)
 
     umapPlotData <- reactive({
@@ -3399,7 +3421,8 @@ shinyServer(function(input, output, session) {
         req(renameLabelsUmap())
         plotDf <- createUmapPlotData(
             umapCluster(), renameLabelsUmap(), freqCutoff = input$umapLabelNr, 
-            excludeTaxa = input$excludeUmapTaxa
+            excludeTaxa = input$excludeUmapTaxa, 
+            currentNCBIinfo = currentNCBIinfo
         )
         return(plotDf)
     })
@@ -3434,7 +3457,6 @@ shinyServer(function(input, output, session) {
                     umapPlotData(), legendPos = input$umap.Legend,
                     colorPalette = input$colorPalleteUmap,
                     transparent = input$umapAlpha,
-                    textSize = input$umapPlot.textsize, font = input$font, 
                     highlightTaxa = input$highlightUmapTaxa, 
                     dotZoom = input$umapPlot.dotzoom
                 ) 
@@ -3470,24 +3492,10 @@ shinyServer(function(input, output, session) {
                 plotlyOutput(
                     "umapPlotly",
                     height = input$umapPlot.height,
-                    width = input$umapPlot.width,
-                    # click = "umapClick",
-                    # dblclick = "umapdblClick",
-                    # brush = brushOpts(
-                    #     id = "umapBrush",
-                    #     delay = input$brushDelay,
-                    #     delayType = input$brushPolicy,
-                    #     direction = input$brushDir,
-                    #     resetOnNew = TRUE
-                    # ),
-                    # hover = hoverOpts(
-                    #     id = "umapHover",
-                    #     nullOutside = FALSE
-                    # )
+                    width = input$umapPlot.width
                 )
             )
         }
-        
     })
     
     # When a double-click happens, check if there's a brush on the plot
@@ -3606,14 +3614,7 @@ shinyServer(function(input, output, session) {
         }
         df <- as.data.frame(brushedUmapData())
         if (nrow(df) > 0) {
-            specDf <- df %>% select(ncbiID, Label, Freq, n)
-            specDf$id <- as.numeric(gsub("ncbi","",specDf$ncbiID))
-            taxonNameDf <- PhyloProfile::id2name(specDf$id, currentNCBIinfo)
-            specDf <- left_join(
-                specDf, taxonNameDf %>% select(ncbiID, fullName),
-                by = c("id" = "ncbiID")
-            )
-            specDf <- specDf %>% select(ncbiID, fullName, Label, Freq, n)
+            specDf <- df %>% select(ncbiID, fullName, Label, Freq, n)
             colnames(specDf) <- c(
                 "NCBI taxon ID", "Taxon name", "Label", "Number of genes", "Freq"
             )
@@ -3660,18 +3661,17 @@ shinyServer(function(input, output, session) {
         df <- as.data.frame(brushedUmapData())
         if (nrow(df) > 0) {
             removeDf <- df %>% select(where(~ all(. == -1)))
+            subDf <- df %>% select(-c(colnames(removeDf), Label, Freq, X, Y, n))
+            if ("fullName" %in% colnames(subDf))
+                subDf <- subDf %>% select(-c("fullName"))
             if ("ncbiID" %in% colnames(df)) {
                 meltedDf <- data.frame(melt(
-                    as.data.table(
-                        df %>% select(-c(colnames(removeDf), Label, Freq, X, Y, n))
-                    ),
+                    as.data.table(subDf),
                     id.vars = "ncbiID", variable.name = "geneID"
                 ))
             } else 
                 meltedDf <- data.frame(melt(
-                    as.data.table(
-                        df %>% select(-c(colnames(removeDf), Label, Freq, X, Y, n))
-                    ),
+                    as.data.table(subDf),
                     id.vars = "geneID", variable.name = "ncbiID"
                 ))
             geneDf <- meltedDf %>% filter(value >= 0) %>%
@@ -3733,14 +3733,8 @@ shinyServer(function(input, output, session) {
         y <- input$umapHover$y
         hoveredDf <- nearPoints(
             umapPlotData(), input$umapHover, xvar = "X", yvar = "Y"
-        ) %>% select(ncbiID, Label, Freq)
+        ) %>% select(ncbiID, Label, Freq, fullName)
         if (nrow(hoveredDf) > 0) {
-            hoveredDf$id <- as.numeric(gsub("ncbi","",hoveredDf$ncbiID))
-            taxonNameDf <- PhyloProfile::id2name(hoveredDf$id, currentNCBIinfo)
-            hoveredDf <- left_join(
-                hoveredDf, taxonNameDf %>% select(ncbiID, fullName),
-                by = c("id" = "ncbiID")
-            )
             hoveredDf <- hoveredDf %>% select(fullName, Freq)
             colnames(hoveredDf) <- c("Taxon", "# genes")
             return(hoveredDf)

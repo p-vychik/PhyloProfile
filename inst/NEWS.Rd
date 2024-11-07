@@ -2,6 +2,13 @@
 \title{PhyloProfile news}
 \encoding{UTF-8}
 
+\section{Version 1.20.3}{
+  \itemize{
+    \item fixed bug with NCBI taxonomy link at the first time running
+    \item improve UMAP 3D (hover info, dot zooming, same colors with 2D plot)
+  }
+}
+
 \section{Version 1.20.2}{
   \itemize{
     \item hover option for UMAP

@@ -5,7 +5,7 @@
 \title{Create UMAP cluster plot}
 \usage{
 createUmapPlotData(umapData = NULL, data4umap = NULL, 
-    freqCutoff = c(0,200), excludeTaxa = "None")
+    freqCutoff = c(0,200), excludeTaxa = "None", currentNCBIinfo = NULL)
 }
 \arguments{
 \item{umapData}{data contains UMAP cluster (output from umapClustering())}
@@ -16,6 +16,9 @@ createUmapPlotData(umapData = NULL, data4umap = NULL,
 outside of this range will be assigned as [Other]}
 
 \item{excludeTaxa}{hide taxa from plot. Default: "None"}
+
+\item{currentNCBIinfo}{table/dataframe of the pre-processed NCBI taxonomy
+data (/PhyloProfile/data/preProcessedTaxonomy.txt)}
 }
 \value{
 A plot as ggplot object

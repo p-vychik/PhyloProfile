@@ -5,8 +5,8 @@
 \title{Create UMAP cluster 3D plot}
 \usage{
 plotUmap3D(plotDf = NULL, legendPos = "bottom", 
-    colorPalette = "Set2", transparent = 0, textSize = 12, font = "Arial", 
-    highlightTaxa = NULL, dotZoom = 0)
+    colorPalette = "Set2", transparent = 0,highlightTaxa = NULL, 
+    dotZoom = 0)
 }
 \arguments{
 \item{plotDf}{data for UMAP plot}
@@ -16,10 +16,6 @@ plotUmap3D(plotDf = NULL, legendPos = "bottom",
 \item{colorPalette}{color palette. Default: "Set2"}
 
 \item{transparent}{transparent level (from 0 to 1). Default: 0}
-
-\item{textSize}{size of axis and legend text. Default: 12}
-
-\item{font}{font of text. Default = Arial"}
 
 \item{highlightTaxa}{list of taxa to be highlighted}
 
@@ -39,7 +35,7 @@ longDf <- createLongMatrix(rawInput)
 umapData <- prepareUmapData(longDf, "phylum")
 data.umap <- umapClustering3D(umapData)
 plotDf <- createUmapPlotData(data.umap, umapData)
-plotUmap3D(plotDf, font = "sans")
+plotUmap3D(plotDf)
 }
 \seealso{
 \code{\link{prepareUmapData}}, \code{\link{umapClustering}},

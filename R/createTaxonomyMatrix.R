@@ -494,7 +494,16 @@ taxonomyTableCreator <- function(idListFile = NULL, rankListFile = NULL) {
 #' PhyloProfile:::getTaxHierarchy(inputTaxa, currentNCBIinfo)
 
 getTaxHierarchy <- function(inputTaxa = NULL, currentNCBIinfo = NULL){
-    if (is.null(currentNCBIinfo)) stop("Pre-processed NCBI tax data is NULL!")
+    if (is.null(currentNCBIinfo)) {
+        dataPath <- system.file(
+            "PhyloProfile", "data/",
+            package = "PhyloProfile", mustWork = TRUE
+        )
+        nameFullFile <- paste0(dataPath, "/preProcessedTaxonomy.txt")
+        if (file.exists(nameFullFile)) {
+            currentNCBIinfo <- as.data.frame(data.table::fread(nameFullFile))
+        } else stop("Pre-processed NCBI tax data is NULL!")
+    }
     inputTaxaInfo <- PhyloProfile::getTaxonomyInfo(inputTaxa, currentNCBIinfo)
     ## get reduced taxonomy info (subset of preProcessedTaxonomy.txt)
     reducedDf <- unique(rbindlist(inputTaxaInfo))
