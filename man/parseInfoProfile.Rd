@@ -35,7 +35,8 @@ taxonIDs <- getInputTaxaID(mainLongRaw)
 sortedInputTaxa <- sortInputTaxa(
     taxonIDs, "class", "Mammalia", NULL, NULL
 )
-taxaCount <- sortedInputTaxa \%>\% dplyr::count(supertaxon)
+taxaCount <- sortedInputTaxa \%>\% dplyr::group_by(supertaxon) \%>\% 
+    summarise(.groups = "drop")
 coorthoCOMax <- 999
 parseInfoProfile(
     mainLongRaw, sortedInputTaxa, taxaCount, coorthoCOMax

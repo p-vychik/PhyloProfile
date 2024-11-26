@@ -1928,7 +1928,9 @@ shinyUI(
             "uploadGeneName",
             size = "medium",
             em(paste(
-                "Upload gene names in tab-delimited format! Please check",
+                "This option is used to map gene IDs from the main input with",
+                "their gene names. Please upload the mapping file for gene IDs - ",
+                "gene names in tab-delimited format! Check",
                 "https://github.com/BIONF/PhyloProfile/wiki/Input-Data#gene-names",
                 "for more info."
             )),

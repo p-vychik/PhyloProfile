@@ -30,72 +30,79 @@ getDataClustering <- function(
     data = NULL, profileType = "binary", var1AggBy = "max", var2AggBy = "max"
 ) {
     if (is.null(data)) stop("Input data cannot be NULL!")
-    supertaxon <- presSpec <- orthoID <- NULL
-    # remove lines where there is no found ortholog
-    subDataHeat <- subset(data, data$presSpec > 0)
-    # predict if ortho ID in BIONF format
-    idFormat <- "other"
-    firstOrtho <- strsplit(
-        as.character(subDataHeat[1,]$orthoID), '|', fixed = TRUE)[[1]]
-    if (
-        length(firstOrtho) >= 3 && firstOrtho[1] == subDataHeat[1,]$geneID &&
-        grepl(subDataHeat[1,]$supertaxonID, firstOrtho[2])
-    ) idFormat <- "bionf"
-    # transform data into wide matrix
+    presSpec <- geneID <- supertaxon <- orthoID <- NULL
+    # Filter out rows where presSpec is 0
+    subDataHeat <- data %>% dplyr::filter(presSpec > 0)
+    
+    # Predict orthoID format (default is "other")
+    subDataHeat$orthoID <- as.character(subDataHeat$orthoID)
+    idFormat <- ifelse(
+        length(subDataHeat$orthoID) > 0 &&
+            grepl(
+                subDataHeat$supertaxonID[1], 
+                strsplit(subDataHeat$orthoID[1], '\\|', fixed = TRUE)[[1]][2]
+            ), "bionf", "other"
+    )
+    # Process based on profileType
     if (profileType == "binary") {
-        subDataHeat <- subDataHeat[, c("geneID", "supertaxon", "presSpec")]
-        subDataHeat$presSpec[subDataHeat$presSpec > 0] <- 1
-        subDataHeat <- subDataHeat[!duplicated(subDataHeat), ]
+        subDataHeat <- subDataHeat %>%
+            dplyr::select(geneID, supertaxon, presSpec) %>%
+            dplyr::mutate(presSpec = ifelse(presSpec > 0, 1, 0)) %>%
+            dplyr::distinct()
         wideData <- data.table::dcast(
             data.table::setDT(subDataHeat),
-            geneID ~ supertaxon, value.var = "presSpec")
-    } else if(profileType == "orthoID") {
-        subDataHeat <- subDataHeat[, c("geneID", "supertaxon", "orthoID")]
-        if (idFormat == "bionf") {
-            subDataHeat <- within(
-                subDataHeat,
-                orthoMod <- data.frame(
-                    do.call(
-                        'rbind', strsplit(as.character(orthoID),'|',fixed=TRUE)
+            geneID ~ supertaxon, value.var = "presSpec"
+        )
+    } else if (profileType == "orthoID") {
+        subDataHeat <- subDataHeat %>% 
+            dplyr::select(geneID, supertaxon, orthoID) %>%
+            dplyr::mutate(
+                orthoID = if (idFormat == "bionf") {
+                    paste(
+                        vapply(
+                            strsplit(as.character(orthoID), "\\|"), 
+                            `[`, character(1), 2
+                        ),
+                        vapply(
+                            strsplit(as.character(orthoID), "\\|"), 
+                            `[`, character(1), 3
+                        ),
+                        sep = "#"
                     )
-                )
-            )
-            subDataHeat$orthoID <- paste(
-                subDataHeat$orthoMod$X2, subDataHeat$orthoMod$X3, sep = "#"
-            )
-            subDataHeat <- subDataHeat[,!(names(subDataHeat) %in% ("orthoMod"))]
-        } else {
-            subDataHeat$orthoID <- paste(
-                subDataHeat$supertaxon, subDataHeat$orthoID, sep = "#"
-            )
-        }
-        subDataHeat <- subDataHeat[!duplicated(subDataHeat), ]
-        l <- unique(subDataHeat$orthoID)
-        subDataHeat$orthoID <- as.numeric(factor(subDataHeat$orthoID, levels=l))
+                } else {
+                    paste(supertaxon, orthoID, sep = "#")
+                }
+            ) %>% dplyr::distinct()
+        # Assign numeric factor to orthoID
+        subDataHeat <- subDataHeat %>%
+            dplyr::mutate(orthoID = as.numeric(factor(orthoID)))
         wideData <- data.table::dcast(
             data.table::setDT(subDataHeat),
-            geneID ~ supertaxon, value.var = "orthoID", fun.aggregate = sum)
+            geneID ~ supertaxon, value.var = "orthoID", fun.aggregate = sum
+        )
     } else {
         var <- profileType
-        subDataHeat <- subDataHeat[, c("geneID", "supertaxon", var)]
-        subDataHeat <- subDataHeat[!duplicated(subDataHeat), ]
-        # aggreagte the values by the selected method
-        if (var == "var1") aggregateBy <- var1AggBy
-        else aggregateBy <- var2AggBy
-        subDataHeat <- stats::aggregate(
-            subDataHeat[, var],
-            list(subDataHeat$geneID, subDataHeat$supertaxon),
-            FUN = aggregateBy
-        )
-        colnames(subDataHeat) <- c("geneID", "supertaxon", var)
+        subDataHeat <- subDataHeat %>%
+            dplyr::select(geneID, supertaxon, !!sym(var)) %>%
+            dplyr::distinct()
+        # Aggregate values by selected method
+        aggregateBy <- ifelse(var == "var1", var1AggBy, var2AggBy)
+        subDataHeat <- subDataHeat %>%
+            dplyr::group_by(geneID, supertaxon) %>%
+            dplyr::summarise(
+                !!sym(var) := match.fun(aggregateBy)(!!sym(var)),
+                .groups = 'drop'
+            )
         wideData <- data.table::dcast(
             data.table::setDT(subDataHeat),
-            geneID ~ supertaxon, value.var = var)
+            geneID ~ supertaxon, value.var = var
+        )
     }
-    # set name for wide matrix as gene IDs
+    # Convert to data frame and set geneID as row names
     wideData <- as.data.frame(wideData)
-    dat <- wideData[, 2:ncol(wideData)]
-    rownames(dat) <- wideData[, 1]
+    dat <- wideData[, -1]
+    rownames(dat) <- wideData$geneID
+    # Replace NA with 0
     dat[is.na(dat)] <- 0
     return(dat)
 }
@@ -168,7 +175,7 @@ getDistanceMatrix <- function(profiles = NULL, method = "mutualInformation") {
 #' @return An object class hclust generated based on input distance matrix and
 #' a selected clustering method.
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
-#' @importFrom stats hclust
+#' @importFrom fastcluster hclust
 #' @seealso \code{\link{getDataClustering}},
 #' \code{\link{getDistanceMatrix}}, \code{\link{hclust}}
 #' @examples
@@ -184,8 +191,23 @@ getDistanceMatrix <- function(profiles = NULL, method = "mutualInformation") {
 
 clusterDataDend <- function(distanceMatrix = NULL, clusterMethod = "complete") {
     if (is.null(distanceMatrix)) stop("Distance matrix cannot be NULL!")
-    dd.col <- stats::hclust(distanceMatrix, method = clusterMethod)
-    return(dd.col)
+    if (!inherits(distanceMatrix,"dist")) stop("Input must be a 'dist' object!")
+    # Validate clustering method
+    validMethods <- c(
+        "complete", "ward.D", "ward.D2", "single", "average", "mcquitty", 
+        "median", "centroid"
+    )
+    if (!clusterMethod %in% validMethods) {
+        stop(
+            paste(
+                "Invalid clustering method. Choose one of:", 
+                paste(validMethods, collapse = ", ")
+            )
+        )
+    }
+    # Perform clustering using fastcluster
+    dendrogram <- fastcluster::hclust(distanceMatrix, method = clusterMethod)
+    return(dendrogram)
 }
 
 #' Plot dendrogram tree

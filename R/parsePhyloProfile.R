@@ -79,13 +79,14 @@ getNameList <- function(taxDB = NULL) {
 getTaxonomyMatrix <- function(
         taxDB = NULL, subsetTaxaCheck = FALSE, taxonIDs = NULL
 ){
-    if (is.null(taxDB)) {
-        taxonomyMatrixFile <- paste(
-            system.file(package = "PhyloProfile"),
-            "PhyloProfile/data/taxonomyMatrix.txt", sep = "/"
+    taxonomyMatrixFile <- if (is.null(taxDB)) {
+        file.path(
+            system.file(package = "PhyloProfile"), 
+            "PhyloProfile/data/taxonomyMatrix.txt"
         )
-    } else taxonomyMatrixFile <- paste(taxDB, "taxonomyMatrix.txt", sep = "/")
-
+    } else {
+        file.path(taxDB, "taxonomyMatrix.txt")
+    }
 
     if (!file.exists(taxonomyMatrixFile)) {
         utils::data(taxonomyMatrix)
@@ -140,16 +141,18 @@ getInputTaxaID <- function(rawProfile = NULL){
 
 getInputTaxaName <- function(rankName, taxonIDs = NULL, taxDB = NULL){
     # check input parameters
-    if (missing(rankName)) return("No taxonomy rank name given!")
+    if (missing(rankName)) stop("No taxonomy rank name given!")
     allMainRanks <- getTaxonomyRanks()
-    if (!(rankName[1] %in% allMainRanks)) return("Invalid taxonomy rank given!")
+    if (!(rankName[1] %in% allMainRanks)) stop("Invalid taxonomy rank given!")
     # load list of unsorted taxa
-    Dt <- getTaxonomyMatrix(taxDB, TRUE, taxonIDs)
+    taxMatrix <- getTaxonomyMatrix(
+        taxDB, subsetTaxaCheck = TRUE, taxonIDs = taxonIDs
+    )
     # load list of taxon name
     nameList <- getNameList(taxDB)
     # return
     choice <- data.frame(
-        "ncbiID" = unlist(Dt[rankName]), stringsAsFactors = FALSE
+        "ncbiID" = unlist(taxMatrix[[rankName]]), stringsAsFactors = FALSE
     )
     choice <- merge(choice, nameList, by = "ncbiID", all = FALSE)
     return(choice)
@@ -357,7 +360,8 @@ sortInputTaxa <- function(
 #' or kingdom)
 #' @return A data frame with % of present species in each supertaxon
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
-#' @importFrom dplyr count
+#' @importFrom dplyr count select distinct summarise group_by inner_join mutate
+#' filter
 #' @seealso \code{\link{profileWithTaxonomy}} for a demo input data
 #' @examples
 #' # NOTE: for internal testing only
@@ -366,57 +370,39 @@ sortInputTaxa <- function(
 #' taxaCount <- profileWithTaxonomy %>% dplyr::count(supertaxon)
 #' taxaCount$n <- 1
 #' calcPresSpec(profileWithTaxonomy, taxaCount)
-
-calcPresSpec <- function(profileWithTax, taxaCount){
-    paralog <- abbrName <- geneID <- supertaxon <- NULL
-    if (missing(profileWithTax)) return("No input data given")
-    if (missing(taxaCount)) return("No supertaxon count given")
-    profileWithTax <- profileWithTax[profileWithTax$orthoID != "NA", ]
-
-    # get geneID and supertaxon
-    geneIDSupertaxon <- subset(
-        profileWithTax,
-        select = c("geneID", "supertaxon", "paralog", "abbrName")
-    )
-    # remove duplicated rows
-    geneIDSupertaxon <- geneIDSupertaxon[!duplicated(geneIDSupertaxon), ]
-    # remove NA rows from profileWithTax
-    profileWithTaxNoNA <- profileWithTax[profileWithTax$orthoID != "NA", ]
-    profileWithTaxNoNA <- profileWithTax[!(is.na(profileWithTax$orthoID)), ]
-    # count present frequency of supertaxon for each gene
-    geneSupertaxonCount <- profileWithTaxNoNA %>%
-        dplyr::count(geneID, supertaxon)
-    # merge with taxaCount to get total number of species of each supertaxon
-    # and calculate presSpec
-    presSpecDt <- merge(
-        geneSupertaxonCount, taxaCount, by = "supertaxon", all.x = TRUE
-    )
-    specCount <- geneIDSupertaxon %>% dplyr::count(geneID, supertaxon)
-    presSpecDt <- merge(
-        presSpecDt, specCount, by = c("geneID", "supertaxon")
-    )
-    presSpecDt$presSpec <- presSpecDt$n / presSpecDt$n.y
-    presSpecDt <- presSpecDt[presSpecDt$presSpec <= 1, ]
-    presSpecDt <- presSpecDt[order(presSpecDt$geneID), ]
-    presSpecDt <- presSpecDt[
-        , c("geneID", "supertaxon", "presSpec", "n", "n.y")
+calcPresSpec <- function(profileWithTax, taxaCount) {
+    if (missing(profileWithTax)) stop("No input data given")
+    if (missing(taxaCount)) stop("No supertaxon count given")
+    geneID <- supertaxon <- paralog <- abbrName <- NULL
+    presSpec <- presentTaxa <- totalTaxa <- NULL
+    # Filter out rows with missing orthoID to reduce subsequent data size
+    profileWithTax <- profileWithTax[
+        !is.na(profileWithTax$orthoID) & profileWithTax$orthoID != "NA", 
     ]
-    colnames(presSpecDt) <- c(
-        "geneID", "supertaxon", "presSpec", "presentTaxa", "totalTaxa"
-    )
-    # add absent supertaxon into presSpecDt
-    geneIDSupertaxon <- subset(
-        geneIDSupertaxon, select = -c(paralog, abbrName)
-    )
-    finalPresSpecDt <- merge(
-        presSpecDt, geneIDSupertaxon,
-        by = c("geneID", "supertaxon"), all.y = TRUE
-    )
-    finalPresSpecDt$presSpec[is.na(finalPresSpecDt$presSpec)] <- 0
-    # remove duplicated and NA rows
-    finalPresSpecDt <- finalPresSpecDt[!duplicated(finalPresSpecDt), ]
-    finalPresSpecDt <- finalPresSpecDt[stats::complete.cases(finalPresSpecDt), ]
-    # return finalPresSpecDt
+    # Pre-calculate geneID and supertaxon combinations for merging later
+    geneIDSupertaxon <- profileWithTax %>%
+        select(geneID, supertaxon, paralog, abbrName) %>% distinct()
+    # Use summarise directly instead of count for better control
+    geneSupertaxonCount <- geneIDSupertaxon %>% group_by(geneID, supertaxon) %>%
+        summarise(presentTaxa = n(), .groups = "drop")
+    # Perform the join with taxaCount and calculate presSpec efficiently
+    presSpecDt <- geneSupertaxonCount %>% 
+        inner_join(taxaCount, by = "supertaxon") %>%
+        mutate(
+            presSpec = presentTaxa / n,
+            totalTaxa = n
+        ) %>% select(-n) %>% filter(presSpec <= 1)
+    # Merge with geneIDSupertaxon for missing combinations and fill defaults
+    finalPresSpecDt <- geneIDSupertaxon %>%
+        left_join(presSpecDt, by = c("geneID", "supertaxon")) %>%
+        mutate(
+            presSpec = ifelse(is.na(presSpec), 0, presSpec),
+            presentTaxa = ifelse(is.na(presentTaxa), 0, presentTaxa),
+            totalTaxa = ifelse(is.na(totalTaxa), 0, totalTaxa)
+        ) %>% select(-c(abbrName, paralog))
+    # Remove duplicates and sort results
+    finalPresSpecDt <- finalPresSpecDt %>% arrange(geneID, supertaxon) %>%
+        distinct()
     return(finalPresSpecDt)
 }
 
@@ -447,7 +433,8 @@ calcPresSpec <- function(profileWithTax, taxaCount){
 #' sortedInputTaxa <- sortInputTaxa(
 #'     taxonIDs, "class", "Mammalia", NULL, NULL
 #' )
-#' taxaCount <- sortedInputTaxa %>% dplyr::count(supertaxon)
+#' taxaCount <- sortedInputTaxa %>% dplyr::group_by(supertaxon) %>% 
+#'     summarise(.groups = "drop")
 #' coorthoCOMax <- 999
 #' parseInfoProfile(
 #'     mainLongRaw, sortedInputTaxa, taxaCount, coorthoCOMax
@@ -467,9 +454,10 @@ parseInfoProfile <- function(
     }
     if (coorthoCOMax < 1) coorthoCOMax <- 1
     # count number of inparalogs & calculate frequency of all supertaxa
-    paralogCount <- inputDf %>% dplyr::count(geneID, ncbiID)
+    paralogCount <- inputDf %>%
+        dplyr::group_by(geneID, ncbiID) %>%
+        dplyr::summarise(paralog = dplyr::n(), .groups = "drop")
     inputDf <- merge(inputDf, paralogCount, by = c("geneID", "ncbiID"))
-    colnames(inputDf)[ncol(inputDf)] <- "paralog"
     # filter by number of coorthologs
     inputDf <- inputDf[!(inputDf$paralog > coorthoCOMax),]
     # merge inputDf and sortedInputTaxa to get taxonomy info
@@ -541,6 +529,7 @@ parseInfoProfile <- function(
 #' values for two additional variables var1, var2, % of species present in each
 #' supertaxon, and the categories of seed genes (or ortholog groups).
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
+#' @importFrom stats complete.cases aggregate
 #' @export
 #' @seealso \code{\link{parseInfoProfile}} and \code{\link{reduceProfile}}
 #' for generating input dataframe, \code{\link{fullProcessedProfile}} for a
@@ -584,7 +573,6 @@ parseInfoProfile <- function(
 #'     var1AggregateBy,
 #'     var2AggregateBy
 #' )
-
 filterProfileData <- function(
     DF, taxaCount, refTaxon = NULL, percentCO = c(0, 1), coorthoCOMax = 9999,
     var1CO = c(0, 1), var2CO = c(0, 1), var1Rel = "protein",
@@ -593,118 +581,93 @@ filterProfileData <- function(
 ) {
     if (is.null(DF)) stop("Profile data cannot be NULL!")
     if (is.null(refTaxon)) refTaxon <- "NA"
-    ### check if working with lowest rank (species/strain), e.g. flag == 0
-    flag <- 1
-    if (length(unique(levels(as.factor(DF$numberSpec)))) == 1) {
-        if (unique(levels(as.factor(DF$numberSpec))) == 1) {
-            flag <- 0
+
+    flag <- ifelse(all(DF$numberSpec == 1), 0, 1)
+
+    DF$taxonMod <- sub("^[[:digit:]]*_", "", DF$supertaxon)
+
+    filter_var <- function(var, varCO, rel, refTaxon, taxonMod) {
+        if (rel == "protein") {
+            var[taxonMod != refTaxon & (var < varCO[1] | var > varCO[2])] <- NA
+        } else {
+            var[taxonMod != refTaxon & (var < varCO[1] | var > varCO[2])] <- 0
         }
+        return(var)
     }
-    ### remove index from supertaxon names
-    DF$taxonMod <- gsub("^[[:digit:]]*_", "", DF$supertaxon)
-    ### filter by var1 and var2
+
     if (flag == 0) {
-        if (var1Rel == "protein") {
-            DF$var1[DF$taxonMod != refTaxon & DF$var1 < var1CO[1]] <- NA
-            DF$var1[DF$taxonMod != refTaxon & DF$var1 > var1CO[2]] <- NA
-        } else {
-            DF$var1[DF$taxonMod != refTaxon & DF$var1 < var1CO[1]] <- 0
-            DF$var1[DF$taxonMod != refTaxon & DF$var1 > var1CO[2]] <- 0
-        }
-        if (var2Rel == "protein") {
-            DF$var2[DF$taxonMod != refTaxon & DF$var2 < var2CO[1]] <- NA
-            DF$var2[DF$taxonMod != refTaxon & DF$var2 > var2CO[2]] <- NA
-        } else {
-            DF$var2[DF$taxonMod != refTaxon & DF$var2 < var2CO[1]] <- 0
-            DF$var2[DF$taxonMod != refTaxon & DF$var2 > var2CO[2]] <- 0
-        }
+        DF$var1 <- filter_var(DF$var1, var1CO, var1Rel, refTaxon, DF$taxonMod)
+        DF$var2 <- filter_var(DF$var2, var2CO, var2Rel, refTaxon, DF$taxonMod)
     } else {
-        if (var1Rel == "protein") {
-            DF$var1[DF$var1 < var1CO[1]] <- NA
-            DF$var1[DF$var1 > var1CO[2]] <- NA
-        } else {
-            DF$var1[DF$var1 < var1CO[1]] <- 0
-            DF$var1[DF$var1 > var1CO[2]] <- 0
-        }
-        if (var2Rel == "protein") {
-            DF$var2[DF$var2 < var2CO[1]] <- NA
-            DF$var2[DF$var2 > var2CO[2]] <- NA
-        } else {
-            DF$var2[DF$var2 < var2CO[1]] <- 0
-            DF$var2[DF$var2 > var2CO[2]] <- 0
-        }
+        DF$var1 <- filter_var(DF$var1, var1CO, var1Rel, NA, NA)
+        DF$var2 <- filter_var(DF$var2, var2CO, var2Rel, NA, NA)
     }
-    ### calculate % present taxa and filter by percentCO
+
     DFtmp <- DF[stats::complete.cases(DF), ]
     finalPresSpecDt <- calcPresSpec(DFtmp, taxaCount)
-    DF <- Reduce(
-        function(x, y) merge(x, y, by = c("geneID", "supertaxon"), all.x=TRUE),
-        list(DF, finalPresSpecDt))
-    DF$presSpec[DF$presSpec < percentCO[[1]] | DF$presSpec > percentCO[[2]]] <-0
-    DF$orthoID[DF$presSpec == 0] <- NA
-    if (var1Rel == "protein") {
-        DF$orthoID[is.na(DF$var1)] <- NA
-        DF$var1[is.na(DF$orthoID)] <- NA
-    }
-    if (var2Rel == "protein") {
-        DF$orthoID[is.na(DF$var2)] <- NA
-        DF$var2[is.na(DF$orthoID)] <- NA
-    }
-    DF$presSpec[is.na(DF$orthoID)] <- 0
-    if (var1Rel == "protein")
-        DF$var1[DF$presSpec == 0] <- NA
-    if (var2Rel == "protein")
-        DF$var2[DF$presSpec == 0] <- NA
 
-    ### remove paralog count if NOT working with lowest rank (species/strain)
+    DF <- merge(
+        DF, finalPresSpecDt, by = c("geneID", "supertaxon"), all.x = TRUE
+    )
+    DF$presSpec <- ifelse(
+        DF$presSpec < percentCO[1] | DF$presSpec > percentCO[2], 0, DF$presSpec
+    )
+
+    DF$orthoID <- as.character(DF$orthoID)
+    DF$orthoID <- ifelse(DF$presSpec == 0, NA, DF$orthoID)
+    if (var1Rel == "protein") DF$var1[is.na(DF$orthoID)] <- NA
+    if (var2Rel == "protein") DF$var2[is.na(DF$orthoID)] <- NA
+    DF$presSpec[is.na(DF$orthoID)] <- 0
+
     if (flag == 1) DF$paralog <- 1
 
-    DF <- droplevels(DF)  # delete unused levels
-    DF$geneID <- as.factor(DF$geneID)
-    DF$supertaxon <- as.factor(DF$supertaxon)
+    DF <- droplevels(DF)
+    DF$geneID <- factor(DF$geneID)
+    DF$supertaxon <- factor(DF$supertaxon)
 
-    # calculate max/min/mean/median VAR1 for every supertaxon of each gene
-    DFNoNA <- DF[!is.na(DF$var1), ]
-    mVar1Dt <- stats::aggregate(
-        DFNoNA[, "var1"],
-        list(DFNoNA$supertaxon, DFNoNA$geneID),
-        FUN = var1AggregateBy)
-    colnames(mVar1Dt) <- c("supertaxon", "geneID", "mVar1")
-    # calculate max/min/mean/median VAR2 for each supertaxon
-    DFNoNAVar2 <- DF[!is.na(DF$var2), ]
-    if (nrow(DFNoNAVar2) > 0) {
-        mVar2Dt <- stats::aggregate(
-            DFNoNAVar2[, "var2"],
-            list(DFNoNAVar2$supertaxon, DFNoNAVar2$geneID),
-            FUN = var2AggregateBy)
-        colnames(mVar2Dt) <- c("supertaxon", "geneID", "mVar2")
-    } else {
-        mVar2Dt <- DF[, c("supertaxon", "geneID")]
-        mVar2Dt$mVar2 <- 0
-    }
-    # join mVar2 together with mVar1 scores into one df
-    scoreDf <- merge(mVar1Dt, mVar2Dt, by = c("supertaxon","geneID"), all=TRUE)
-    # add into DF
-    DF <- Reduce(
-        function(x, y) merge(x, y, by = c("geneID", "supertaxon"), all.x=TRUE),
-        list(DF, scoreDf))
-
-    ### add gene categories (if provided)
-    originalOrder <- levels(as.factor(DF$geneID))
-    if (groupByCat == TRUE) {
-        if (is.null(catDt)) {
-            catDt <- data.frame( geneID = levels(DF$geneID))
-            catDt$group <- "noCategory"
+    aggregate_scores <- function(df, var, aggBy) {
+        if (nrow(df) > 0) {
+            return(
+                stats::aggregate(
+                    df[[var]], by = list(df$supertaxon, df$geneID), FUN = aggBy
+                )
+            )
         }
-        dfCat <- data.frame(
-            supertaxon = rep(levels(DF$supertaxon), nlevels(DF$geneID)),
-            geneID = rep(levels(DF$geneID), each = nlevels(DF$supertaxon)))
-        dfCat <- merge(dfCat, catDt, by = "geneID")
-        DF <- merge(dfCat, DF, by = c("geneID","supertaxon"), all.x = TRUE)
-        DF$category <- DF$group
-        DF$geneID <- factor(DF$geneID, levels = originalOrder)
+        return(
+            data.frame(
+                Group.1 = character(0), Group.2 = character(0), x = numeric(0)
+            )
+        )
     }
-    return(DF) #[!is.na(DF$orthoID),])
+
+    mVar1Dt <- aggregate_scores(DF[!is.na(DF$var1), ], "var1", var1AggregateBy)
+    colnames(mVar1Dt) <- c("supertaxon", "geneID", "mVar1")
+
+    mVar2Dt <- aggregate_scores(DF[!is.na(DF$var2), ], "var2", var2AggregateBy)
+    if (nrow(mVar2Dt) == 0) {
+        mVar2Dt <- data.frame(
+            supertaxon = DF$supertaxon, geneID = DF$geneID, mVar2 = 0
+        )
+    }
+    colnames(mVar2Dt) <- c("supertaxon", "geneID", "mVar2")
+
+    scoreDf <- merge(mVar1Dt, mVar2Dt, by = c("supertaxon", "geneID"), all=TRUE)
+    DF <- merge(DF, scoreDf, by = c("geneID", "supertaxon"), all.x = TRUE)
+
+    if (groupByCat) {
+        if (is.null(catDt)) {
+            catDt <- data.frame(geneID = levels(DF$geneID), group="noCategory")
+        }
+        dfCat <- merge(
+            expand.grid(
+                supertaxon = levels(DF$supertaxon), geneID = levels(DF$geneID)
+            ), catDt, by = "geneID", all.x = TRUE
+        )
+        DF <- merge(dfCat, DF, by = c("geneID", "supertaxon"), all.x = TRUE)
+        DF$category <- DF$group
+    }
+
+    return(DF)
 }
 
 #' Reduce the filtered profile data into supertaxon level
@@ -778,6 +741,7 @@ reduceProfile <- function(filteredProfile) {
         names(superDfExt)[names(superDfExt) == "mVar1"] <- "var1"
         names(superDfExt)[names(superDfExt) == "mVar2"] <- "var2"
     }
+    superDfExt$orthoID <- as.character(superDfExt$orthoID)
     return(superDfExt)
 }
 

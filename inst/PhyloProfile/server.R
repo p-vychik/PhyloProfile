@@ -1022,6 +1022,7 @@ shinyServer(function(input, output, session) {
     
     # * predict reference species ----------------------------------------------
     refSpec <- reactive({
+        req(getMainInput())
         longDataframe <- getMainInput()
         longDataframe$joinedID <- paste(
             longDataframe$geneID, longDataframe$ncbiID
@@ -2292,106 +2293,92 @@ shinyServer(function(input, output, session) {
 
     # * count taxa for each supertaxon -----------------------------------------
     getCountTaxa <- reactive({
-        taxaCount <- sortedtaxaList() %>% dplyr::count(supertaxon)
+        taxaCount <- sortedtaxaList() %>% dplyr::group_by(supertaxon) %>% 
+            dplyr::summarise(n = n(), .groups = "drop")
         return(taxaCount)
     })
 
-    # * get subset data for plotting (default 30 genes if > 50 genes) ----------
+    # * get subset data for plotting -------------------------------------------
     preData <- reactive({
         req(isTruthy(v$doPlot)|isTruthy(w$doCusPlot))
         req(input$mainInputType)
+        ### if input a folder
         if (input$mainInputType == "folder") {
             req(getMainInputDir())
             if (length(checkMainInputDir()) == 4) {
-                data <- readRDS(
-                    paste0(getMainInputDir(),"/preData.rds")
-                )
-                return(data)
-            } else return()
-        } else {
-            longDataframe <- getMainInput()
-            # isolate start and end gene index
-            input$applyFilter
-            if (input$autoUpdate == TRUE) {
-                startIndex <- input$stIndex
-                endIndex <- input$endIndex
-            } else {
-                startIndex <- isolate(input$stIndex)
-                endIndex <- isolate(input$endIndex)
+                return(readRDS(paste0(getMainInputDir(),"/preData.rds")))
             }
-
-            if (is.na(endIndex)) endIndex <- 1000
-            withProgress(message = 'Subseting data...', value = 0.5, {
-                longDataframe <- sortGeneIDs(
-                    longDataframe, input$orderGenes, checkInputSortedGenes()
-                )
-                # filter preData based on UMAP selection
-                data <- longDataframe
-                if (!(v$doPlot)) {
-                    if (isTruthy(input$addSpecUmap)|isTruthy(input$addGeneUmap)) {
-                        selectedTaxa <- longDataframe$ncbiID
-                        if (input$addSpecUmap) {
-                            umapTaxa <- umapSelectedTaxa()
-                            selectedTaxa <- unique(head(umapTaxa$`NCBI taxon ID`))
-                        }
-                        umapGenes <- umapSelectedGenes()
-                        selectedGenes <- unique(umapGenes$geneID)
-                        if (length(selectedGenes) > 0) {
-                            data <- longDataframe %>% filter(
-                                geneID %in% selectedGenes & ncbiID %in% selectedTaxa
-                            )
-                            data$geneID <- droplevels(data$geneID)
-                            data$ncbiID <- droplevels(data$ncbiID)
-                        } else {
-                            return()
-                        }
-                    }
-                } else {
-                    listIn <- input$geneList
-                    if (!is.null(listIn)) {
-                        geneListDf <- read.table(
-                            file = listIn$datapath, header = FALSE
-                        )
-                        listGeneOri <- unique(geneListDf$V1)
-
-                        # update number of endIndex
-                        if (length(listGeneOri) <= 1500) {
-                            updateNumericInput(
-                                session,
-                                "endIndex", value = length(listGeneOri)
-                            )
-                        }
-                        if (startIndex <= length(listGeneOri)) {
-                            listGene <- listGeneOri[startIndex:endIndex]
-                        } else listGene <- listGeneOri
-                        listGene <- listGene[!is.na(listGene)]
-                        data <- longDataframe[longDataframe$geneID %in% listGene, ]
-                    } else {
-                        subsetID <-
-                            levels(longDataframe$geneID)[startIndex:endIndex]
-                        data <- longDataframe[longDataframe$geneID %in% subsetID, ]
-                    }
-                }
-
-                if (ncol(data) < 5) {
-                    for (i in seq_len(5 - ncol(data))) {
-                        data[paste0("newVar", i)] <- 1
-                    }
-                }
-
-                # return preData
-                if (nrow(data) == 0) return()
-                if (ncol(data) < 6) {
-                    colnames(data) <- c("geneID","ncbiID","orthoID","var1","var2")
-                } else {
-                    colnames(data) <- c(
-                        "geneID", "ncbiID", "orthoID", "var1", "var2", "geneName"
-                    )
-                }
-                data$geneID <- droplevels(data$geneID)
-                return(data)
-            })
+            return(NULL)
         }
+        ### if input a file
+        longDataframe <- getMainInput()
+        # isolate start and end gene index
+        input$applyFilter
+        if (input$autoUpdate == TRUE) {
+            startIndex <- input$stIndex
+            endIndex <- input$endIndex
+        } else {
+            startIndex <- isolate(input$stIndex)
+            endIndex <- isolate(input$endIndex)
+        }
+        if (is.na(endIndex)) endIndex <- 1000
+        
+        withProgress(message = 'Subseting data...', value = 0.5, {
+            longDataframe <- sortGeneIDs(
+                longDataframe, input$orderGenes, checkInputSortedGenes()
+            )
+            # filter preData based on UMAP selection
+            if (!v$doPlot && (isTruthy(input$addSpecUmap) || isTruthy(input$addGeneUmap))) {
+                selectedTaxa <- longDataframe$ncbiID
+                if (input$addSpecUmap) {
+                    umapTaxa <- umapSelectedTaxa()
+                    selectedTaxa <- unique(head(umapTaxa$`NCBI taxon ID`))
+                }
+                umapGenes <- umapSelectedGenes()
+                selectedGenes <- unique(umapGenes$geneID)
+                
+                if (length(selectedGenes) > 0) {
+                    data <- longDataframe %>%
+                        filter(geneID %in% selectedGenes & ncbiID %in% selectedTaxa) %>%
+                        droplevels()
+                } else {
+                    return(NULL)
+                }
+            } else {
+                # Handle custom gene list or subset ID
+                geneList <- input$geneList
+                if (!is.null(geneList)) {
+                    geneListDf <- read.table(file = geneList$datapath, header = FALSE)
+                    listGeneOri <- unique(geneListDf$V1)
+                    
+                    # Update endIndex if gene list is small
+                    if (length(listGeneOri) <= 1500) {
+                        updateNumericInput(session, "endIndex", value = length(listGeneOri))
+                    }
+                    
+                    listGene <- listGeneOri[startIndex:min(endIndex, length(listGeneOri))]
+                    data <- longDataframe[longDataframe$geneID %in% listGene[!is.na(listGene)], ]
+                } else {
+                    subsetID <- levels(longDataframe$geneID)[startIndex:endIndex]
+                    data <- longDataframe[longDataframe$geneID %in% subsetID, ]
+                }
+            }
+            # ensure a minimum of 5 columns
+            while (ncol(data) < 5) {
+                data[paste0("newVar", ncol(data) + 1)] <- 1
+            }
+            # return preData
+            if (nrow(data) == 0) return()
+            if (ncol(data) < 6) {
+                colnames(data) <- c("geneID","ncbiID","orthoID","var1","var2")
+            } else {
+                colnames(data) <- c(
+                    "geneID", "ncbiID", "orthoID", "var1", "var2", "geneName"
+                )
+            }
+            data$geneID <- droplevels(data$geneID)
+            return(data)
+        })
     })
 
     # * creating main dataframe for subset taxa (in species/strain level) ------
@@ -2535,12 +2522,12 @@ shinyServer(function(input, output, session) {
             withProgress(message = 'Clustering profile data...', value = 0.5, {
                 dat <- getProfiles()
                 # do clustering based on distance matrix
-                row.order <- hclust(
+                row.order <- fastcluster::hclust(
                     getDistanceMatrixProfiles(), method = clusterMethod
                 )$order
 
                 # re-order distance matrix accoring to clustering
-                datNew <- dat[row.order, ] #col.order
+                datNew <- dat[row.order, ]
 
                 # return clustered gene ID list
                 clusteredGeneIDs <- as.factor(row.names(datNew))
@@ -2549,15 +2536,11 @@ shinyServer(function(input, output, session) {
                 dataHeat$geneID <- factor(
                     dataHeat$geneID, levels = clusteredGeneIDs
                 )
-                orderedName <- unlist(
-                    vapply(
-                        levels(dataHeat$geneID),
-                        function(x)
-                            as.character(
-                                unique(dataHeat$geneName[dataHeat$geneID == x])
-                            ),
-                        character(1)
-                    )
+                orderedName <- unique(
+                    dataHeat[
+                        order(match(dataHeat$geneID, clusteredGeneIDs)), 
+                        "geneName"
+                    ]
                 )
                 dataHeat$geneName <- factor(
                     dataHeat$geneName, levels = orderedName
@@ -4466,7 +4449,7 @@ shinyServer(function(input, output, session) {
     observeEvent(input$doDownloadProcData, {
         req(length(getProcDataPath()) > 0)
         withCallingHandlers({
-            shinyjs::html("downloadProcDataStatus", "")
+            shinyjs::html("downloadProcDataStatus", "<p>Please wait...</p>")
             downloadProcData()
         },
         message = function(m) {

@@ -216,7 +216,6 @@ wideToLong <- function(inputFile = NULL){
         ),
         stringsAsFactors = FALSE
     )
-
     longDataframe <- data.frame(
         geneID = rep(wideDataframe$geneID, time = ncol(wideDataframe) - 1),
         ncbiID = rep(ncbiIDs, time = 1, each = nrow(wideDataframe)),
@@ -263,22 +262,20 @@ createLongMatrix <- function(inputFile = NULL){
     # WIDE
     else if (inputType == "wide") longDataframe <- wideToLong(inputFile)
     else return(NULL)
-
-    # convert geneID, ncbiID and orthoID into factor and var1, var2 into numeric
-    for (i in seq_len(3)) {
-        longDataframe[, i] <- as.factor(longDataframe[, i])
+    # Convert geneID, ncbiID and orthoID to factors
+    longDataframe[seq_len(3)] <- lapply(longDataframe[seq_len(3)], as.factor)
+    # Convert var1, var2 to numeric, suppressing warnings
+    if (ncol(longDataframe) > 3) {
+        longDataframe[4:min(5, ncol(longDataframe))] <- lapply(
+            longDataframe[4:min(5, ncol(longDataframe))],
+            function(col) suppressWarnings(as.numeric(as.character(col)))
+        )
     }
-    if (ncol(longDataframe) > 3 & ncol(longDataframe) < 6) {
-        for (j in seq(4, ncol(longDataframe))){
-            longDataframe[,j] <- suppressWarnings(
-                as.numeric(as.character(longDataframe[,j]))
-            )
-        }
+    # Convert the 6th column to a factor (if applicable)
+    if (ncol(longDataframe) == 6) {
+        longDataframe[[6]] <- as.factor(longDataframe[[6]])
     }
-    if (ncol(longDataframe) == 6)
-        longDataframe[, 6] <- as.factor(longDataframe[, 6])
-
-    # remove duplicated lines
-    longDataframe <- longDataframe[!duplicated(longDataframe),]
+    # Remove duplicated rows
+    longDataframe <- dplyr::distinct(longDataframe)
     return(longDataframe)
 }
