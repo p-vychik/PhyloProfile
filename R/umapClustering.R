@@ -1,6 +1,6 @@
-#' Prepare data for UMAP
+#' Prepare data for dimension reduction
 #' @export
-#' @usage prepareUmapData(longDf = NULL, taxonRank = NULL, type = "taxa", 
+#' @usage prepareDimRedData(longDf = NULL, taxonRank = NULL, type = "taxa", 
 #'     taxDB = NULL, filterVar = "both", cutoff = 0, groupLabelsBy = "taxa")
 #' @param longDf input phyloprofile file in long format
 #' @param taxonRank taxonomy rank for labels (e.g. "phylum")
@@ -18,9 +18,9 @@
 #'    "extdata", "test.main.long", package = "PhyloProfile", mustWork = TRUE
 #' )
 #' longDf <- createLongMatrix(rawInput)
-#' prepareUmapData(longDf, "phylum")
+#' prepareDimRedData(longDf, "phylum")
 
-prepareUmapData <- function(
+prepareDimRedData <- function(
     longDf = NULL, taxonRank = NULL, type = "taxa", taxDB = NULL, 
     filterVar = "both", cutoff = 0, groupLabelsBy = "taxa"
 ) {
@@ -29,33 +29,25 @@ prepareUmapData <- function(
     FAS_F <- FAS_B <- geneID <- ncbiID <- abbrName <- fullName <- NULL
     var1 <- var2 <- Freq <- Label <- NULL
     if (type == "genes") groupLabelsBy <- "genes"
-    # filter and subset input df
-    filterFlag <- 1
-    if (ncol(longDf) == 6) {
-        colnames(longDf) <- c(
-            "geneID", "ncbiID", "orthoID", "var1", "var2", "geneName"
-        )
-    } else if (ncol(longDf) == 5) {
-        colnames(longDf) <- c("geneID", "ncbiID", "orthoID", "var1", "var2")
-    } else if (ncol(longDf) == 4) {
-        colnames(longDf) <- c("geneID", "ncbiID", "orthoID", "var1")
-    } else if (ncol(longDf) == 3) {
-        colnames(longDf) <- c("geneID", "ncbiID", "orthoID")
-        longDf$var1 <- 1
-        filterFlag <- 0
+    # Handle column renaming and filtering based on input dimensions
+    colNames <- c("geneID", "ncbiID", "orthoID", "var1", "var2", "geneName")
+    colNames <- colNames[seq_len(ncol(longDf))]
+    colnames(longDf) <- colNames
+    # Add default values for missing columns
+    if (!"var1" %in% colnames(longDf)) longDf$var1 <- 1
+    # Apply filters based on cutoff values
+    filterFlag <- ifelse("var1" %in% colnames(longDf), 1, 0)
+    if (filterFlag) {
+        longDf <- longDf %>%
+            filter(
+                (filterVar == "both" & var1 >= cutoff & var2 >= cutoff) |
+                    (filterVar == "var1" & var1 >= cutoff) |
+                    (filterVar == "var2" & var2 >= cutoff)
+            )
     }
-    if (filterFlag == 1) {
-        if (filterVar == "both") {
-            longDfSub <- longDf %>% filter(var1 >= cutoff & var2 >= cutoff)
-        } else if (filterVar == "var1") {
-            longDfSub <- longDf %>% filter(var1 >= cutoff)
-        } else if (filterVar == "var2") {
-            longDfSub <- longDf %>% filter(var2 >= cutoff)
-        }
-    } else  longDfSub <- longDf
     # calculate mean of var1 and var2 (if var2 available)
     if (all(c("var1", "var2") %in% colnames(longDf))) 
-        longDfSub <- longDfSub %>% mutate(var1 = (var1 + var2) / 2) 
+        longDfSub <- longDf %>% mutate(var1 = (var1 + var2) / 2) 
     longDfSub <- longDfSub %>% select(geneID, ncbiID, var1)
     
     # get taxon names for input taxa based on a selected supertaxon rank
@@ -116,170 +108,138 @@ prepareUmapData <- function(
     return(wideDf)
 }
 
-#' Perform UMAP clustering 2D
+#' Perform dimension reduction 2D
 #' @export
-#' @usage umapClustering(data4umap = NULL, by = "taxa", type = "binary", 
-#'     randomSeed = 123)
-#' @param data4umap data for UMAP clustering (output from prepareUmapData)
+#' @usage dimReduction(data4dimRed = NULL, by = "taxa", type = "binary", 
+#'     randomSeed = 123, reductionTechnique = "umap", dimension = "2d",
+#'     tsneIter = 1000)
+#' @param data4dimRed data for dimension reduction (from prepareDimRedData)
 #' @param by cluster data by "taxa" (default) or "genes"
 #' @param type type of data, either "binary" (default) or "non-binary"
 #' @param randomSeed random seed. Default: 123
-#' @import umap
-#' @return A list contain UMAP cluster objects
+#' @param reductionTechnique dimensionality reduction technique, either "umap" 
+#' (default) or "tsne"
+#' @param dimension either "2d" (default) or "3d"
+#' @param tsneIter number of iterations for t-SNE. Default: 1000
+#' @import umap tsne
+#' @return A table contains coordinates of the 2D dimension reduction
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
-#' @seealso \code{\link{prepareUmapData}}
+#' @seealso \code{\link{prepareDimRedData}}
 #' @examples
 #' rawInput <- system.file(
 #'    "extdata", "test.main.long", package = "PhyloProfile", mustWork = TRUE
 #' )
 #' longDf <- createLongMatrix(rawInput)
-#' data4umap <- prepareUmapData(longDf, "phylum")
-#' umapClustering(data4umap)
+#' data4dimRed <- prepareDimRedData(longDf, "phylum")
+#' dimReduction(data4dimRed)
 
-umapClustering <- function(
-    data4umap = NULL, by = "taxa", type = "binary", randomSeed = 123
+dimReduction <- function(
+    data4dimRed = NULL, by = "taxa", type = "binary", randomSeed = 123,
+    reductionTechnique = "umap", dimension = "2d", tsneIter = 1000
 ) {
-    if (is.null(data4umap)) stop("Input data cannot be NULL!")
-    ncbiID <- Label <- Freq <- geneID <- NULL
-    if ("geneID" %in% colnames(data4umap)) by <- "genes"
-    if (by == "taxa") {
-        subsetDt <- subset(data4umap, select = -c(ncbiID, Label, Freq, n))
+    if (is.null(data4dimRed)) stop("Input data cannot be NULL!")
+    # Determine subset columns based on `by`
+    subsetCols <- if (by == "taxa") {
+        setdiff(colnames(data4dimRed), c("ncbiID", "Label", "Freq", "n"))
     } else {
-        subsetDt <- subset(data4umap, select = -c(geneID, Label, Freq, n))
+        setdiff(colnames(data4dimRed), c("geneID", "Label", "Freq", "n"))
     }
+    subsetDt <- data4dimRed[, subsetCols, drop = FALSE]
+    # Convert to binary if required
     if (type == "binary") {
-        subsetDt[subsetDt >= 0] <- 1
-        subsetDt[subsetDt < 0] <- 0
+        subsetDt <- ifelse(subsetDt >= 0, 1, 0)
     }
-    checkDt4Umap <- tryCatch(
-        {
-            suppressWarnings(umap::umap(
-                subsetDt, random_state = randomSeed, preserve.seed = TRUE
-            ))
+    # Define the dimensionality
+    dim <- ifelse(dimension == "2d", 2, 3)
+    # Perform dimensionality reduction
+    outDf <- switch(
+        reductionTechnique,
+        umap = {performUmap(subsetDt, randomSeed, dim)},
+        tsne = {
+            tsne::tsne(subsetDt, initial_dims=dim, k=dim, max_iter = tsneIter)
         },
-        error = function(cond) {
-            message(conditionMessage(cond))
-            NA
-        },
-        warning = function(cond) {
-            message(conditionMessage(cond))
-            NA
-        }
+        stop("Unsupported reduction technique: ", reductionTechnique)
     )
-    if (!(is.na(checkDt4Umap[1]))) {
-        df.umap <- umap::umap(
-            subsetDt, random_state = randomSeed, preserve.seed = TRUE
-        )
-    } else {
-        warning("PROBLEM: Too few samples for UMAP!!!")
-        df.umap <- umap::umap(
-            subsetDt, random_state = randomSeed, preserve.seed = TRUE,
-            n_neighbors = max(1, nrow(subsetDt) - 1)
-        )
-    }
-    return(df.umap)
+    return(outDf)
 }
 
-#' Perform UMAP clustering 3D
-#' @export
-#' @usage umapClustering3D(data4umap = NULL, by = "taxa", type = "binary", 
-#'     randomSeed = 123)
-#' @param data4umap data for UMAP clustering (output from prepareUmapData)
-#' @param by cluster data by "taxa" (default) or "genes"
-#' @param type type of data, either "binary" (default) or "non-binary"
+#' Helper function to handle UMAP logic
+#' @param umapDt data matrix for UMAP
 #' @param randomSeed random seed. Default: 123
+#' @param dim dimension, either 2 for 2D (default) or 3 for 3D
 #' @import umap
-#' @return A list contain UMAP cluster objects
+#' @return A table contains coordinates UMAP reduction
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
-#' @seealso \code{\link{prepareUmapData}}
-#' @examples
-#' rawInput <- system.file(
-#'    "extdata", "test.main.long", package = "PhyloProfile", mustWork = TRUE
-#' )
-#' longDf <- createLongMatrix(rawInput)
-#' data4umap <- prepareUmapData(longDf, "phylum")
-#' umapClustering3D(data4umap)
 
-umapClustering3D <- function(
-        data4umap = NULL, by = "taxa", type = "binary", randomSeed = 123
-) {
-    if (is.null(data4umap)) stop("Input data cannot be NULL!")
-    ncbiID <- Label <- Freq <- geneID <- NULL
-    if ("geneID" %in% colnames(data4umap)) by <- "genes"
-    if (by == "taxa") {
-        subsetDt <- subset(data4umap, select = -c(ncbiID, Label, Freq, n))
-    } else {
-        subsetDt <- subset(data4umap, select = -c(geneID, Label, Freq, n))
-    }
-    if (type == "binary") {
-        subsetDt[subsetDt >= 0] <- 1
-        subsetDt[subsetDt < 0] <- 0
-    }
-    checkDt4Umap <- tryCatch(
-        {
-            suppressWarnings(umap::umap(
-                subsetDt, random_state = randomSeed, preserve.seed = TRUE,
-                n_components = 3
-            ))
-        },
-        error = function(cond) {
-            message(conditionMessage(cond))
-            NA
-        },
-        warning = function(cond) {
-            message(conditionMessage(cond))
-            NA
-        }
-    )
-    if (!(is.na(checkDt4Umap[1]))) {
-        df.umap <- umap::umap(
-            subsetDt, random_state = randomSeed, preserve.seed = TRUE,
-            n_components = 3
+performUmap <- function(umapDt, randomSeed = 123, dim = 2) {
+    # Attempt UMAP reduction with fallback for sample size issues
+    tryCatch({
+        suppressWarnings(
+            umap::umap(
+                umapDt, random_state = randomSeed, preserve.seed = TRUE,
+                n_components = dim
+            )$layout
         )
-    } else {
-        warning("PROBLEM: Too few samples for UMAP!!!")
-        df.umap <- umap::umap(
-            subsetDt, random_state = randomSeed, preserve.seed = TRUE,
-            n_neighbors = max(1, nrow(subsetDt) - 1), n_components = 3
-        )
-    }
-    return(df.umap)
+    }, error = function(cond) {
+        message("Error with UMAP: ", conditionMessage(cond))
+        fallbackUmap(umapDt, randomSeed, dim)
+    }, warning = function(cond) {
+        message("Warning with UMAP: ", conditionMessage(cond))
+        fallbackUmap(umapDt, randomSeed, dim)
+    })
 }
 
-#' Reduce the number of labels for UMAP plot based on the gene/taxon frequency
+#' Fallback for UMAP in case of insufficient samples
+#' @param umapDt data matrix for UMAP
+#' @param randomSeed random seed. Default: 123
+#' @param dim dimension, either 2 for 2D (default) or 3 for 3D
+#' @import umap
+#' @return A table contains coordinates UMAP reduction
+#' @author Vinh Tran tran@bio.uni-frankfurt.de
+
+fallbackUmap <- function(umapDt, randomSeed, dim) {
+    warning("PROBLEM: Too few samples for UMAP! Adjusting n_neighbors.")
+    umap::umap(
+        umapDt, random_state = randomSeed, preserve.seed = TRUE,
+        n_neighbors = max(1, nrow(umapDt) - 1), n_components = dim
+    )$layout
+}
+
+#' Reduce the number of labels for DIM reduction plot based on the 
+#' gene/taxon frequency
 #' @export
-#' @usage groupLabelUmapData(data4umap = NULL, freqCutoff = c(0,200))
-#' @param data4umap data for UMAP clustering (output from prepareUmapData)
+#' @usage groupLabelDimRedData(data4dimRed = NULL, freqCutoff = c(0,200))
+#' @param data4dimRed data for dimension reduction (from prepareDimRedData)
 #' @param freqCutoff gene/taxon frequency cutoff range. Any labels that are 
 #' outside of this range will be assigned as [Other]
-#' @return A dataframe similar to input data4umap, but with modified Label 
+#' @return A dataframe similar to input data4dimRed, but with modified Label 
 #' column, where less frequent labels are grouped together as "Other"
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
-#' @seealso \code{\link{prepareUmapData}}
+#' @seealso \code{\link{prepareDimRedData}}
 #' @examples
 #' rawInput <- system.file(
 #'    "extdata", "test.main.long", package = "PhyloProfile", mustWork = TRUE
 #' )
 #' longDf <- createLongMatrix(rawInput)
-#' data4umap <- prepareUmapData(longDf, "phylum")
-#' groupLabelUmapData(data4umap, freqCutoff = c(3,5))
+#' data4dimRed <- prepareDimRedData(longDf, "phylum")
+#' groupLabelDimRedData(data4dimRed, freqCutoff = c(3,5))
 
-groupLabelUmapData <- function(data4umap = NULL, freqCutoff = c(0,200)) {
-    if (is.null(data4umap)) stop("Input data cannot be NULL!")
-    if (length(data4umap) == 0) stop("Input data cannot be EMPTY!")
-    
-    data4umap$Label[
-        data4umap$n < freqCutoff[1] | data4umap$n > freqCutoff[2]
+groupLabelDimRedData <- function(data4dimRed = NULL, freqCutoff = c(0,200)) {
+    if (is.null(data4dimRed) || length(data4dimRed) == 0) 
+        stop("Input data cannot be NULL or EMPTY!")
+    data4dimRed$Label[
+        data4dimRed$n < freqCutoff[1] | data4dimRed$n > freqCutoff[2]
     ] <- "[Other]"
-    return(data4umap)
+    return(data4dimRed)
 }
 
-#' Create UMAP cluster plot
+#' Generate data for dimension reduction plot
 #' @export
-#' @usage createUmapPlotData(umapData = NULL, data4umap = NULL, 
+#' @usage createDimRedPlotData(dimRedCoord = NULL, data4dimRed = NULL, 
 #'     freqCutoff = c(0,200), excludeTaxa = "None", currentNCBIinfo = NULL)
-#' @param umapData data contains UMAP cluster (output from umapClustering())
-#' @param data4umap data for UMAP clustering (output from prepareUmapData())
+#' @param dimRedCoord data contains DIM reduction coordinates (from 
+#' dimReduction)
+#' @param data4dimRed data for dimension reduction (from prepareDimRedData())
 #' @param freqCutoff gene/taxon frequency cutoff range. Any labels that are 
 #' outside of this range will be assigned as [Other]
 #' @param excludeTaxa hide taxa from plot. Default: "None"
@@ -288,37 +248,37 @@ groupLabelUmapData <- function(data4umap = NULL, freqCutoff = c(0,200)) {
 #' @importFrom utils tail
 #' @return A plot as ggplot object
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
-#' @seealso \code{\link{prepareUmapData}}, \code{\link{umapClustering}}
+#' @seealso \code{\link{prepareDimRedData}}, \code{\link{dimReduction}}
 #' @examples
 #' rawInput <- system.file(
 #'    "extdata", "test.main.long", package = "PhyloProfile", mustWork = TRUE
 #' )
 #' longDf <- createLongMatrix(rawInput)
-#' data4umap <- prepareUmapData(longDf, "phylum")
-#' umapData <- umapClustering(data4umap)
-#' createUmapPlotData(umapData, data4umap)
+#' data4dimRed <- prepareDimRedData(longDf, "phylum")
+#' dimRedCoord <- dimReduction(data4dimRed)
+#' createDimRedPlotData(dimRedCoord, data4dimRed)
 
-createUmapPlotData <- function(
-    umapData = NULL, data4umap = NULL, freqCutoff = c(0, 200), 
+createDimRedPlotData <- function(
+    dimRedCoord = NULL, data4dimRed = NULL, freqCutoff = c(0, 200), 
     excludeTaxa = "None", currentNCBIinfo = NULL
 ) {
-    if (is.null(umapData) | is.null(data4umap)) 
-        stop("Input data cannot be NULL!")
-    if (length(umapData) == 0 | length(data4umap) == 0) 
-        stop("Input data cannot be EMPTY!")
+    if (is.null(dimRedCoord) || is.null(data4dimRed) || 
+        length(dimRedCoord) == 0 || length(data4dimRed) == 0) {
+        stop("Input data cannot be NULL or EMPTY!")
+    }
     Label <- Freq <- NULL
-    data4umap$X <- umapData$layout[,1]
-    data4umap$Y <- umapData$layout[,2]
-    if (ncol(umapData$layout) == 3) data4umap$Z <- umapData$layout[,3]
+    data4dimRed$X <- dimRedCoord[,1]
+    data4dimRed$Y <- dimRedCoord[,2]
+    if (ncol(dimRedCoord) == 3) data4dimRed$Z <- dimRedCoord[,3]
     # join less freq items into "other"
-    data4umap <- groupLabelUmapData(data4umap, freqCutoff)
+    data4dimRed <- groupLabelDimRedData(data4dimRed, freqCutoff)
     # exclude taxa
     if (length(excludeTaxa) > 0) {
-        data4umap$X[data4umap$Label %in% excludeTaxa] <- NA
-        data4umap$Y[data4umap$Label %in% excludeTaxa] <- NA
+        data4dimRed$X[data4dimRed$Label %in% excludeTaxa] <- NA
+        data4dimRed$Y[data4dimRed$Label %in% excludeTaxa] <- NA
     }
     # convert tax IDs into names
-    if ("ncbiID" %in% colnames(data4umap)) {
+    if ("ncbiID" %in% colnames(data4dimRed)) {
         if (is.null(currentNCBIinfo)) {
             dataPath <- system.file(
                 "PhyloProfile", "data/",
@@ -326,33 +286,31 @@ createUmapPlotData <- function(
             )
             nameFullFile <- paste0(dataPath, "/preProcessedTaxonomy.txt")
             if (file.exists(nameFullFile)) {
-                currentNCBIinfo <- as.data.frame(
-                    data.table::fread(nameFullFile)
-                )
+                currentNCBIinfo <-as.data.frame(data.table::fread(nameFullFile))
             }
         }
         if (!is.null(currentNCBIinfo)) {
             id2nameDf <- PhyloProfile::id2name(
-                gsub("ncbi","",unique(data4umap$ncbiID)), currentNCBIinfo
+                gsub("ncbi","",unique(data4dimRed$ncbiID)), currentNCBIinfo
             )
             id2nameDf$ncbiID <- paste0("ncbi", id2nameDf$ncbiID)
-            data4umap <- merge(
-                data4umap, id2nameDf, by = "ncbiID", all.x = TRUE
+            data4dimRed <- merge(
+                data4dimRed, id2nameDf, by = "ncbiID", all.x = TRUE
             )
         } else {
-            data4umap$fullName <- "NA"
+            data4dimRed$fullName <- "NA"
         }
     }
-    return(data4umap)
+    return(data4dimRed)
 }
 
 
-#' Create UMAP cluster plot
+#' Create dimension reduction plot
 #' @export
-#' @usage plotUmap(plotDf = NULL, legendPos = "bottom", colorPalette = "Set2", 
-#'     transparent = 0, textSize = 12, font = "Arial", highlightTaxa = NULL,
-#'     dotZoom = 0)
-#' @param plotDf data for UMAP plot 
+#' @usage plotDimRed(plotDf = NULL, legendPos = "bottom", 
+#'     colorPalette = "Set2", transparent = 0, textSize = 12, font = "Arial", 
+#'     highlightTaxa = NULL, dotZoom = 0)
+#' @param plotDf data for dimension reduction 2D plot 
 #' @param legendPos position of legend. Default: "right"
 #' @param colorPalette color palette. Default: "Set2"
 #' @param transparent transparent level (from 0 to 1). Default: 0
@@ -362,19 +320,19 @@ createUmapPlotData <- function(
 #' @param dotZoom dot size zooming factor. Default: 0
 #' @return A plot as ggplot object
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
-#' @seealso \code{\link{prepareUmapData}}, \code{\link{umapClustering}},
-#' \code{\link{createUmapPlotData}}
+#' @seealso \code{\link{prepareDimRedData}}, \code{\link{dimReduction}},
+#' \code{\link{createDimRedPlotData}}
 #' @examples
 #' rawInput <- system.file(
 #'    "extdata", "test.main.long", package = "PhyloProfile", mustWork = TRUE
 #' )
 #' longDf <- createLongMatrix(rawInput)
-#' umapData <- prepareUmapData(longDf, "phylum")
-#' data.umap <- umapClustering(umapData)
-#' plotDf <- createUmapPlotData(data.umap, umapData)
-#' plotUmap(plotDf, font = "sans")
+#' data4dimRed <- prepareDimRedData(longDf, "phylum")
+#' dimRedCoord <- dimReduction(data4dimRed)
+#' plotDf <- createDimRedPlotData(dimRedCoord, data4dimRed)
+#' plotDimRed(plotDf, font = "sans")
 
-plotUmap <- function(
+plotDimRed <- function(
     plotDf = NULL, legendPos = "bottom", colorPalette = "Set2", 
     transparent = 0, textSize = 12, font = "Arial", highlightTaxa = NULL,
     dotZoom = 0
@@ -382,7 +340,7 @@ plotUmap <- function(
     if (is.null(plotDf)) stop("Input data cannot be NULL!")
     X <- Y <- Label <- Freq <- NULL
     # add colors
-    plotDf <- addUmapTaxaColors(plotDf, colorPalette, highlightTaxa)
+    plotDf <- addDimRedTaxaColors(plotDf, colorPalette, highlightTaxa)
     if ("color" %in% colnames(plotDf)) {
         colorScheme <- structure(
             plotDf$color, .Names = plotDf$Label
@@ -398,8 +356,6 @@ plotUmap <- function(
             ), .Names = levels(as.factor(plotDf$Label))
         )
     }
-    # adapt plot height based on number of labels
-
     # generate plot
     plot <- ggplot(plotDf, aes(x = X, y = Y, color = Label)) +
         geom_point(aes(size = Freq), alpha = 1 - transparent) +
@@ -431,12 +387,12 @@ plotUmap <- function(
 }
 
 
-#' Create UMAP cluster 3D plot
+#' Create dimension reduction 3D plot
 #' @export
-#' @usage plotUmap3D(plotDf = NULL, legendPos = "bottom", 
+#' @usage plotDimRed3D(plotDf = NULL, legendPos = "bottom", 
 #'     colorPalette = "Set2", transparent = 0,highlightTaxa = NULL, 
 #'     dotZoom = 0)
-#' @param plotDf data for UMAP plot 
+#' @param plotDf data for dimension reduction 3D plot 
 #' @param legendPos position of legend. Default: "right"
 #' @param colorPalette color palette. Default: "Set2"
 #' @param transparent transparent level (from 0 to 1). Default: 0
@@ -445,19 +401,19 @@ plotUmap <- function(
 #' @return A plot as ggplot object
 #' @rawNamespace import(plotly, except = last_plot)
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
-#' @seealso \code{\link{prepareUmapData}}, \code{\link{umapClustering}},
-#' \code{\link{createUmapPlotData}}
+#' @seealso \code{\link{prepareDimRedData}}, \code{\link{dimReduction}},
+#' \code{\link{createDimRedPlotData}}
 #' @examples
 #' rawInput <- system.file(
 #'    "extdata", "test.main.long", package = "PhyloProfile", mustWork = TRUE
 #' )
 #' longDf <- createLongMatrix(rawInput)
-#' umapData <- prepareUmapData(longDf, "phylum")
-#' data.umap <- umapClustering3D(umapData)
-#' plotDf <- createUmapPlotData(data.umap, umapData)
-#' plotUmap3D(plotDf)
+#' data4dimRed <- prepareDimRedData(longDf, "phylum")
+#' dimRedCoord3d <- dimReduction(data4dimRed, dimension = "3d")
+#' plotDf <- createDimRedPlotData(dimRedCoord3d, data4dimRed)
+#' plotDimRed3D(plotDf)
 
-plotUmap3D <- function(
+plotDimRed3D <- function(
     plotDf = NULL, legendPos = "bottom", colorPalette = "Set2", 
     transparent = 0, highlightTaxa = NULL, dotZoom = 0
 ) {
@@ -465,7 +421,7 @@ plotUmap3D <- function(
     X <- Y <- Z <- Label <- Freq <- color <- NULL
     if (!("Z" %in% colnames(plotDf))) stop("PlotDf seems to be 2D plot!")
     # add colors
-    plotDf <- addUmapTaxaColors(plotDf, colorPalette, highlightTaxa)
+    plotDf <- addDimRedTaxaColors(plotDf, colorPalette, highlightTaxa)
     colorDf <- unique(plotDf %>% select(Label, color))
     # calculate min and max dot size
     minSize <- dotZoom
@@ -504,28 +460,28 @@ plotUmap3D <- function(
 } 
 
 
-#' Add colors for taxa in UMAP plot
-#' @usage addUmapTaxaColors(plotDf = NULL, colorPalette = "Set2", 
+#' Add colors for taxa in dimension reduction plot
+#' @usage addDimRedTaxaColors(plotDf = NULL, colorPalette = "Set2", 
 #'     highlightTaxa = NULL)
-#' @param plotDf data for UMAP plot 
+#' @param plotDf data for dimension reduction plot 
 #' @param colorPalette color palette. Default: "Set2"
 #' @param highlightTaxa list of taxa to be highlighted
-#' @return A dataframe for UMAP plot with an additional column for the assigned
-#' color to each taxon
+#' @return A dataframe for dimension reduction plot with an additional column 
+#' for the assigned color to each taxon
 #' @author Vinh Tran tran@bio.uni-frankfurt.de
-#' @seealso \code{\link{prepareUmapData}}, \code{\link{umapClustering}},
-#' \code{\link{createUmapPlotData}}
+#' @seealso \code{\link{prepareDimRedData}}, \code{\link{dimReduction}},
+#' \code{\link{createDimRedPlotData}}
 #' @examples
 #' rawInput <- system.file(
 #'    "extdata", "test.main.long", package = "PhyloProfile", mustWork = TRUE
 #' )
 #' longDf <- createLongMatrix(rawInput)
-#' umapData <- prepareUmapData(longDf, "phylum")
-#' data.umap <- umapClustering(umapData)
-#' plotDf <- createUmapPlotData(data.umap, umapData)
-#' PhyloProfile:::addUmapTaxaColors(plotDf, colorPalette = "Set2")
+#' data4dimRed <- prepareDimRedData(longDf, "phylum")
+#' dimRedCoord <- dimReduction(data4dimRed)
+#' plotDf <- createDimRedPlotData(dimRedCoord, data4dimRed)
+#' PhyloProfile:::addDimRedTaxaColors(plotDf, colorPalette = "Set2")
 
-addUmapTaxaColors <- function(
+addDimRedTaxaColors <- function(
     plotDf = NULL, colorPalette = "Set2", highlightTaxa = NULL
 ) {
     if (is.null(plotDf)) stop("plotDf cannot be null!")

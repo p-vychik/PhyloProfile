@@ -458,7 +458,7 @@ shinyUI(
 
                         shinyBS::bsButton("uploadGeneCategory", "Gene categories"),
                         h5(""),
-                        
+
                         shinyBS::bsButton("uploadGeneName", "Gene names"),
                         hr(),
 
@@ -716,7 +716,7 @@ shinyUI(
                                     "Fast mode is only recommended for large data",
                                     "top"
                                 )
-                            ), 
+                            ),
                             column(
                                 8,
                                 uiOutput("colorVar.ui")
@@ -903,24 +903,51 @@ shinyUI(
                 )
             ),
 
-            # UMAP CLUSTERING TAB ==============================================
+            # DIMENSIONALITY REDUCTION reduction TAB ===========================
             tabPanel(
-                "UMAP",
+                "Dimension Reduction",
                 # * Top panel for plot configuration ---------------------------
                 wellPanel(
                     fluidRow(
                         column(
                             2,
-                            radioButtons(
-                                "umapClusteringType", "UMAP",
-                                c("Taxa" = "taxa", "Genes" = "genes"),
-                                inline = TRUE
+                            column(
+                                6,
+                                style = "padding:0px;",
+                                selectInput(
+                                    "reductionTechnique", label = "Technique",
+                                    choices = list("UMAP" = "umap",
+                                                   "t-SNE" = "tsne"),
+                                    selected = "umap"
+                                )
                             ),
-                            selectInput(
-                                "umapDataType", label = "using",
-                                choices = list("Presence/Absence" = "binary", 
-                                               "Numeric score" = "nonbinary"),
-                                selected = "binary"
+                            column(
+                                6,
+                                conditionalPanel(
+                                    condition = 'input.reductionTechnique == "tsne"',
+                                    numericInput(
+                                        "tsneIter", "# iter.",
+                                        min = 100, max = 5000, step = 100, 
+                                        value = 1000
+                                    )
+                                )
+                            ),
+                            column(
+                                12,
+                                style = "padding:0px;",
+                                radioButtons(
+                                    "dimRedType", "Apply on",
+                                    c("Taxa" = "taxa", "Genes" = "genes"),
+                                    inline = TRUE
+                                ),
+                                selectInput(
+                                    "dimRedDataType", label = "using",
+                                    choices = list(
+                                        "Presence/Absence data" = "binary",
+                                        "Numeric scores" = "nonbinary"
+                                    ),
+                                    selected = "binary"
+                                )
                             )
                         ),
                         column(
@@ -928,19 +955,20 @@ shinyUI(
                             column(
                                 3,
                                 createPlotSize(
-                                    "umapPlot.width", "Plot width", 900
+                                    "dimRedPlot.width", "Plot width", 900
                                 ),
                                 createPlotSize(
-                                    "umapPlot.height", "Plot height", 400
+                                    "dimRedPlot.height", "Plot height", 400
                                 )
                             ),
                             column(
                                 4,
                                 createTextSize(
-                                    "umapPlot.textsize", "Text size", 12
+                                    "dimRedPlot.textsize", "Text size", 12
                                 ),
                                 selectInput(
-                                    "umap.Legend", label = "Legend position:",
+                                    "dimRedPlot.legend", 
+                                    label = "Legend position:",
                                     choices = list("Right" = "right",
                                                    "Left" = "left",
                                                    "Top" = "top",
@@ -952,7 +980,7 @@ shinyUI(
                             column(
                                 5,
                                 sliderInput(
-                                    "umapPlot.dotzoom", "Dot size zooming", 
+                                    "dimRedPlot.dotzoom", "Dot size zooming",
                                     min = -3, max = 10, step = 1, value = 0
                                 )
                             )
@@ -962,7 +990,7 @@ shinyUI(
                             column(
                                 6,
                                 radioButtons(
-                                    "umapGroupLabelsBy",
+                                    "dimRedGroupLabelsBy",
                                     "Summarize as [Other] by",
                                     choices = c("taxa", "genes"),
                                     inline = TRUE
@@ -974,22 +1002,28 @@ shinyUI(
                             column(
                                 6,
                                 sliderInput(
-                                    "umapLabelNr", "Freq cutoff", min = 0,
-                                    max = 99, step = 1, value = c(5,99), 
+                                    "dimRedLabelNr", "Freq cutoff", min = 0,
+                                    max = 99, step = 1, value = c(5,99),
                                     width = 200
+                                ),
+                                radioButtons(
+                                    "dimRedPlotType", "Plot dimensions", 
+                                    choices = list(
+                                        "2D" = "ggplot", "3D" = "plotly"
+                                    ),
+                                    selected = "ggplot", inline = TRUE
                                 )
                             )
                         ),
                         column(
                             2,
                             sliderInput(
-                                "umapAlpha", "Transparent level", min = 0,
+                                "dimRedDotAlpha", "Transparent level", min = 0,
                                 max = 1, step = 0.05, value = 0.5, width=200
                             ),
-                            radioButtons(
-                                "umapPlotType", "Plot dimensions", inline = TRUE,
-                                choices = list("2D" = "ggplot", "3D" = "plotly"),
-                                selected = "ggplot"
+                            numericInput(
+                                "randomSeed", "Random seed",
+                                min = 0, max = 9999, step = 1, value = 123
                             )
                         )
                     )
@@ -997,42 +1031,42 @@ shinyUI(
                 sidebarLayout(
                     # * Sidebar panel for data filter --------------------------
                     sidebarPanel(
-                        tableOutput("umapHoverInfo"),
+                        tableOutput("dimRedHoverInfo"),
                         hr(),
                         selectInput(
-                            "umapRank", label = "Taxonomy rank for labels",
+                            "dimRedRank", label = "Taxonomy rank for labels",
                             choices = getTaxonomyRanks(),
                             selected = "phylum"
                         ),
                         hr(),
                         textInput(
-                            "umapGroupHigherRank", 
+                            "dimRedGroupHigherRank",
                             "Group labels into higher rank",
-                            value = "", 
+                            value = "",
                             placeholder = paste(
                                 "Type taxon names in higher rank",
                                 "(e.g.: Fungi;Metazoa)"
                             )
                         ),
-                        uiOutput("umapGroupHigherRank.warning"),
-                        uiOutput("umapCustomLabel.ui"),
+                        uiOutput("dimRedGroupHigherRank.warning"),
+                        uiOutput("dimRedCustomLabel.ui"),
                         shinyBS::bsButton(
-                            "umapApplyChangeLables", "Change labels", 
+                            "dimRedApplyChangeLables", "Change labels",
                             style = "success", icon = icon("play")
                         ),
                         shinyBS::bsButton(
-                            "umapResetLables", "Reset labels", 
+                            "dimRedResetLables", "Reset labels",
                             style = "default", icon = icon("rotate-left")
                         ),
                         shinyBS::bsPopover(
-                            "umapResetLables", "",
+                            "dimRedResetLables", "",
                             paste("Click `Change labels` after reset!"),
                             "bottom"
                         ),
                         hr(),
-                        uiOutput("umapTaxa.ui"),
+                        uiOutput("dimRedTaxa.ui"),
                         selectInput(
-                            "colorPalleteUmap",
+                            "colorPalleteDimRed",
                             "Color pallete",
                             choices = c(
                                 "Paired", "Set1", "Set2", "Set3",
@@ -1042,29 +1076,29 @@ shinyUI(
                         ),
                         hr(),
                         selectInput(
-                            "umapFilterVar",
+                            "dimRedFilterVar",
                             "Choose variable for data filtering",
                             choices = c("Var1" = "var1", "Var2" = "var2",
                                         "Both" = "both"),
                             selected = "both"
                         ),
                         sliderInput(
-                            "umapCutoff", "Filter cutoff", min = 0, max = 1,
+                            "dimRedCutoff", "Filter cutoff", min = 0, max = 1,
                             step = 0.05, value = 0, width = '100%'
                         ),
                         hr(),
                         strong("Add following data to Customized profile"),
-                        checkboxInput("addSpecUmap", em("Selected taxa")),
+                        checkboxInput("addSpecDimRed", em("Selected taxa")),
                         shinyBS::bsPopover(
-                            "addSpecUmap", "",
+                            "addSpecDimRed", "",
                             paste("Only available when working with the",
                                   "lowest taxonomy rank!"),
                             "bottom"
                         ),
-                        checkboxInput("addGeneUmap", em("Selected genes")),
-                        uiOutput("addUmapCustomProfileCheck.ui")
+                        checkboxInput("addGeneDimRed", em("Selected genes")),
+                        uiOutput("addDimRedCustomProfileCheck.ui")
                     ),
-                    # * Main panel for UMAP plot and tables --------------------
+                    # * Main panel for DIM red plot and tables -----------------
                     mainPanel(
                         column(
                             6,
@@ -1073,40 +1107,40 @@ shinyUI(
                                 style = "color:darkblue"
                             )
                         ),
-                        uiOutput("umapPlot.ui"),
+                        uiOutput("dimRedPlot.ui"),
                         br(),
                         column(
                             7,
                             column(
                                 4,
                                 shinyBS::bsButton(
-                                    "plotUmap", "PLOT UMAP", type = "action", 
+                                    "plotDimRed", "PLOT", type = "action",
                                     style = "danger", disabled = FALSE
                                 )
                             ),
                             column(
                                 4,
                                 downloadButton(
-                                    "umapDownloadPlot", "Download plot",
+                                    "dimRedDownloadPlot", "Download plot",
                                     class = "butDL"
                                 )
                             ),
                             column(
                                 4,
                                 downloadButton(
-                                    "umapDownloadData", "Download UMAP data",
+                                    "dimRedDownloadData", "Download data",
                                     class = "butDL"
                                 ),
                                 shinyBS::bsPopover(
-                                    "umapDownloadData", "",
-                                    paste("Use plotUmap() to manually create",
-                                          "UMAP plot!"),
+                                    "dimRedDownloadData", "",
+                                    paste("Use plotDimRed() to manually create",
+                                          "dimension reduction plot!"),
                                     "bottom"
                                 )
                             )
                         ),
                         br(),
-                        uiOutput("umapTable.ui")
+                        uiOutput("dimRedTable.ui")
                     )
                 )
             ),
@@ -1920,7 +1954,7 @@ shinyUI(
             size = "small",
             fileInput("geneCategory", "")
         ),
-        
+
         # * popup for upload gene names ----------------------------------------
         shinyBS::bsModal(
             "uploadGeneNameBs",
@@ -2431,19 +2465,6 @@ shinyUI(
                 ),
                 style = "opacity: 0.80"
             )
-        ),
-        # HOVER INFO BOX =======================================================
-        # conditionalPanel(
-        #     condition =
-        #         "input.tabs=='UMAP'",
-        #     absolutePanel(
-        #         bottom = 5, left = 30,
-        #         fixed = TRUE,
-        #         draggable = TRUE,
-        #         h5("Hover info:"),
-        #         verbatimTextOutput("umapHoverInfo"),
-        #         style = "opacity: 0.80"
-        #     )
-        # )
+        )
     )
 )
