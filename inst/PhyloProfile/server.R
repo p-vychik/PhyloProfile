@@ -3357,8 +3357,8 @@ shinyServer(function(input, output, session) {
         withProgress(
             message = "Performing dimension reduction...", value = 0.5, {
                 dimRedData.coord <- dimReduction(renameLabelsDimRed(), 
-                    params$type, params$dataType, params$reductionTechnique, 
-                    params$dim, params$tsneIter
+                    params$type, params$dataType, params$randomSeed, 
+                    params$reductionTechnique, params$dim, params$tsneIter
                 )
                 return(dimRedData.coord)
             }

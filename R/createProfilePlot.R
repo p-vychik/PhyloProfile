@@ -596,32 +596,38 @@ highlightProfilePlot <- function(
             taxonHighlightID <- c(taxonHighlightID, missingID)
         }
         # get taxonID together with it sorted index
-        selTaxon <- unique(as.character(
-            plotDf$supertaxon[plotDf$supertaxonID %in% taxonHighlightID]
-        ))
-        selIndex <- match(selTaxon, levels(as.factor(plotDf$supertaxon)))
-        if (xAxis == "taxa") {
-            rect <- data.frame(
-                xmin=selIndex-0.5, xmax = selIndex+0.5, ymin = -Inf, ymax = Inf)
-        } else
-            rect <- data.frame(
-                ymin=selIndex-0.5, ymax = selIndex+0.5, xmin = -Inf, xmax = Inf)
-        profilePlot <- profilePlot + geom_rect(
-            data = rect, color = "yellow", alpha = 0.3, inherit.aes = FALSE,
-            aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax))
+        taxonHighlightID <- intersect(taxonHighlightID, plotDf$supertaxonID)
+        if (length(taxonHighlightID) > 0) {
+            selTaxon <- unique(as.character(
+                plotDf$supertaxon[plotDf$supertaxonID %in% taxonHighlightID]
+            ))
+            selIndex <- match(selTaxon, levels(as.factor(plotDf$supertaxon)))
+            if (xAxis == "taxa") {
+                rect <- data.frame(
+                    xmin=selIndex-0.5, xmax=selIndex+0.5, ymin=-Inf, ymax=Inf)
+            } else
+                rect <- data.frame(
+                    ymin=selIndex-0.5, ymax=selIndex+0.5, xmin=-Inf, xmax=Inf)
+            profilePlot <- profilePlot + geom_rect(
+                data = rect, color = "yellow", alpha = 0.3, inherit.aes = FALSE,
+                aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax))
+        }
     }
     # highlight gene
     if (length(geneHighlight) > 0 && !("none" %in% geneHighlight)) {
-        selIndex <- match(geneHighlight, levels(as.factor(plotDf$geneID)))
-        if (xAxis == "taxa") {
-            rect <- data.frame(
-                ymin=selIndex-0.5, ymax = selIndex+0.5, xmin = -Inf, xmax = Inf)
-        } else
-            rect <- data.frame(
-                xmin=selIndex-0.5, xmax = selIndex+0.5, ymin = -Inf, ymax = Inf)
-        profilePlot <- profilePlot + geom_rect(
-            data = rect, color = "yellow", alpha = 0.3, inherit.aes = FALSE,
-            aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax))
+        geneHighlight <- intersect(geneHighlight, unique(plotDf$geneID))
+        if (length(geneHighlight) > 0) {
+            selIndex <- match(geneHighlight, levels(as.factor(plotDf$geneID)))
+            if (xAxis == "taxa") {
+                rect <- data.frame(
+                    ymin=selIndex-0.5, ymax=selIndex+0.5, xmin=-Inf, xmax=Inf)
+            } else
+                rect <- data.frame(
+                    xmin=selIndex-0.5, xmax=selIndex+0.5, ymin=-Inf, ymax=Inf)
+            profilePlot <- profilePlot + geom_rect(
+                data = rect, color = "yellow", alpha = 0.3, inherit.aes = FALSE,
+                aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax))
+        }
     }
     return(profilePlot)
 }

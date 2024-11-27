@@ -300,7 +300,12 @@ createProfilePlot <- function(
     
     output$subPlot <- renderPlot({
         req(nrow(brushedData()) > 0)
-        heatmapPlotting(brushedData(), subPlotParameters())
+        p <- heatmapPlotting(brushedData(), subPlotParameters())
+        p <- highlightProfilePlot(
+            p, brushedData(), taxonHighlight(), rankSelect(),
+            geneHighlight(), taxDB(), subPlotParameters()$xAxis
+        )
+        p
     })
     
     # ** download subplot ------------------------------------------------------

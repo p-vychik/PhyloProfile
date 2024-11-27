@@ -2,6 +2,14 @@
 \title{PhyloProfile news}
 \encoding{UTF-8}
 
+\section{Version 1.20.4}{
+  \itemize{
+    \item added t-SNE dimension reduction
+    \item highlight genes and taxa for sub-plot
+    \item use fastcluster for clustering and sorting the input taxa
+  }
+}
+
 \section{Version 1.20.3}{
   \itemize{
     \item fixed bug with NCBI taxonomy link at the first time running
