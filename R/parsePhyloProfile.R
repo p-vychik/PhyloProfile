@@ -45,15 +45,15 @@ getNameList <- function(taxDB = NULL) {
     if (!file.exists(nameReducedFile)) {
         utils::data(taxonNamesReduced)
     } else {
-        taxonNamesReduced <- utils::read.table(
+        taxonNamesReduced <- data.table::fread(
             nameReducedFile, sep = "\t", header = TRUE, fill = TRUE,
-            comment.char = ""
+            showProgress = FALSE
         )
     }
-
+    
     taxonNamesReduced$fullName <- as.character(taxonNamesReduced$fullName)
     taxonNamesReduced$rank <- as.character(taxonNamesReduced$rank)
-    taxonNamesReduced <- taxonNamesReduced[!duplicated(taxonNamesReduced), ]
+    taxonNamesReduced <- unique(taxonNamesReduced)
 
     return(taxonNamesReduced)
 }
@@ -91,18 +91,19 @@ getTaxonomyMatrix <- function(
     if (!file.exists(taxonomyMatrixFile)) {
         utils::data(taxonomyMatrix)
     } else {
-        taxonomyMatrix <- utils::read.table(
-            taxonomyMatrixFile, sep = "\t", header = TRUE,
-            stringsAsFactors = TRUE
+        taxonomyMatrix <- data.table::fread(
+            taxonomyMatrixFile, sep = "\t", header = TRUE, 
+            stringsAsFactors = TRUE, showProgress = FALSE
         )
     }
 
     if (subsetTaxaCheck) {
-        if (missing(taxonIDs)) return(taxonomyMatrix)
-        taxonomyMatrix <- taxonomyMatrix[
-            taxonomyMatrix$abbrName  %in% taxonIDs, ]
+        if (!missing(taxonIDs)) {
+            taxonomyMatrix <- taxonomyMatrix[
+                taxonomyMatrix$abbrName %in% taxonIDs,]
+        }
     }
-    return(taxonomyMatrix)
+    return(data.frame(taxonomyMatrix))
 }
 
 #' Get ID list of input taxa from the main input

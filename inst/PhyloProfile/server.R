@@ -1934,17 +1934,6 @@ shinyServer(function(input, output, session) {
             shinyBS::updateButton(session, "plotCustom", disabled = TRUE)
         }
     })
-    # observeEvent(input$applyFilterCustom, {
-    #     w$doCusPlot <- input$applyFilterCustom
-    #     filein <- input$mainInput
-    #     if (
-    #         input$mainInputType == "file" & is.null(filein) &
-    #         input$demoData == "none"
-    #     ) {
-    #         w$doCusPlot <- FALSE
-    #         shinyBS::updateButton(session, "applyFilterCustom", disabled = TRUE)
-    #     }
-    # })
 
     # * check if genes ordered by distances has been selected ------------------
     output$applyClusterCheck.ui <- renderUI({
@@ -2198,6 +2187,7 @@ shinyServer(function(input, output, session) {
             withProgress(message = 'Getting input taxon IDs...', value = 0.5, {
                 longDataframe <- getMainInput()
                 inputTaxa <- getInputTaxaID(longDataframe)
+                return(inputTaxa)
             })
         } else return()
     })
@@ -2234,12 +2224,16 @@ shinyServer(function(input, output, session) {
                 inputTaxaTree <- NULL
                 if (input$demoData == "preCalcDt") {
                     if (!is.null(i_treeInput)) {
-                        inputTaxaTree <- read.tree(file = i_treeInput)
+                        inputTaxaTree <- ape::read.tree(file = i_treeInput)
                     }
                 } else {
                     treeIn <- input$inputTree
                     if (!is.null(treeIn)) {
-                        inputTaxaTree <- read.tree(file = treeIn$datapath)
+                        inputTaxaTree <- ape::read.tree(file = treeIn$datapath)
+                    } else {
+                        preCalcTree <- paste0(getTaxDBpath(), "/preCalcTree.nw")
+                        if (file.exists(preCalcTree)) 
+                            inputTaxaTree <- ape::read.tree(file = preCalcTree)
                     }
                 }
                 # get list of sorted taxa
@@ -2254,7 +2248,7 @@ shinyServer(function(input, output, session) {
                     )
                     sortedTaxonList <- sortedTaxonInputDf$V1
                 } else sortedTaxonList <- NULL
-
+                
                 # sort taxonomy matrix based on selected refTaxon
                 sortedOut <- sortInputTaxa(
                     taxonIDs = inputTaxonID(),
@@ -2293,6 +2287,7 @@ shinyServer(function(input, output, session) {
 
     # * count taxa for each supertaxon -----------------------------------------
     getCountTaxa <- reactive({
+        req(sortedtaxaList())
         taxaCount <- sortedtaxaList() %>% dplyr::group_by(supertaxon) %>%
             dplyr::summarise(n = n(), .groups = "drop")
         return(taxaCount)
