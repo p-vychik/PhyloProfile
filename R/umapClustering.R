@@ -77,7 +77,7 @@ prepareDimRedData <- function(
         countDf <- data.frame(table(seedWithTax$ncbiID))
         colnames(countDf) <- c("ncbiID", "Freq")
         wideDf <- dplyr::left_join(
-            data.frame(wideDf), countDf, by = c("ncbiID")
+            wideDf, countDf, by = c("ncbiID")
         )
     } else {
         wideDf <- data.table::dcast(
@@ -91,7 +91,7 @@ prepareDimRedData <- function(
         countDf <- data.frame(table(seedWithTax$geneID))
         colnames(countDf) <- c("geneID", "Freq")
         wideDf <- dplyr::left_join(
-            data.frame(wideDf), countDf, by = c("geneID")
+            wideDf, countDf, by = c("geneID")
         )
     }
     # calculate genes / taxa frequency for each label
@@ -105,7 +105,7 @@ prepareDimRedData <- function(
     wideDf <- left_join(wideDf, countFreqDf, by = "Label")
     wideDf$n <- as.numeric(wideDf$n)
     wideDf$Label <- as.character(wideDf$Label)
-    return(wideDf)
+    return(data.frame(wideDf, check.names = FALSE))
 }
 
 #' Perform dimension reduction 2D
